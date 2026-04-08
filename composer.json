@@ -1,0 +1,19 @@
+{
+    "name": "anibalealvarezs/meta-hub-driver",
+    "description": "APIs-Hub driver for Meta (Facebook & Instagram) integration.",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1",
+        "anibalealvarezs/api-client-skeleton": "dev-main",
+        "anibalealvarezs/facebook-graph-api": "dev-main",
+        "symfony/http-foundation": "^5.4 || ^6.0 || ^7.0",
+        "psr/log": "^1.0 || ^2.0 || ^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Anibalealvarezs\\MetaHubDriver\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": false
+}
