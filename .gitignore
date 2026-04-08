@@ -1,5 +1,5 @@
-/vendor/
-/.idea/
-/.vscode/
-/.phpunit.result.cache
-/*.log
+vendor/
+.idea/
+.vscode/
+.phpunit.result.cache
+*.log

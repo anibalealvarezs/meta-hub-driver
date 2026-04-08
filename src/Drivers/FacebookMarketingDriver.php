@@ -137,8 +137,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
     private function getMetricsConfig(array $config): array
     {
         return [
-            'metricSet' => MetricSet::basic,
-            'breakdowns' => [MetricBreakdown::action_type, MetricBreakdown::publisher_platform],
+            'metricSet' => MetricSet::BASIC,
+            'breakdowns' => [MetricBreakdown::AGE, MetricBreakdown::GENDER],
             'fields' => 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,actions,action_values',
             'metrics' => []
         ];
