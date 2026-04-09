@@ -105,7 +105,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return new Response(json_encode(['status' => 'success', 'data' => $totalStats]));
     }
 
-    private function initializeApi(array $config): FacebookGraphApi
+    protected function initializeApi(array $config): FacebookGraphApi
     {
         return new FacebookGraphApi(
             userId: $config['facebook']['user_id'] ?? $_ENV['FACEBOOK_USER_ID'] ?? 'system',
