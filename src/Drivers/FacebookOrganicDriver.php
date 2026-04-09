@@ -7,6 +7,7 @@ use Anibalealvarezs\FacebookGraphApi\Enums\MediaType;
 use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookOrganicMetricConvert;
 use Anibalealvarezs\ApiSkeleton\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
+use Anibalealvarezs\ApiSkeleton\Traits\HasUpdatableCredentials;
 use Anibalealvarezs\ApiSkeleton\Enums\Period;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
@@ -17,6 +18,16 @@ use Doctrine\Common\Collections\ArrayCollection;
 
 class FacebookOrganicDriver implements SyncDriverInterface
 {
+    use HasUpdatableCredentials;
+
+    public array $updatableCredentials = [
+        'FACEBOOK_USER_TOKEN',
+        'FACEBOOK_USER_ID',
+        'FACEBOOK_ACCOUNTS_GROUP',
+        'FACEBOOK_APP_ID',
+        'FACEBOOK_APP_SECRET'
+    ];
+
     private ?AuthProviderInterface $authProvider = null;
     private ?LoggerInterface $logger = null;
     /** @var callable|null */

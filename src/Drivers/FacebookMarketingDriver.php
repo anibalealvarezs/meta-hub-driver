@@ -9,6 +9,7 @@ use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookMarketingMetricConvert;
 use Anibalealvarezs\ApiSkeleton\Helpers\DateHelper;
 use Anibalealvarezs\ApiSkeleton\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
+use Anibalealvarezs\ApiSkeleton\Traits\HasUpdatableCredentials;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
@@ -16,6 +17,16 @@ use Exception;
 
 class FacebookMarketingDriver implements SyncDriverInterface
 {
+    use HasUpdatableCredentials;
+
+    public array $updatableCredentials = [
+        'FACEBOOK_USER_TOKEN',
+        'FACEBOOK_USER_ID',
+        'FACEBOOK_ACCOUNTS_GROUP',
+        'FACEBOOK_APP_ID',
+        'FACEBOOK_APP_SECRET'
+    ];
+
     private ?AuthProviderInterface $authProvider = null;
     private ?LoggerInterface $logger = null;
     /** @var callable|null */
