@@ -238,4 +238,58 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         return $data;
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function getConfigSchema(): array
+    {
+        return [
+            'global' => [
+                'enabled' => true,
+                'cache_history_range' => '2 years',
+                'cache_aggregations' => false,
+            ],
+            'entity' => [
+                'id' => '',
+                'url' => '',
+                'title' => '',
+                'hostname' => '',
+                'enabled' => true,
+                'exclude_from_caching' => false,
+                'ig_account' => null,
+                'ig_account_name' => null,
+                'ig_accounts' => false,
+                'page_metrics' => true,
+                'posts' => true,
+                'post_metrics' => false,
+                'ig_account_metrics' => false,
+                'ig_account_media' => false,
+                'ig_account_media_insights' => false,
+            ]
+        ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function validateConfig(array $config): array
+    {
+        $globalExclude = $config['exclude_from_caching'] ?? [];
+        if (!is_array($globalExclude)) {
+            $globalExclude = [$globalExclude];
+        }
+
+        if (isset($config['PAGE'])) {
+            $globalPageDefaults = $config['PAGE'];
+            $config['pages'] = array_map(function ($page) use ($globalPageDefaults, $globalExclude) {
+                $merged = array_merge($globalPageDefaults, $page);
+                if (in_array((string)($merged['id'] ?? ''), array_map('strval', $globalExclude))) {
+                    $merged['exclude_from_caching'] = true;
+                }
+                return $merged;
+            }, $config['pages'] ?? []);
+        }
+        return $config;
+    }
 }

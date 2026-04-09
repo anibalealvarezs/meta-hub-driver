@@ -236,4 +236,62 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $msg = $e->getMessage();
         return (stripos($msg, '(#100)') !== false || stripos($msg, 'valid insights metric') !== false || stripos($msg, 'permissions') !== false);
     }
+    /**
+     * @inheritdoc
+     */
+    public function getConfigSchema(): array
+    {
+        return [
+            'global' => [
+                'enabled' => true,
+                'cache_history_range' => '2 years',
+                'cache_aggregations' => false,
+                'metrics_strategy' => 'default',
+            ],
+            'entity' => [
+                'id' => '',
+                'name' => '',
+                'enabled' => true,
+                'exclude_from_caching' => false,
+            ],
+            'metrics' => [
+                'spend' => ['enabled' => false, 'format' => 'currency', 'precision' => 2],
+                'clicks' => ['enabled' => false, 'format' => 'number', 'precision' => 0],
+                'impressions' => ['enabled' => false, 'format' => 'number', 'precision' => 0],
+                'reach' => ['enabled' => false, 'format' => 'number', 'precision' => 0],
+                'frequency' => ['enabled' => false, 'format' => 'number', 'precision' => 2],
+                'ctr' => ['enabled' => false, 'format' => 'percent', 'precision' => 2],
+                'cpc' => ['enabled' => false, 'format' => 'currency', 'precision' => 2, 'sparkline_direction' => 'inverted'],
+                'cpm' => ['enabled' => false, 'format' => 'currency', 'precision' => 2, 'sparkline_direction' => 'inverted'],
+                'results' => ['enabled' => false, 'format' => 'number', 'precision' => 0],
+                'cost_per_result' => ['enabled' => false, 'format' => 'currency', 'precision' => 2, 'sparkline_direction' => 'inverted'],
+                'result_rate' => ['enabled' => false, 'format' => 'percent', 'precision' => 2],
+                'purchase_roas' => ['enabled' => false, 'format' => 'number', 'precision' => 2],
+                'actions' => ['enabled' => false, 'format' => 'number', 'precision' => 0],
+            ]
+        ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function validateConfig(array $config): array
+    {
+        $globalExclude = $config['exclude_from_caching'] ?? [];
+        if (!is_array($globalExclude)) {
+            $globalExclude = [$globalExclude];
+        }
+
+        if (isset($config['AD_ACCOUNT'])) {
+            $globalAdAccountDefaults = $config['AD_ACCOUNT'];
+            $config['ad_accounts'] = array_map(function ($adAccount) use ($globalAdAccountDefaults, $globalExclude) {
+                $merged = array_merge($globalAdAccountDefaults, $adAccount);
+                if (in_array((string)($merged['id'] ?? ''), array_map('strval', $globalExclude))) {
+                    $merged['exclude_from_caching'] = true;
+                }
+                return $merged;
+            }, $config['ad_accounts'] ?? []);
+        }
+        return $config;
+    }
 }
