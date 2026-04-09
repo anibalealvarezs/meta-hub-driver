@@ -12,13 +12,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "4dfd558a5d6afaa55026b7563bd90ca01b83b71f"
+                "reference": "f475e5342f4745d2a903d697092750b83fb90589"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-4dfd558a5d6afaa55026b7563bd90ca01b83b71f-zip-552592.zip",
-                "reference": "4dfd558a5d6afaa55026b7563bd90ca01b83b71f",
-                "shasum": "4c140a2ca1cccd33ce50722c90e7ead056f40b46"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-f475e5342f4745d2a903d697092750b83fb90589-zip-057c83.zip",
+                "reference": "f475e5342f4745d2a903d697092750b83fb90589",
+                "shasum": "56e20a99d0749b952dcdee12db39e20c915e2de5"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "@dev",
@@ -70,7 +70,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-04-09T09:48:02+00:00"
+            "time": "2026-04-09T14:05:10+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -78,13 +78,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "9cd0be1159edefbd22de3b59ae34ae01fbfff7ea"
+                "reference": "549ab551686786742d2bc48a2e328765bbcec2a3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-9cd0be1159edefbd22de3b59ae34ae01fbfff7ea-zip-57b18a.zip",
-                "reference": "9cd0be1159edefbd22de3b59ae34ae01fbfff7ea",
-                "shasum": "43414ee4e55a2282e9b4ebf1948acf1f14def40c"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-549ab551686786742d2bc48a2e328765bbcec2a3-zip-0fbb79.zip",
+                "reference": "549ab551686786742d2bc48a2e328765bbcec2a3",
+                "shasum": "692a9f264ec637b1f33dd2ca96c56d4587d2bbe4"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -135,7 +135,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-04-08T23:06:04+00:00"
+            "time": "2026-04-09T14:08:49+00:00"
         },
         {
             "name": "anibalealvarezs/oauth-v1",
@@ -739,12 +739,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "8a119d6b373041a3fcfb6126c1d9b446e54570b4"
+                "reference": "68b974809baff3f071893de61447212e9e688ee7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/8a119d6b373041a3fcfb6126c1d9b446e54570b4",
-                "reference": "8a119d6b373041a3fcfb6126c1d9b446e54570b4",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/68b974809baff3f071893de61447212e9e688ee7",
+                "reference": "68b974809baff3f071893de61447212e9e688ee7",
                 "shasum": ""
             },
             "require": {
@@ -835,7 +835,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-08T20:26:13+00:00"
+            "time": "2026-04-09T13:04:03+00:00"
         },
         {
             "name": "nesbot/carbon",

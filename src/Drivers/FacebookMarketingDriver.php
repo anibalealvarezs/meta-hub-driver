@@ -62,6 +62,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
 
         $api = $this->initializeApi($config);
+        $entity = $config['entity'] ?? 'metrics';
+
+        if ($entity !== 'metrics') {
+            return $this->syncEntities($entity, $startDate, $endDate, $config, $api);
+        }
+
         $accountsToProcess = $config['ad_accounts'] ?? [];
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
         
@@ -103,6 +109,62 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
 
         return new Response(json_encode(['status' => 'success', 'data' => $totalStats]));
+    }
+
+    private function syncEntities(string $entity, DateTime $startDate, DateTime $endDate, array $config, FacebookGraphApi $api): Response
+    {
+        $startDateStr = $startDate->format('Y-m-d');
+        $endDateStr = $endDate->format('Y-m-d');
+        $jobId = $config['jobId'] ?? null;
+        $filters = $config['filters'] ?? null;
+
+        switch ($entity) {
+            case 'campaigns':
+                return \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::syncCampaigns(
+                    startDate: $startDateStr,
+                    endDate: $endDateStr,
+                    logger: $this->logger,
+                    jobId: $jobId,
+                    adAccountIds: $filters->adAccountIds ?? null,
+                    api: $api
+                );
+            case 'ad_groups':
+                return \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::syncAdGroups(
+                    startDate: $startDateStr,
+                    endDate: $endDateStr,
+                    logger: $this->logger,
+                    jobId: $jobId,
+                    adAccountIds: $filters->adAccountIds ?? null,
+                    api: $api,
+                    parentIdsMap: $filters->parentIdsMap ?? null
+                );
+            case 'ads':
+                return \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::syncAds(
+                    startDate: $startDateStr,
+                    endDate: $endDateStr,
+                    logger: $this->logger,
+                    jobId: $jobId,
+                    adAccountIds: $filters->adAccountIds ?? null,
+                    api: $api,
+                    parentIdsMap: $filters->parentIdsMap ?? null
+                );
+            case 'creatives':
+                return \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::syncCreatives(
+                    startDate: $startDateStr,
+                    endDate: $endDateStr,
+                    logger: $this->logger,
+                    jobId: $jobId,
+                    adAccountIds: $filters->adAccountIds ?? null,
+                    api: $api
+                );
+            default:
+                throw new Exception("Entity sync for '{$entity}' not implemented in FacebookMarketingDriver");
+        }
+    }
+
+    public function getApi(array $config = []): FacebookGraphApi
+    {
+        return $this->initializeApi($config);
     }
 
     protected function initializeApi(array $config): FacebookGraphApi
