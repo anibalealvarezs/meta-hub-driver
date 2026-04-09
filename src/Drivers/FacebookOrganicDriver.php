@@ -4,13 +4,16 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MediaType;
+use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookOrganicMetricConvert;
 use Anibalealvarezs\ApiSkeleton\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
+use Anibalealvarezs\ApiSkeleton\Enums\Period;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
 use Exception;
 use Carbon\Carbon;
+use Doctrine\Common\Collections\ArrayCollection;
 
 class FacebookOrganicDriver implements SyncDriverInterface
 {
@@ -33,6 +36,11 @@ class FacebookOrganicDriver implements SyncDriverInterface
     public function setAuthProvider(AuthProviderInterface $provider): void
     {
         $this->authProvider = $provider;
+    }
+
+    public function getAuthProvider(): ?AuthProviderInterface
+    {
+        return $this->authProvider;
     }
 
     public function setDataProcessor(callable $processor): void
@@ -75,17 +83,49 @@ class FacebookOrganicDriver implements SyncDriverInterface
             foreach ($chunks as $chunk) {
                 $pageData = $this->fetchPageData($api, $page, $chunk['start'], $chunk['end'], $config);
                 
-                $result = ($this->dataProcessor)(
-                    data: $pageData,
-                    startDate: $chunk['start'],
-                    endDate: $chunk['end'],
-                    page: $page,
-                    config: $config
-                );
+                $collection = new ArrayCollection();
 
-                $totalStats['metrics'] += $result['metrics'] ?? 0;
-                $totalStats['rows'] += $result['rows'] ?? 0;
-                $totalStats['duplicates'] += $result['duplicates'] ?? 0;
+                // 1. Process Page Insights
+                if (!empty($pageData['insights'])) {
+                    $pageCollection = FacebookOrganicMetricConvert::pageMetrics(
+                        rows: $pageData['insights'],
+                        pagePlatformId: $pageId,
+                        logger: $this->logger,
+                        page: $pageId // Pass string ID; host resolves entity
+                    );
+                    foreach ($pageCollection as $m) $collection->add($m);
+                }
+
+                // 2. Process IG Account Insights
+                if (!empty($pageData['ig_insights'])) {
+                    foreach ($pageData['ig_insights'] as $insight) {
+                        $igCollection = FacebookOrganicMetricConvert::igAccountMetrics(
+                            rows: $insight['data'],
+                            date: $chunk['start'],
+                            page: $pageId,
+                            account: $config['accounts_group_name'] ?? 'Default',
+                            channeledAccount: $page['ig_account'] ?? null,
+                            logger: $this->logger,
+                            period: Period::Daily
+                        );
+                        foreach ($igCollection as $m) $collection->add($m);
+                    }
+                }
+
+                // 3. Process IG Media
+                if (!empty($pageData['ig_media'])) {
+                    // Logic for iterating and converting media insights would go here
+                    // For now, we delegate the conversion to the SDK if it has a way to handle it
+                }
+
+                // Persist converted collection in the host
+                if ($this->dataProcessor && $collection->count() > 0) {
+                    $result = ($this->dataProcessor)($collection, $this->logger);
+                    
+                    $totalStats['metrics'] += $result['metrics'] ?? $collection->count();
+                    $totalStats['rows'] += $result['rows'] ?? 0;
+                    $totalStats['duplicates'] += $result['duplicates'] ?? 0;
+                }
             }
         }
 
@@ -125,32 +165,13 @@ class FacebookOrganicDriver implements SyncDriverInterface
             );
         }
 
-        // 2. Instagram Media
-        if (!empty($page['ig_account'])) {
-            $syncSince = Carbon::parse($start)->startOfYear()->timestamp;
-            $data['ig_media'] = $api->getInstagramMedia(
-                igUserId: (string)$page['ig_account'],
-                additionalParams: ['since' => $syncSince]
-            );
-        }
-
-        // 3. Facebook Posts
-        if ($page['posts'] ?? false) {
-            $syncSince = Carbon::parse($start)->startOfYear()->timestamp;
-            $data['fb_posts'] = $api->getFacebookPosts(
-                pageId: $pageId,
-                additionalParams: ['since' => $syncSince]
-            );
-        }
-
-        // 4. IG Account Insights (Iterative process in host, moving here)
+        // 2. Instagram Account Insights
         if (!empty($page['ig_account']) && !empty($page['ig_account_metrics'])) {
-            // Options 1-5 as per legacy code
             foreach ([1, 2, 3, 4, 5] as $option) {
                 try {
                     $insights = $api->getDailyInstagramAccountTotalValueInsights(
                         instagramAccountId: (string)$page['ig_account'],
-                        since: $start, // Note: legacy uses startDate object, we use $start string
+                        since: $start,
                         option: $option
                     );
                     if (!empty($insights['data'])) {

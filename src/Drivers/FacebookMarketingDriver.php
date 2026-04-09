@@ -5,6 +5,7 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricBreakdown;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
+use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookMarketingMetricConvert;
 use Anibalealvarezs\ApiSkeleton\Helpers\DateHelper;
 use Anibalealvarezs\ApiSkeleton\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
@@ -36,6 +37,11 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $this->authProvider = $provider;
     }
 
+    public function getAuthProvider(): ?AuthProviderInterface
+    {
+        return $this->authProvider;
+    }
+
     public function setDataProcessor(callable $processor): void
     {
         $this->dataProcessor = $processor;
@@ -52,7 +58,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
 
         if ($this->logger) {
-            $this->logger->info("Starting FacebookMarketingDriver sync...");
+            $this->logger->info("Starting FacebookMarketingDriver sync (Modular)...");
         }
 
         $api = $this->initializeApi($config);
@@ -74,17 +80,25 @@ class FacebookMarketingDriver implements SyncDriverInterface
             foreach ($chunks as $chunk) {
                 $rows = $this->fetchInsights($api, $accountId, $chunk['start'], $chunk['end'], $config);
                 
-                $result = ($this->dataProcessor)(
-                    data: $rows,
-                    startDate: $chunk['start'],
-                    endDate: $chunk['end'],
-                    account: $account,
-                    config: $config
+                if (empty($rows['data'])) continue;
+
+                // Convert raw data into metrics using the SDK
+                $collection = FacebookMarketingMetricConvert::adAccountMetrics(
+                    rows: $rows['data'] ?? [],
+                    logger: $this->logger,
+                    account: $config['accounts_group_name'] ?? 'Default', // Passes name string; host will resolve entity
+                    channeledAccountPlatformId: $accountId,
+                    period: \Anibalealvarezs\ApiSkeleton\Enums\Period::Daily
                 );
 
-                $totalStats['metrics'] += $result['metrics'] ?? 0;
-                $totalStats['rows'] += $result['rows'] ?? 0;
-                $totalStats['duplicates'] += $result['duplicates'] ?? 0;
+                // Persist converted collection in the host
+                if ($this->dataProcessor && $collection->count() > 0) {
+                    $result = ($this->dataProcessor)($collection, $this->logger);
+                    
+                    $totalStats['metrics'] += $result['metrics'] ?? $collection->count();
+                    $totalStats['rows'] += $result['rows'] ?? count($rows['data']);
+                    $totalStats['duplicates'] += $result['duplicates'] ?? 0;
+                }
             }
         }
 
