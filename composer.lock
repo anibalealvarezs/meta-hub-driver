@@ -12,13 +12,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "2ec3dd6a17f33a1215c4b5d926188eb62eaf9491"
+                "reference": "1bf7a84ba261a10fbc0e2dd37872766fb3439aef"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-2ec3dd6a17f33a1215c4b5d926188eb62eaf9491-zip-ad3b25.zip",
-                "reference": "2ec3dd6a17f33a1215c4b5d926188eb62eaf9491",
-                "shasum": "1ced7c8667a27b9cf86bd844b170e7d91b46cfce"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-1bf7a84ba261a10fbc0e2dd37872766fb3439aef-zip-9bc4c8.zip",
+                "reference": "1bf7a84ba261a10fbc0e2dd37872766fb3439aef",
+                "shasum": "525ea66f661108754af9fafdd52f67165dab7ef7"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "@dev",
@@ -70,7 +70,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-04-09T20:56:15+00:00"
+            "time": "2026-04-09T21:18:15+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
