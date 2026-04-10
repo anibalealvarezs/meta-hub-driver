@@ -109,7 +109,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     logger: $this->logger,
                     account: $config['accounts_group_name'] ?? 'Default', // Passes name string; host will resolve entity
                     channeledAccountPlatformId: $accountId,
-                    period: \Anibalealvarezs\ApiSkeleton\Enums\Period::Daily
+                    period: \Anibalealvarezs\ApiDriverCore\Enums\Period::Daily
                 );
 
                 // Persist converted collection in the host
