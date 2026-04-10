@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Anibalealvarezs\MetaHubDriver\Services;
 
-use Anibalealvarezs\ApiDriverCore\Enums\Channel;
+use Anibalealvarezs\ApiSkeleton\Enums\Channel;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingConvert;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookOrganicConvert;

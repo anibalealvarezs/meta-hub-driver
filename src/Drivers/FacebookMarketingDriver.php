@@ -6,10 +6,10 @@ use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricBreakdown;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingMetricConvert;
-use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
+use Anibalealvarezs\ApiSkeleton\Helpers\DateHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
-use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
-use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
+use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
+use Anibalealvarezs\ApiSkeleton\Traits\HasUpdatableCredentials;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
@@ -109,7 +109,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     logger: $this->logger,
                     account: $config['accounts_group_name'] ?? 'Default', // Passes name string; host will resolve entity
                     channeledAccountPlatformId: $accountId,
-                    period: \Anibalealvarezs\ApiDriverCore\Enums\Period::Daily
+                    period: \Anibalealvarezs\ApiSkeleton\Enums\Period::Daily
                 );
 
                 // Persist converted collection in the host
