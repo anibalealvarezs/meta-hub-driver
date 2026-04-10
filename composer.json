@@ -2,21 +2,21 @@
     "name": "anibalealvarezs/meta-hub-driver",
     "description": "APIs-Hub driver for Meta (Facebook & Instagram) integration.",
     "license": "MIT",
-    "require" : {
-        "php" : ">=8.1",
-        "anibalealvarezs/api-client-skeleton" : "dev-main",
-        "anibalealvarezs/api-driver-core" : "dev-main",
-        "anibalealvarezs/facebook-graph-api" : "dev-main",
-        "symfony/http-foundation" : "^5.4 || ^6.0 || ^7.0",
-        "psr/log" : "^1.0 || ^2.0 || ^3.0",
-        "nesbot/carbon" : "^2.0 || ^3.0",
+    "require": {
+        "php": ">=8.1",
+        "anibalealvarezs/api-client-skeleton": "dev-main",
+        "anibalealvarezs/api-driver-core": "dev-main",
+        "anibalealvarezs/facebook-graph-api": "dev-main",
+        "symfony/http-foundation": "^5.4 || ^6.0 || ^7.0",
+        "psr/log": "^1.0 || ^2.0 || ^3.0",
+        "nesbot/carbon": "^2.0 || ^3.0",
         "fakerphp/faker": "^1.20",
         "doctrine/orm": "^2.12.3 || ^3.0"
     },
-    "repositories" : [
+    "repositories": [
         {
-            "type" : "composer",
-            "url" : "https://satis.anibalalvarez.com/"
+            "type": "composer",
+            "url": "https://satis.anibalalvarez.com/"
         }
     ],
     "autoload": {

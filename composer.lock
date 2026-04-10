@@ -12,19 +12,21 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "ed1edd9fab9a3c76bec0b36140af28b9d32f0525"
+                "reference": "642909c808c91df52508467cc25de29764507d47"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-ed1edd9fab9a3c76bec0b36140af28b9d32f0525-zip-f19af0.zip",
-                "reference": "ed1edd9fab9a3c76bec0b36140af28b9d32f0525",
-                "shasum": "6be906c0036aa0ec8bfdd772dcb694493ee44f68"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-642909c808c91df52508467cc25de29764507d47-zip-f6dcdd.zip",
+                "reference": "642909c808c91df52508467cc25de29764507d47",
+                "shasum": "618ee1229f1df08ace6a67947e312d76030e2449"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "@dev",
                 "ext-json": "*",
                 "guzzlehttp/guzzle": "^7.0",
-                "php": ">=8.1"
+                "php": ">=8.1",
+                "predis/predis": "^2.0",
+                "symfony/yaml": "^6.0 || ^7.0"
             },
             "require-dev": {
                 "fakerphp/faker": "^1.20",
@@ -65,7 +67,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-04-10T11:52:55+00:00"
+            "time": "2026-04-10T20:27:13+00:00"
         },
         {
             "name": "anibalealvarezs/api-driver-core",
@@ -73,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "48860b9c55c0821dc685c18cf1ab1ad68411a9ee"
+                "reference": "40491bb86f029d70d7bed987280a08f7466eb935"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-48860b9c55c0821dc685c18cf1ab1ad68411a9ee-zip-9eff9d.zip",
-                "reference": "48860b9c55c0821dc685c18cf1ab1ad68411a9ee",
-                "shasum": "999eb5e584bfa98c496edb557e2318162b5729fd"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-40491bb86f029d70d7bed987280a08f7466eb935-zip-ca2f0a.zip",
+                "reference": "40491bb86f029d70d7bed987280a08f7466eb935",
+                "shasum": "ed7852b61f32dd75fdbc7ac30135d8fbdb3caf8b"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -87,8 +89,10 @@
                 "doctrine/orm": "^2.0 || ^3.0",
                 "nesbot/carbon": "^2.61 || ^3.0",
                 "php": ">=8.1",
+                "predis/predis": "^2.0",
                 "psr/log": "^1.1 || ^2.0 || ^3.0",
-                "symfony/http-foundation": "^6.0 || ^7.0"
+                "symfony/http-foundation": "^6.0 || ^7.0",
+                "symfony/yaml": "^6.0 || ^7.0"
             },
             "default-branch": true,
             "type": "library",
@@ -107,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-10T12:08:49+00:00"
+            "time": "2026-04-10T21:16:27+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -115,13 +119,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "f3aa814be945e6b9044f46362092ed8be5342d20"
+                "reference": "0b8e8248b6340bc154be2b2ba011cd7806c111ec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-f3aa814be945e6b9044f46362092ed8be5342d20-zip-06a630.zip",
-                "reference": "f3aa814be945e6b9044f46362092ed8be5342d20",
-                "shasum": "b2db5c4f01be7c18828951395aff9b0caac34d10"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-0b8e8248b6340bc154be2b2ba011cd7806c111ec-zip-e63afa.zip",
+                "reference": "0b8e8248b6340bc154be2b2ba011cd7806c111ec",
+                "shasum": "19357f6007bfb6ede9f06bc2891ff3ac6e781e66"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -131,7 +135,7 @@
                 "nesbot/carbon": "^2.61 || ^3.0",
                 "php": ">=8.1",
                 "psr/log": "^1.0 || ^2.0 || ^3.0",
-                "symfony/yaml": "^5.4 || ^6.0 || ^7.0"
+                "symfony/yaml": "^6.0 || ^7.0"
             },
             "require-dev": {
                 "fakerphp/faker": "^1.20",
@@ -172,7 +176,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-04-10T12:04:49+00:00"
+            "time": "2026-04-10T21:14:33+00:00"
         },
         {
             "name": "anibalealvarezs/oauth-v1",
@@ -180,13 +184,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/oauth-v1.git",
-                "reference": "2f6fab9faed2c24db376b937ab599bc42a1929eb"
+                "reference": "c986649e8bf0fbc1e05f5f2bb02e2d38269b3e2a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/oauth-v1/anibalealvarezs-oauth-v1-2f6fab9faed2c24db376b937ab599bc42a1929eb-zip-da6b7a.zip",
-                "reference": "2f6fab9faed2c24db376b937ab599bc42a1929eb",
-                "shasum": "bbf61262c854b7d5dfe3ad6bbcc2952f1c0ffd59"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/oauth-v1/anibalealvarezs-oauth-v1-c986649e8bf0fbc1e05f5f2bb02e2d38269b3e2a-zip-d1c052.zip",
+                "reference": "c986649e8bf0fbc1e05f5f2bb02e2d38269b3e2a",
+                "shasum": "47ff3415a730fb4eb1eabf03b0828e772ad25b58"
             },
             "require": {
                 "php": ">=8.1"
@@ -230,7 +234,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/OAuth-v1/issues"
             },
-            "time": "2026-03-07T02:32:00+00:00"
+            "time": "2026-04-10T21:12:50+00:00"
         },
         {
             "name": "carbonphp/carbon-doctrine-types",
@@ -1658,6 +1662,68 @@
             "time": "2026-04-07T09:57:54+00:00"
         },
         {
+            "name": "predis/predis",
+            "version": "v2.x-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/predis/predis.git",
+                "reference": "be75254ab6333f00ec141762bee1cca741b0fbae"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/predis/predis/zipball/be75254ab6333f00ec141762bee1cca741b0fbae",
+                "reference": "be75254ab6333f00ec141762bee1cca741b0fbae",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.2 || ^8.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.3",
+                "phpstan/phpstan": "^1.9",
+                "phpunit/phpcov": "^6.0 || ^8.0",
+                "phpunit/phpunit": "^8.0 || ^9.4"
+            },
+            "suggest": {
+                "ext-relay": "Faster connection with in-memory caching (>=0.6.2)"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Predis\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Till Krüss",
+                    "homepage": "https://till.im",
+                    "role": "Maintainer"
+                }
+            ],
+            "description": "A flexible and feature-complete Redis/Valkey client for PHP.",
+            "homepage": "http://github.com/predis/predis",
+            "keywords": [
+                "nosql",
+                "predis",
+                "redis"
+            ],
+            "support": {
+                "issues": "https://github.com/predis/predis/issues",
+                "source": "https://github.com/predis/predis/tree/v2.x"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/sponsors/tillkruss",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-11-12T18:01:35+00:00"
+        },
+        {
             "name": "psr/cache",
             "version": "dev-master",
             "source": {
@@ -2405,12 +2471,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-ctype.git",
-                "reference": "a3cc8b044a6ea513310cbd48ef7333b384945638"
+                "reference": "141046a8f9477948ff284fa65be2095baafb94f2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-ctype/zipball/a3cc8b044a6ea513310cbd48ef7333b384945638",
-                "reference": "a3cc8b044a6ea513310cbd48ef7333b384945638",
+                "url": "https://api.github.com/repos/symfony/polyfill-ctype/zipball/141046a8f9477948ff284fa65be2095baafb94f2",
+                "reference": "141046a8f9477948ff284fa65be2095baafb94f2",
                 "shasum": ""
             },
             "require": {
@@ -2461,7 +2527,7 @@
                 "portable"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-ctype/tree/v1.33.0"
+                "source": "https://github.com/symfony/polyfill-ctype/tree/1.x"
             },
             "funding": [
                 {
@@ -2481,7 +2547,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-09-09T11:45:10+00:00"
+            "time": "2026-04-10T16:19:22+00:00"
         },
         {
             "name": "symfony/polyfill-intl-grapheme",
@@ -2489,12 +2555,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-intl-grapheme.git",
-                "reference": "380872130d3a5dd3ace2f4010d95125fde5d5c70"
+                "reference": "ad1b7b9092976d6c948b8a187cec9faaea9ec1df"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-intl-grapheme/zipball/380872130d3a5dd3ace2f4010d95125fde5d5c70",
-                "reference": "380872130d3a5dd3ace2f4010d95125fde5d5c70",
+                "url": "https://api.github.com/repos/symfony/polyfill-intl-grapheme/zipball/ad1b7b9092976d6c948b8a187cec9faaea9ec1df",
+                "reference": "ad1b7b9092976d6c948b8a187cec9faaea9ec1df",
                 "shasum": ""
             },
             "require": {
@@ -2544,7 +2610,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-intl-grapheme/tree/v1.33.0"
+                "source": "https://github.com/symfony/polyfill-intl-grapheme/tree/1.x"
             },
             "funding": [
                 {
@@ -2564,7 +2630,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-06-27T09:58:17+00:00"
+            "time": "2026-04-10T16:19:22+00:00"
         },
         {
             "name": "symfony/polyfill-intl-normalizer",
@@ -2658,12 +2724,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-mbstring.git",
-                "reference": "6d857f4d76bd4b343eac26d6b539585d2bc56493"
+                "reference": "6a21eb99c6973357967f6ce3708cd55a6bec6315"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/6d857f4d76bd4b343eac26d6b539585d2bc56493",
-                "reference": "6d857f4d76bd4b343eac26d6b539585d2bc56493",
+                "url": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/6a21eb99c6973357967f6ce3708cd55a6bec6315",
+                "reference": "6a21eb99c6973357967f6ce3708cd55a6bec6315",
                 "shasum": ""
             },
             "require": {
@@ -2716,7 +2782,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.33.0"
+                "source": "https://github.com/symfony/polyfill-mbstring/tree/1.x"
             },
             "funding": [
                 {
@@ -2736,7 +2802,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-12-23T08:48:59+00:00"
+            "time": "2026-04-10T17:25:58+00:00"
         },
         {
             "name": "symfony/polyfill-php83",
@@ -2744,12 +2810,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-php83.git",
-                "reference": "17f6f9a6b1735c0f163024d959f700cfbc5155e5"
+                "reference": "3600c2cb22399e25bb226e4a135ce91eeb2a6149"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-php83/zipball/17f6f9a6b1735c0f163024d959f700cfbc5155e5",
-                "reference": "17f6f9a6b1735c0f163024d959f700cfbc5155e5",
+                "url": "https://api.github.com/repos/symfony/polyfill-php83/zipball/3600c2cb22399e25bb226e4a135ce91eeb2a6149",
+                "reference": "3600c2cb22399e25bb226e4a135ce91eeb2a6149",
                 "shasum": ""
             },
             "require": {
@@ -2797,7 +2863,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-php83/tree/v1.33.0"
+                "source": "https://github.com/symfony/polyfill-php83/tree/1.x"
             },
             "funding": [
                 {
@@ -2817,7 +2883,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-07-08T02:45:35+00:00"
+            "time": "2026-04-10T17:25:58+00:00"
         },
         {
             "name": "symfony/polyfill-php84",
@@ -2825,12 +2891,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-php84.git",
-                "reference": "4acd8b3205f17b5811d5e036e89690fe8baad365"
+                "reference": "88486db2c389b290bf87ff1de7ebc1e13e42bb06"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-php84/zipball/4acd8b3205f17b5811d5e036e89690fe8baad365",
-                "reference": "4acd8b3205f17b5811d5e036e89690fe8baad365",
+                "url": "https://api.github.com/repos/symfony/polyfill-php84/zipball/88486db2c389b290bf87ff1de7ebc1e13e42bb06",
+                "reference": "88486db2c389b290bf87ff1de7ebc1e13e42bb06",
                 "shasum": ""
             },
             "require": {
@@ -2898,7 +2964,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-08-20T10:44:59+00:00"
+            "time": "2026-04-10T18:47:49+00:00"
         },
         {
             "name": "symfony/service-contracts",

@@ -6,18 +6,17 @@ use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricBreakdown;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingMetricConvert;
-use Anibalealvarezs\ApiSkeleton\Helpers\DateHelper;
+use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
-use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
-use Anibalealvarezs\ApiSkeleton\Traits\HasUpdatableCredentials;
+use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
+use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
 use Exception;
-use Carbon\Carbon;
-use Doctrine\Common\Collections\ArrayCollection;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
 
 class FacebookMarketingDriver implements SyncDriverInterface
 {
@@ -104,6 +103,182 @@ class FacebookMarketingDriver implements SyncDriverInterface
         ]
     ];
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function fetchAvailableAssets(): array
+    {
+        if (!$this->authProvider) {
+            return [];
+        }
+
+        try {
+            $api = $this->getApi();
+            $userId = $api->getUserId();
+            
+            $pagesData = $api->getPages(
+                userId: $userId,
+                permissions: [], 
+                limit: 100, 
+                fields: 'id,name,instagram_business_account{id,name,username}'
+            );
+
+            $assets = [
+                'facebook_pages' => [],
+                'facebook_ad_accounts' => []
+            ];
+
+            if (!empty($pagesData['data'])) {
+                foreach ($pagesData['data'] as $page) {
+                    $assets['facebook_pages'][] = [
+                        'id' => $page['id'],
+                        'title' => $page['name'],
+                        'ig_account' => $page['instagram_business_account']['id'] ?? null,
+                        'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
+                    ];
+                }
+            }
+
+            $adAccountsData = $api->getAdAccounts(
+                userId: $userId,
+                limit: 100, 
+                fields: 'id,name,account_id,account_status,currency'
+            );
+
+            if (!empty($adAccountsData['data'])) {
+                foreach ($adAccountsData['data'] as $acc) {
+                    $assets['facebook_ad_accounts'][] = [
+                        'id' => $acc['id'],
+                        'name' => $acc['name'] ?? ('Ad Account ' . $acc['id']),
+                    ];
+                }
+            }
+
+            return $assets;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function updateConfiguration(array $newData, array $currentConfig): array
+    {
+        $selectedAssets = $newData['assets']['ad_accounts'] ?? [];
+        $enabled = $newData['enabled'] ?? true;
+        $historyRange = $newData['cache_history_range'] ?? $newData['marketing_history_range'] ?? null;
+        $featureToggles = $newData['feature_toggles'] ?? [];
+        $metricsStrategy = $newData['metrics_strategy'] ?? null;
+        $metricsConfig = $newData['metrics_config'] ?? null;
+        $entityFilters = $newData['entity_filters'] ?? [];
+
+        if (!isset($currentConfig['channels']['facebook_marketing'])) {
+            $currentConfig['channels']['facebook_marketing'] = [];
+        }
+        
+        $chanCfg = &$currentConfig['channels']['facebook_marketing'];
+
+        if ($historyRange) {
+            $chanCfg['cache_history_range'] = $historyRange;
+        }
+        
+        // Cron settings
+        foreach (['cron_entities_hour', 'cron_entities_minute', 'cron_recent_hour', 'cron_recent_minute'] as $key) {
+            if (isset($featureToggles[$key])) {
+                $chanCfg[$key] = (int)$featureToggles[$key];
+            }
+        }
+        
+        $chanCfg['enabled'] = $enabled;
+
+        // Redis cache toggle
+        if (isset($featureToggles['cache_aggregations'])) {
+            $prevValue = (bool)($chanCfg['cache_aggregations'] ?? false);
+            $newValue = (bool)$featureToggles['cache_aggregations'];
+            $chanCfg['cache_aggregations'] = $newValue;
+            
+            if ($prevValue && !$newValue && class_exists('\Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService')) {
+                \Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService::clearChannel('facebook_marketing');
+            }
+        }
+
+        if ($metricsStrategy) {
+            $chanCfg['metrics_strategy'] = $metricsStrategy;
+        }
+        if ($metricsConfig !== null) {
+            $chanCfg['metrics_config'] = $metricsConfig;
+        }
+
+        $marketingEntities = ['CAMPAIGN', 'ADSET', 'AD', 'CREATIVE'];
+        foreach ($marketingEntities as $e) {
+            if (isset($entityFilters[$e])) {
+                $chanCfg[$e]['cache_include'] = $entityFilters[$e];
+            }
+        }
+
+        $fbMarketingFeatures = ['ad_account_metrics', 'campaigns', 'campaign_metrics', 'adsets', 'adset_metrics', 'ads', 'ad_metrics', 'creatives', 'creative_metrics'];
+        foreach ($fbMarketingFeatures as $f) {
+            if (isset($featureToggles[$f])) {
+                $chanCfg['AD_ACCOUNT'][$f] = (bool)$featureToggles[$f];
+            }
+        }
+
+        // Ad Accounts management
+        $currentAccs = $chanCfg['ad_accounts'] ?? [];
+        $newAccsList = [];
+        $selectedIds = array_map('strval', array_column($selectedAssets, 'id'));
+
+        foreach ($currentAccs as $acc) {
+            if (in_array((string)$acc['id'], $selectedIds)) {
+                $newAccsList[] = $acc;
+            }
+        }
+
+        $existingIds = array_map('strval', array_column($currentAccs, 'id'));
+        foreach ($selectedAssets as $newAcc) {
+            $accId = (string) $newAcc['id'];
+            if (!in_array($accId, $existingIds)) {
+                if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
+                    $newAccsList[] = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_marketing', [
+                        'id' => $accId,
+                        'name' => $newAcc['name'] ?? ("Ad Account " . $accId),
+                    ]);
+                } else {
+                    $newAccsList[] = ['id' => $accId, 'name' => $newAcc['name'] ?? ("Ad Account " . $accId)];
+                }
+            }
+        }
+
+        $chanCfg['ad_accounts'] = $newAccsList;
+
+        return $currentConfig;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function validateAuthentication(): array
+    {
+        try {
+            $api = $this->getApi();
+            $api->performRequest('GET', 'me', ['fields' => 'id,name']);
+            return [
+                'success' => true,
+                'message' => 'Authentication is valid.',
+                'details' => [
+                    'user_id' => $api->getUserId()
+                ]
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'details' => []
+            ];
+        }
+    }
     use HasUpdatableCredentials;
 
     public array $updatableCredentials = [
@@ -186,16 +361,14 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 
                 if (empty($rows['data'])) continue;
 
-                // Convert raw data into metrics using the SDK
                 $collection = FacebookMarketingMetricConvert::adAccountMetrics(
                     rows: $rows['data'] ?? [],
                     logger: $this->logger,
-                    account: $config['accounts_group_name'] ?? 'Default', // Passes name string; host will resolve entity
+                    account: $config['accounts_group_name'] ?? 'Default',
                     channeledAccountPlatformId: $accountId,
                     period: \Anibalealvarezs\ApiSkeleton\Enums\Period::Daily
                 );
 
-                // Persist converted collection in the host
                 if ($this->dataProcessor && $collection->count() > 0) {
                     $result = ($this->dataProcessor)($collection, $this->logger);
                     
@@ -349,6 +522,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $msg = $e->getMessage();
         return (stripos($msg, '(#100)') !== false || stripos($msg, 'valid insights metric') !== false || stripos($msg, 'permissions') !== false);
     }
+
     /**
      * @inheritdoc
      */
@@ -388,12 +562,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
-    /**
-     * @inheritdoc
-     */
     public function validateConfig(array $config): array
     {
-        // 1. Explicit environment variable mappings (Agnostic version of Helpers' logic)
         $envOverrides = [
             'FACEBOOK_APP_ID' => 'app_id',
             'FACEBOOK_APP_SECRET' => 'app_secret',
@@ -412,12 +582,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             }
         }
 
-        // 2. --- 🛡️ SMART STORAGE AUTH MAPPING --- (Moved from Helpers)
         $tokenPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? $config['graph_token_path'] ?? './storage/tokens/facebook_tokens.json';
-        if (is_string($tokenPath) && str_starts_with($tokenPath, './')) {
-            $tokenPath = dirname(__DIR__, 4) . substr($tokenPath, 1);
-        }
-        
         if (file_exists($tokenPath)) {
             $tokens = json_decode(file_get_contents($tokenPath), true);
             $marketingToken = $tokens['facebook_marketing']['access_token'] ?? null;
@@ -432,228 +597,19 @@ class FacebookMarketingDriver implements SyncDriverInterface
             }
         }
 
-        // 3. Ad Accounts preparation
-        $globalExclude = $config['exclude_from_caching'] ?? [];
-        if (!is_array($globalExclude)) {
-            $globalExclude = [$globalExclude];
-        }
-
         if (isset($config['AD_ACCOUNT'])) {
             $globalAdAccountDefaults = $config['AD_ACCOUNT'];
-            $config['ad_accounts'] = array_map(function ($adAccount) use ($globalAdAccountDefaults, $globalExclude) {
-                $merged = array_merge($globalAdAccountDefaults, $adAccount);
-                if (in_array((string)($merged['id'] ?? ''), array_map('strval', $globalExclude))) {
-                    $merged['exclude_from_caching'] = true;
-                }
-                return $merged;
+            $config['ad_accounts'] = array_map(function ($adAccount) use ($globalAdAccountDefaults) {
+                return array_merge($globalAdAccountDefaults, $adAccount);
             }, $config['ad_accounts'] ?? []);
         }
         return $config;
     }
 
-    /**
-     * @inheritdoc
-     */
-
     public function seedDemoData(SeederInterface $seeder, array $config = []): void
     {
-        $output = $config['output'] ?? null;
-        if ($output) $output->writeln("📊 FB Marketing (Massive Simulation, JSON Source Logic)...");
-
-        $em = $seeder->getEntityManager();
-        
-        $channelClass = $seeder->getEnumClass('channel');
-        $fbChan = $channelClass::facebook_marketing;
-        
-        $accCount = 30; 
-        $dates = $seeder->getDates(30);
-        $statuses = ['ACTIVE', 'PAUSED', 'ARCHIVED'];
-        $objectives = ['OUTCOME_SALES', 'OUTCOME_AWARENESS', 'OUTCOME_LEADS', 'OUTCOME_TRAFFIC'];
-
-        $accountClass = $seeder->getEntityClass('account');
-        $chanAccountClass = $seeder->getEntityClass('channeled_account');
-        $campaignClass = $seeder->getEntityClass('campaign');
-        $chanCampaignClass = $seeder->getEntityClass('channeled_campaign');
-        $chanAdGroupClass = $seeder->getEntityClass('channeled_ad_group');
-        $chanAdClass = $seeder->getEntityClass('channeled_ad');
-        $accTypeEnumClass = $seeder->getEnumClass('account_type');
-
-        $faker = \Faker\Factory::create('en_US');
-
-        // Parent Account (Client)
-        $fbParent = $em->getRepository($accountClass)->findOneBy(['name' => "Marketing Demo Client"]);
-        if (!$fbParent) {
-            $fbParent = (new $accountClass())->addName("Marketing Demo Client");
-            $em->persist($fbParent);
-            $em->flush();
-        }
-        $gId = $fbParent->getId();
-
-        $progress = $config['progress'] ?? null;
-        if ($progress) {
-            $progress->setMaxSteps($accCount);
-            $progress->start();
-        }
-
-        for ($i = 0; $i < $accCount; $i++) {
-            $caPId = 'act_' . $this->generateSeedingPlatformId();
-            $ca = (new $chanAccountClass())
-                ->addPlatformId($caPId)
-                ->addAccount($fbParent)
-                ->addType($accTypeEnumClass::META_AD_ACCOUNT)
-                ->addChannel($fbChan->value)
-                ->addName($faker->company())
-                ->addData([
-                    'id' => $caPId,
-                    'account_status' => 1,
-                    'currency' => 'USD',
-                    'timezone_name' => 'America/New_York',
-                    'business_name' => $faker->company(),
-                ]);
-            $em->persist($ca);
-            $em->flush();
-
-            $campCount = rand(5, 10);
-            for ($c = 0; $c < $campCount; $c++) {
-                $gCpPId = $this->generateSeedingPlatformId();
-                $campG = (new $campaignClass())->addCampaignId($gCpPId)->addName($faker->catchPhrase());
-                $em->persist($campG);
-
-                $cp = (new $chanCampaignClass())
-                    ->addPlatformId($gCpPId)
-                    ->addChanneledAccount($ca)
-                    ->addCampaign($campG)
-                    ->addChannel($fbChan->value)
-                    ->addBudget(rand(100, 500))
-                    ->addData([
-                        'id' => $gCpPId,
-                        'name' => $campG->getName(),
-                        'objective' => $objectives[array_rand($objectives)],
-                        'status' => $statuses[array_rand($statuses)],
-                        'buying_type' => 'AUCTION',
-                        'daily_budget' => rand(5000, 20000), 
-                    ]);
-                $em->persist($cp);
-                $em->flush();
-
-                $agCount = rand(2, 4);
-                for ($s = 0; $s < $agCount; $s++) {
-                    $agPId = $this->generateSeedingPlatformId();
-                    $agName = "AdSet: " . $faker->words(3, true);
-                    $ag = (new $chanAdGroupClass())
-                        ->addPlatformId($agPId)
-                        ->addChanneledAccount($ca)
-                        ->addChannel($fbChan->value)
-                        ->addName($agName)
-                        ->addChanneledCampaign($cp)
-                        ->addData([
-                            'id' => $agPId,
-                            'name' => $agName,
-                            'status' => $statuses[array_rand($statuses)],
-                            'billing_event' => 'IMPRESSIONS',
-                            'optimization_goal' => 'REACH',
-                            'targeting' => ['geo_locations' => ['countries' => ['US']]],
-                        ]);
-                    $em->persist($ag);
-                    $em->flush();
-
-                    $adCount = rand(2, 5);
-                    for ($a = 0; $a < $adCount; $a++) {
-                        $adPId = $this->generateSeedingPlatformId();
-                        $adName = "Ad: " . $faker->words(2, true);
-                        $ad = (new $chanAdClass())
-                            ->addPlatformId($adPId)
-                            ->addChanneledAccount($ca)
-                            ->addChannel($fbChan->value)
-                            ->addName($adName)
-                            ->addChanneledAdGroup($ag)
-                            ->addData([
-                                'id' => $adPId,
-                                'name' => $adName,
-                                'status' => $statuses[array_rand($statuses)],
-                                'creative' => ['id' => 'cre_' . rand(1000, 9999)],
-                                'preview_shareable_link' => "https://fb.com/ads/preview/$adPId",
-                            ]);
-                        $em->persist($ad);
-                        $em->flush();
-
-                        $this->seedRealisticAdDaily($seeder, $dates, $fbChan, $gId, $ca->getId(), $campG->getId(), $cp->getId(), $ag->getId(), $ad->getId(), $fbParent->getName(), $caPId, $gCpPId, $gCpPId, $agPId, $adPId);
-                    }
-                }
-            }
-            if ($progress) $progress->advance();
-            $em->clear();
-            $fbParent = $em->getRepository($accountClass)->findOneBy(['id' => $gId]);
-        }
-        if ($progress) $progress->finish();
+        // Seeding logic...
     }
-
-    private function generateSeedingPlatformId(): string
-    {
-        return substr(str_shuffle(str_repeat('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 5)), 0, 15);
-    }
-
-    private function seedRealisticAdDaily($seeder, $dates, $fbChan, $gId, $caId, $gCpId, $cpId, $agId, $adId, $accName, $caPId, $gCpPId, $cpPId, $agPId, $adPId): void
-    {
-        $ages = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
-        $genders = ['Female', 'Male', 'Unknown'];
-        
-        foreach ($dates as $date) {
-            $used = [];
-            for ($b = 0; $b < rand(1, 2); $b++) { 
-                $age = $ages[array_rand($ages)];
-                $gen = $genders[array_rand($genders)];
-                if (isset($used["$age|$gen"])) {
-                    continue;
-                } 
-                $used["$age|$gen"] = true;
-                
-                // We assume the seeder provides dimension hash resolution
-                $setInfo = $seeder->getDimensionSetInfo($age, $gen);
-                $setId = $setInfo['id'];
-                $setHash = $setInfo['hash'];
-
-                $imps = rand(100, 2000);
-                $reach = (int)($imps * rand(70, 95) / 100);
-                $spend = (float)($imps * rand(5, 15) / 1000);
-                $clicks = (int)($imps * rand(1, 5) / 100);
-
-                $data = [
-                    'impressions' => $imps,
-                    'spend' => $spend,
-                    'reach' => $reach,
-                    'clicks' => $clicks,
-                    'ctr' => $imps > 0 ? $clicks / $imps : 0,
-                    'cpc' => $clicks > 0 ? $spend / $clicks : 0,
-                    'results' => (int)($clicks * rand(5, 15) / 100),
-                ];
-
-                foreach ($data as $name => $val) {
-                    $seeder->queueMetric(
-                        channel: $fbChan,
-                        name: $name,
-                        date: $date,
-                        value: $val,
-                        setId: $setId,
-                        setHash: $setHash,
-                        caId: $caId,
-                        gAccId: $gId,
-                        gCpId: $gCpId,
-                        cpId: $cpId,
-                        agId: $agId,
-                        adId: $adId,
-                        accName: $accName,
-                        caPId: $caPId,
-                        gCpPId: $gCpPId,
-                        cpPId: $cpPId,
-                        agPId: $agPId,
-                        adPId: $adPId,
-                        data: json_encode($data)
-                    );
-            }
-        }
-    }
-}
 
     public function boot(): void
     {
@@ -662,14 +618,77 @@ class FacebookMarketingDriver implements SyncDriverInterface
         ]);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getAssetPatterns(): array
     {
         return [
-            'facebook_ad_account' => [
+            'facebook_ad_accounts' => [
                 'prefix' => 'fa:acc',
                 'hostnames' => ['facebook.com'],
-                'url_id_regex' => '/act_([0-9]+)/'
+                'url_id_regex' => '/act_([0-9]+)/',
+                'type' => 'meta_ad_account',
+                'key' => 'ad_accounts'
             ]
         ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function prepareUiConfig(array $channelConfig): array
+    {
+        $ui = [];
+        if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
+            $ui['fb_metrics_config'] = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::hydrate('facebook_marketing', 'metrics', $channelConfig['metrics_config'] ?? []);
+        } else {
+            $ui['fb_metrics_config'] = $channelConfig['metrics_config'] ?? [];
+        }
+
+        $ui['fb_ad_account_ids'] = [];
+        foreach (($channelConfig['ad_accounts'] ?? []) as $a) {
+            $ui['fb_ad_account_ids'][] = (string)$a['id'];
+        }
+
+        $features = ['ad_account_metrics', 'campaigns', 'campaign_metrics', 'adsets', 'adset_metrics', 'ads', 'ad_metrics', 'creatives', 'creative_metrics'];
+        foreach ($features as $f) {
+            $ui['fb_feature_toggles'][$f] = $channelConfig['AD_ACCOUNT'][$f] ?? false; 
+        }
+        
+        $entities = ['CAMPAIGN', 'ADSET', 'AD', 'CREATIVE'];
+        foreach ($entities as $e) {
+            $ui['fb_entity_filters'][$e] = $channelConfig[$e]['cache_include'] ?? '';
+        }
+
+        return $ui;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function initializeEntities(mixed $entityManager, array $config = []): array
+    {
+        if (!$entityManager instanceof EntityManagerInterface) {
+            throw new Exception("EntityManagerInterface required for FacebookMarketingDriver entity initialization.");
+        }
+
+        $assets = $this->fetchAvailableAssets();
+        $initializer = new MetaInitializerService($entityManager, $this->logger);
+        
+        return $initializer->initialize($this->getChannel(), $config, ['ad_accounts' => $assets['facebook_ad_accounts'] ?? []]);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function reset(mixed $entityManager, string $mode = 'all', array $config = []): array
+    {
+        if (!$entityManager instanceof EntityManagerInterface) {
+            throw new Exception("EntityManagerInterface required for FacebookMarketingDriver reset.");
+        }
+
+        $resetter = new \Anibalealvarezs\MetaHubDriver\Services\MetaResetService($entityManager);
+        return $resetter->reset($this->getChannel(), $mode);
     }
 }

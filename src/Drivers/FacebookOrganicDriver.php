@@ -3,20 +3,19 @@
 namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
-use Anibalealvarezs\FacebookGraphApi\Enums\MediaType;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookOrganicMetricConvert;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
-use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
-use Anibalealvarezs\ApiSkeleton\Traits\HasUpdatableCredentials;
+use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
+use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
 use Anibalealvarezs\ApiSkeleton\Enums\Period;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
 use Exception;
-use Carbon\Carbon;
 use Doctrine\Common\Collections\ArrayCollection;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
 
 class FacebookOrganicDriver implements SyncDriverInterface
 {
@@ -103,6 +102,145 @@ class FacebookOrganicDriver implements SyncDriverInterface
         ]
     ];
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function updateConfiguration(array $newData, array $currentConfig): array
+    {
+        $selectedAssets = $newData['assets']['pages'] ?? [];
+        $enabled = $newData['enabled'] ?? true;
+        $historyRange = $newData['cache_history_range'] ?? $newData['organic_history_range'] ?? null;
+        $featureToggles = $newData['feature_toggles'] ?? [];
+        $entityFilters = $newData['entity_filters'] ?? [];
+
+        if (!isset($currentConfig['channels']['facebook_organic'])) {
+            $currentConfig['channels']['facebook_organic'] = [];
+        }
+        
+        $chanCfg = &$currentConfig['channels']['facebook_organic'];
+
+        if ($historyRange) {
+            $chanCfg['cache_history_range'] = $historyRange;
+        }
+        
+        // Cron settings
+        foreach (['cron_entities_hour', 'cron_entities_minute', 'cron_recent_hour', 'cron_recent_minute'] as $key) {
+            if (isset($featureToggles[$key])) {
+                $chanCfg[$key] = (int)$featureToggles[$key];
+            }
+        }
+        
+        $chanCfg['enabled'] = $enabled;
+
+        // Redis cache toggle
+        if (isset($featureToggles['cache_aggregations'])) {
+            $prevValue = (bool)($chanCfg['cache_aggregations'] ?? false);
+            $newValue = (bool)$featureToggles['cache_aggregations'];
+            $chanCfg['cache_aggregations'] = $newValue;
+            
+            if ($prevValue && !$newValue && class_exists('\Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService')) {
+                \Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService::clearChannel('facebook_organic');
+            }
+        }
+
+        $organicEntities = ['PAGE', 'POST', 'IG_ACCOUNT', 'IG_MEDIA'];
+        foreach ($organicEntities as $e) {
+            if (isset($entityFilters[$e])) {
+                $chanCfg[$e]['cache_include'] = $entityFilters[$e];
+            }
+        }
+
+        $fbOrganicFeatures = ['page_metrics', 'posts', 'post_metrics', 'ig_accounts', 'ig_account_metrics', 'ig_account_media', 'ig_account_media_metrics'];
+        foreach ($fbOrganicFeatures as $f) {
+            if (isset($featureToggles[$f])) {
+                $chanCfg['PAGE'][$f] = (bool)$featureToggles[$f];
+            }
+        }
+
+        // Pages management
+        $newPagesList = [];
+        foreach ($selectedAssets as $pData) {
+            $pageId = (string)$pData['id'];
+            $item = [
+                'id' => $pageId,
+                'title' => $pData['title'] ?? null,
+                'url' => $pData['url'] ?? null,
+                'hostname' => $pData['hostname'] ?? null,
+                'enabled' => filter_var($pData['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'exclude_from_caching' => filter_var($pData['exclude_from_caching'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'ig_account' => $pData['ig_account'] ?? null,
+                'ig_account_name' => $pData['ig_account_name'] ?? null,
+                // Granularity Flags
+                'page_metrics' => filter_var($pData['page_metrics'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'posts' => filter_var($pData['posts'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'post_metrics' => filter_var($pData['post_metrics'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'ig_accounts' => filter_var($pData['ig_accounts'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'ig_account_metrics' => filter_var($pData['ig_account_metrics'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'ig_account_media' => filter_var($pData['ig_account_media'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'ig_account_media_metrics' => filter_var($pData['ig_account_media_metrics'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ];
+            
+            if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
+                $newPagesList[] = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_organic', $item);
+            } else {
+                $newPagesList[] = $item;
+            }
+        }
+        $chanCfg['pages'] = $newPagesList;
+
+        return $currentConfig;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function fetchAvailableAssets(): array
+    {
+        if (!$this->authProvider) {
+            return [];
+        }
+
+        try {
+            $api = $this->initializeApi([]); // Using default from env/provider
+            $userId = $api->getUserId();
+            
+            $pagesData = $api->getPages(
+                userId: $userId,
+                permissions: [], 
+                limit: 100, 
+                fields: 'id,name,instagram_business_account{id,name,username}'
+            );
+
+            $assets = ['facebook_pages' => []];
+
+            if (!empty($pagesData['data'])) {
+                foreach ($pagesData['data'] as $page) {
+                    $assets['facebook_pages'][] = [
+                        'id' => $page['id'],
+                        'title' => $page['name'],
+                        'ig_account' => $page['instagram_business_account']['id'] ?? null,
+                        'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
+                    ];
+                }
+            }
+            return $assets;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function validateAuthentication(): array
+    {
+        return [
+            'success' => true,
+            'message' => 'Status unknown for this driver.',
+            'details' => []
+        ];
+    }
     use HasUpdatableCredentials;
 
     public array $updatableCredentials = [
@@ -176,7 +314,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
             $api->setPageId($pageId);
 
-            $chunks = \Anibalealvarezs\ApiSkeleton\Helpers\DateHelper::getDateChunks(
+            $chunks = \Anibalealvarezs\ApiDriverCore\Helpers\DateHelper::getDateChunks(
                 $startDate->format('Y-m-d'),
                 $endDate->format('Y-m-d'),
                 $chunkSize
@@ -721,14 +859,87 @@ class FacebookOrganicDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
+    /**
+     * @inheritdoc
+     */
     public function getAssetPatterns(): array
     {
         return [
-            'facebook_page' => [
+            'facebook_pages' => [
                 'prefix' => 'fb:page',
-                'hostnames' => ['facebook.com', 'instagram.com'],
-                'url_id_regex' => '~(\d+)/?$~'
+                'hostnames' => ['facebook.com'],
+                'url_id_regex' => '~(\d+)/?$~',
+                'type' => 'facebook_page',
+                'key' => 'pages',
+                'children' => [
+                    'instagram_account' => [
+                        'id_key' => 'ig_account',
+                        'name_key' => 'ig_account_name',
+                        'type' => 'instagram'
+                    ]
+                ]
             ]
         ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function prepareUiConfig(array $channelConfig): array
+    {
+        $ui = [];
+        $ui['fb_organic_enabled'] = $channelConfig['enabled'] ?? true;
+        $ui['fb_organic_history_range'] = $channelConfig['cache_history_range'] ?? '2 years';
+        $ui['fb_organic_cron_entities_hour'] = $channelConfig['cron_entities_hour'] ?? 2;
+        $ui['fb_organic_cron_entities_minute'] = $channelConfig['cron_entities_minute'] ?? 0;
+        $ui['fb_organic_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 6;
+        $ui['fb_organic_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
+
+        $ui['fb_page_ids'] = [];
+        foreach (($channelConfig['pages'] ?? []) as $p) {
+            $ui['fb_page_ids'][] = (string)$p['id'];
+        }
+        $ui['fb_pages_full_config'] = $channelConfig['pages'] ?? [];
+
+        $features = ['page_metrics', 'posts', 'post_metrics', 'ig_accounts', 'ig_account_metrics', 'ig_account_media', 'ig_account_media_metrics'];
+        foreach ($features as $f) {
+            $ui['fb_feature_toggles'][$f] = $channelConfig['PAGE'][$f] ?? false;
+        }
+        $ui['fb_feature_toggles']['cache_aggregations'] = $channelConfig['cache_aggregations'] ?? false;
+        
+        $entities = ['PAGE', 'POST', 'IG_ACCOUNT', 'IG_MEDIA'];
+        foreach ($entities as $e) {
+            $ui['fb_entity_filters'][$e] = $channelConfig[$e]['cache_include'] ?? '';
+        }
+
+        return $ui;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function initializeEntities(mixed $entityManager, array $config = []): array
+    {
+        if (!$entityManager instanceof EntityManagerInterface) {
+            throw new Exception("EntityManagerInterface required for FacebookOrganicDriver entity initialization.");
+        }
+
+        $assets = $this->fetchAvailableAssets();
+        $initializer = new MetaInitializerService($entityManager, $this->logger);
+        
+        return $initializer->initialize($this->getChannel(), $config, ['pages' => $assets['facebook_pages'] ?? []]);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function reset(mixed $entityManager, string $mode = 'all', array $config = []): array
+    {
+        if (!$entityManager instanceof EntityManagerInterface) {
+            throw new Exception("EntityManagerInterface required for FacebookOrganicDriver reset.");
+        }
+
+        $resetter = new \Anibalealvarezs\MetaHubDriver\Services\MetaResetService($entityManager);
+        return $resetter->reset($this->getChannel(), $mode);
     }
 }
