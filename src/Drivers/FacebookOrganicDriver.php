@@ -888,6 +888,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
     public function prepareUiConfig(array $channelConfig): array
     {
         $ui = [];
+        $ui['fb_cache_chunk_size'] = $channelConfig['cache_chunk_size'] ?? '1 week';
         $ui['fb_organic_enabled'] = $channelConfig['enabled'] ?? true;
         $ui['fb_organic_history_range'] = $channelConfig['cache_history_range'] ?? '2 years';
         $ui['fb_organic_cron_entities_hour'] = $channelConfig['cron_entities_hour'] ?? 2;
