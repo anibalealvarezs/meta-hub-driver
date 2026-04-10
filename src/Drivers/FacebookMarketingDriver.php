@@ -534,7 +534,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     public function boot(): void
     {
-        \Repositories\BaseRepository::registerRelations([
+        \Anibalealvarezs\ApiSkeleton\Classes\RepositoryRegistry::registerRelations([
             'linked_fb_page_id' => ['table' => 'channeled_accounts', 'fk' => 'channeled_account_id', 'field' => 'data', 'alias' => 'rca', 'isJSON' => true, 'jsonPath' => 'facebook_page_id', 'isAttribute' => true],
         ]);
     }

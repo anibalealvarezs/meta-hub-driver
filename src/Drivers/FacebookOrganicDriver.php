@@ -582,7 +582,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     public function boot(): void
     {
-        \Repositories\BaseRepository::registerRelations([
+        \Anibalealvarezs\ApiSkeleton\Classes\RepositoryRegistry::registerRelations([
             'post'              => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'post_id', 'alias' => 'rpo'],
             'post_id'           => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'post_id', 'alias' => 'rpo_id'],
             'permalink_url'     => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'data', 'alias' => 'rpo_pu', 'isJSON' => true, 'jsonPath' => 'permalink_url', 'isAttribute' => true],
