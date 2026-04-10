@@ -167,7 +167,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
     public function updateConfiguration(array $newData, array $currentConfig): array
     {
         $selectedAssets = $newData['assets']['ad_accounts'] ?? [];
-        $enabled = $newData['enabled'] ?? true;
+        $channelEnabled = (bool) ($newData['enabled'] ?? true);
         $historyRange = $newData['cache_history_range'] ?? $newData['marketing_history_range'] ?? null;
         $featureToggles = $newData['feature_toggles'] ?? [];
         $metricsStrategy = $newData['metrics_strategy'] ?? null;
@@ -191,7 +191,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             }
         }
         
-        $chanCfg['enabled'] = $enabled;
+        $chanCfg['enabled'] = $channelEnabled;
 
         // Redis cache toggle
         if (isset($featureToggles['cache_aggregations'])) {
