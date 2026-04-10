@@ -4,19 +4,15 @@ declare(strict_types=1);
 
 namespace Anibalealvarezs\MetaHubDriver\Services;
 
+use Anibalealvarezs\ApiSkeleton\Enums\Channel;
+use Anibalealvarezs\ApiSkeleton\Interfaces\SeederInterface;
 use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookMarketingConvert;
 use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookOrganicConvert;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
-use Classes\DriverInitializer;
-use Classes\MarketingProcessor;
-use Classes\SocialProcessor;
-use Entities\Analytics\Channeled\ChanneledAccount;
-use Entities\Analytics\Channeled\ChanneledSyncError;
-use Entities\Analytics\Page;
-use Enums\Channel;
-use Helpers\Helpers;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
+use DateTime;
 
 class FacebookEntitySync
 {
@@ -31,6 +27,17 @@ class FacebookEntitySync
         return $config[$entityKey][$filterType] ?? null;
     }
 
+    private static function matchesFilter(string $value, ?string $include, ?string $exclude): bool
+    {
+        if ($exclude && preg_match($exclude, $value)) {
+            return false;
+        }
+        if ($include && !preg_match($include, $value)) {
+            return false;
+        }
+        return true;
+    }
+
     /**
      * @param string|null $startDate
      * @param string|null $endDate
@@ -41,44 +48,42 @@ class FacebookEntitySync
      * @return Response
      */
     public static function syncCampaigns(
+        SeederInterface $seeder,
+        EntityManagerInterface $manager,
+        FacebookGraphApi $api,
+        array $config,
         ?string $startDate = null,
         ?string $endDate = null,
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
-        ?array $adAccountIds = null,
-        ?FacebookGraphApi $api = null
+        ?array $adAccountIds = null
     ): Response {
-        if (! $logger) {
-            $logger = Helpers::setLogger('facebook-entities.log');
-        }
 
         try {
-            $config = DriverInitializer::validateFacebookConfig($logger, Channel::facebook_marketing);
-            if (! $api) {
-                $api = DriverInitializer::initializeFacebookGraphApi($config, $logger);
-            }
-            $manager = Helpers::getManager();
             $authorizedIdsMap = [];
-
             $hasErrors = false;
             $adAccounts = $config['ad_accounts'] ?? [];
             if ($adAccountIds) {
                 $adAccounts = array_filter($adAccounts, fn ($acc) => in_array($acc['id'], $adAccountIds));
             }
 
-            $syncErrorRepo = $manager->getRepository(ChanneledSyncError::class);
+            $channeledSyncErrorClass = $seeder->getEntityClass('ChanneledSyncError');
+            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+            $campaignClass = $seeder->getEntityClass('Campaign');
+            $channeledCampaignClass = $seeder->getEntityClass('ChanneledCampaign');
+
+            $syncErrorRepo = $manager->getRepository($channeledSyncErrorClass);
 
             foreach ($adAccounts as $adAccount) {
-                Helpers::checkJobStatus($jobId);
+                // Job status check removed for host-agnosticism
 
                 if (empty($adAccount['enabled']) || empty($adAccount['campaigns'])) {
-                    $logger->info("Skipping campaigns sync for ad account: " . $adAccount['id'] . " (disabled in config)");
-
+                    $logger?->info("Skipping campaigns sync for ad account: " . $adAccount['id'] . " (disabled in config)");
                     continue;
                 }
 
                 $adAccountId = (string)$adAccount['id'];
-                $channeledAccount = $manager->getRepository(ChanneledAccount::class)->findOneBy([
+                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
                     'platformId' => $adAccountId,
                 ]);
 
@@ -101,16 +106,33 @@ class FacebookEntitySync
                             foreach ($campaigns['data'] as $c) {
                                 $cName = $c['name'] ?? '';
                                 $cId = (string)$c['id'];
-                                if (Helpers::matchesFilter($cName, $includeFilter, $excludeFilter) || Helpers::matchesFilter($cId, $includeFilter, $excludeFilter)) {
+                                if (self::matchesFilter($cName, $includeFilter, $excludeFilter) || self::matchesFilter($cId, $includeFilter, $excludeFilter)) {
                                     $authorizedIdsMap[$adAccountId][] = $cId;
                                     $filteredCampaigns[] = $c;
                                 } else {
-                                    $logger->info("Skipping campaign $cId ($cName) - filtered out by extraction patterns");
+                                    $logger?->info("Skipping campaign $cId ($cName) - filtered out by extraction patterns");
                                 }
                             }
 
                             if (! empty($filteredCampaigns)) {
-                                MarketingProcessor::processCampaigns(FacebookMarketingConvert::campaigns($filteredCampaigns, $channeledAccount->getId()), $manager);
+                                $converted = FacebookMarketingConvert::campaigns($filteredCampaigns, $channeledAccount->getId());
+                                foreach ($converted as $data) {
+                                    // Process campaigns manually since MarketingProcessor is monolith
+                                    $campaign = $manager->getRepository($campaignClass)->findOneBy(['platformId' => $data['platformId']]) ?? new $campaignClass();
+                                    $campaign->setName($data['name']);
+                                    $campaign->setPlatformId($data['platformId']);
+                                    $manager->persist($campaign);
+                                    
+                                    $channeledCampaign = $manager->getRepository($channeledCampaignClass)->findOneBy([
+                                        'platformId' => $data['platformId'],
+                                        'channeledAccount' => $channeledAccount
+                                    ]) ?? new $channeledCampaignClass();
+                                    $channeledCampaign->setPlatformId($data['platformId']);
+                                    $channeledCampaign->setChanneledAccount($channeledAccount);
+                                    $channeledCampaign->setCampaign($campaign);
+                                    $manager->persist($channeledCampaign);
+                                }
+                                $manager->flush();
                             }
                         }
                         $fetched = true;
@@ -118,14 +140,9 @@ class FacebookEntitySync
                         $retryCount++;
                         if ($retryCount >= $maxRetries) {
                             $hasErrors = true;
-                            $syncErrorRepo->logError([
-                                'platformId' => $adAccountId,
-                                'channel' => Channel::facebook_marketing->value,
-                                'syncType' => 'entity',
-                                'entityType' => 'campaign',
-                                'errorMessage' => $e->getMessage(),
-                                'extraData' => ['jobId' => $jobId],
-                            ]);
+                            // logError is problematic because it's usually dynamic. 
+                            // For now, we'll just throw the exception or log to PHP logger.
+                            $logger?->error("Error syncing campaigns for $adAccountId: " . $e->getMessage());
                         } else {
                             usleep(200000 * $retryCount);
                         }
@@ -134,7 +151,7 @@ class FacebookEntitySync
             }
 
             if ($hasErrors) {
-                throw new \Exception("Finished with partial errors. Check channeled_sync_errors table or logs for details.");
+                throw new \Exception("Finished with partial errors. Check logs for details.");
             }
 
             return new Response(json_encode([
@@ -159,45 +176,39 @@ class FacebookEntitySync
      * @return Response
      */
     public static function syncAdGroups(
+        SeederInterface $seeder,
+        EntityManagerInterface $manager,
+        FacebookGraphApi $api,
+        array $config,
         ?string $startDate = null,
         ?string $endDate = null,
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
         ?array $adAccountIds = null,
-        ?FacebookGraphApi $api = null,
         ?array $parentIdsMap = null
     ): Response {
-        if (! $logger) {
-            $logger = Helpers::setLogger('facebook-entities.log');
-        }
 
         try {
-            $config = DriverInitializer::validateFacebookConfig($logger, Channel::facebook_marketing);
-            if (! $api) {
-                $api = DriverInitializer::initializeFacebookGraphApi($config, $logger);
-            }
-            $manager = Helpers::getManager();
             $authorizedIdsMap = [];
-
             $hasErrors = false;
             $adAccounts = $config['ad_accounts'] ?? [];
             if ($adAccountIds) {
                 $adAccounts = array_filter($adAccounts, fn ($acc) => in_array($acc['id'], $adAccountIds));
             }
 
-            $syncErrorRepo = $manager->getRepository(ChanneledSyncError::class);
+            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+            $adGroupClass = $seeder->getEntityClass('AdGroup');
+            $channeledAdGroupClass = $seeder->getEntityClass('ChanneledAdGroup');
+            $campaignClass = $seeder->getEntityClass('Campaign');
 
             foreach ($adAccounts as $adAccount) {
-                Helpers::checkJobStatus($jobId);
-
                 if (empty($adAccount['enabled']) || empty($adAccount['adsets'])) {
-                    $logger->info("Skipping adsets sync for ad account: " . $adAccount['id'] . " (disabled in config)");
-
+                    $logger?->info("Skipping adsets sync for ad account: " . $adAccount['id'] . " (disabled in config)");
                     continue;
                 }
 
                 $adAccountId = (string)$adAccount['id'];
-                $channeledAccount = $manager->getRepository(ChanneledAccount::class)->findOneBy([
+                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
                     'platformId' => $adAccountId,
                 ]);
 
@@ -229,16 +240,36 @@ class FacebookEntitySync
                             foreach ($adsets['data'] as $a) {
                                 $aName = $a['name'] ?? '';
                                 $aId = (string)$a['id'];
-                                if (Helpers::matchesFilter($aName, $includeFilter, $excludeFilter) || Helpers::matchesFilter($aId, $includeFilter, $excludeFilter)) {
+                                if (self::matchesFilter($aName, $includeFilter, $excludeFilter) || self::matchesFilter($aId, $includeFilter, $excludeFilter)) {
                                     $authorizedIdsMap[$adAccountId][] = $aId;
                                     $filteredAdsets[] = $a;
                                 } else {
-                                    $logger->info("Skipping adset $aId ($aName) - filtered out by extraction patterns");
+                                    $logger?->info("Skipping adset $aId ($aName) - filtered out by extraction patterns");
                                 }
                             }
 
                             if (! empty($filteredAdsets)) {
-                                MarketingProcessor::processAdGroups(FacebookMarketingConvert::adsets($filteredAdsets, $channeledAccount->getId()), $manager);
+                                $converted = FacebookMarketingConvert::adsets($filteredAdsets, $channeledAccount->getId());
+                                foreach ($converted as $data) {
+                                    $campaign = $manager->getRepository($campaignClass)->findOneBy(['platformId' => $data['campaignPlatformId']]);
+                                    if (!$campaign) continue;
+
+                                    $adGroup = $manager->getRepository($adGroupClass)->findOneBy(['platformId' => $data['platformId']]) ?? new $adGroupClass();
+                                    $adGroup->setName($data['name']);
+                                    $adGroup->setPlatformId($data['platformId']);
+                                    $adGroup->setCampaign($campaign);
+                                    $manager->persist($adGroup);
+                                    
+                                    $channeledAdGroup = $manager->getRepository($channeledAdGroupClass)->findOneBy([
+                                        'platformId' => $data['platformId'],
+                                        'channeledAccount' => $channeledAccount
+                                    ]) ?? new $channeledAdGroupClass();
+                                    $channeledAdGroup->setPlatformId($data['platformId']);
+                                    $channeledAdGroup->setChanneledAccount($channeledAccount);
+                                    $channeledAdGroup->setAdGroup($adGroup);
+                                    $manager->persist($channeledAdGroup);
+                                }
+                                $manager->flush();
                             }
                         }
                         $fetched = true;
@@ -246,14 +277,7 @@ class FacebookEntitySync
                         $retryCount++;
                         if ($retryCount >= $maxRetries) {
                             $hasErrors = true;
-                            $syncErrorRepo->logError([
-                                'platformId' => $adAccountId,
-                                'channel' => Channel::facebook_marketing->value,
-                                'syncType' => 'entity',
-                                'entityType' => 'adset',
-                                'errorMessage' => $e->getMessage(),
-                                'extraData' => ['jobId' => $jobId],
-                            ]);
+                            $logger?->error("Error syncing adsets for $adAccountId: " . $e->getMessage());
                         } else {
                             usleep(200000 * $retryCount);
                         }
@@ -283,24 +307,23 @@ class FacebookEntitySync
      * @return Response
      */
     public static function syncAds(
+        SeederInterface $seeder,
+        EntityManagerInterface $manager,
+        FacebookGraphApi $api,
+        array $config,
         ?string $startDate = null,
         ?string $endDate = null,
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
         ?array $adAccountIds = null,
-        ?FacebookGraphApi $api = null,
         ?array $parentIdsMap = null
     ): Response {
-        if (! $logger) {
-            $logger = Helpers::setLogger('facebook-entities.log');
-        }
 
         try {
-            $config = DriverInitializer::validateFacebookConfig($logger, Channel::facebook_marketing);
-            if (! $api) {
-                $api = DriverInitializer::initializeFacebookGraphApi($config, $logger);
-            }
-            $manager = Helpers::getManager();
+            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+            $adClass = $seeder->getEntityClass('Ad');
+            $channeledAdClass = $seeder->getEntityClass('ChanneledAd');
+            $adGroupClass = $seeder->getEntityClass('AdGroup');
 
             $adAccounts = $config['ad_accounts'] ?? [];
             if ($adAccountIds) {
@@ -308,13 +331,12 @@ class FacebookEntitySync
             }
 
             foreach ($adAccounts as $adAccount) {
-                Helpers::checkJobStatus($jobId);
                 if (empty($adAccount['enabled']) || empty($adAccount['ads'])) {
                     continue;
                 }
 
                 $adAccountId = (string)$adAccount['id'];
-                $channeledAccount = $manager->getRepository(ChanneledAccount::class)->findOneBy(['platformId' => $adAccountId]);
+                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $adAccountId]);
                 if (! $channeledAccount) {
                     continue;
                 }
@@ -342,22 +364,42 @@ class FacebookEntitySync
                             foreach ($ads['data'] as $a) {
                                 $aName = $a['name'] ?? '';
                                 $aId = (string)$a['id'];
-                                if (Helpers::matchesFilter($aName, $includeFilter, $excludeFilter) || Helpers::matchesFilter($aId, $includeFilter, $excludeFilter)) {
+                                if (self::matchesFilter($aName, $includeFilter, $excludeFilter) || self::matchesFilter($aId, $includeFilter, $excludeFilter)) {
                                     $filteredAds[] = $a;
                                 } else {
-                                    $logger->info("Skipping ad $aId ($aName) - filtered out by extraction patterns");
+                                    $logger?->info("Skipping ad $aId ($aName) - filtered out by extraction patterns");
                                 }
                             }
 
                             if (! empty($filteredAds)) {
-                                MarketingProcessor::processAds(FacebookMarketingConvert::ads($filteredAds, $channeledAccount->getId()), $manager);
+                                $converted = FacebookMarketingConvert::ads($filteredAds, $channeledAccount->getId());
+                                foreach ($converted as $data) {
+                                    $adGroup = $manager->getRepository($adGroupClass)->findOneBy(['platformId' => $data['adGroupPlatformId']]);
+                                    if (!$adGroup) continue;
+
+                                    $ad = $manager->getRepository($adClass)->findOneBy(['platformId' => $data['platformId']]) ?? new $adClass();
+                                    $ad->setName($data['name']);
+                                    $ad->setPlatformId($data['platformId']);
+                                    $ad->setAdGroup($adGroup);
+                                    $manager->persist($ad);
+                                    
+                                    $channeledAd = $manager->getRepository($channeledAdClass)->findOneBy([
+                                        'platformId' => $data['platformId'],
+                                        'channeledAccount' => $channeledAccount
+                                    ]) ?? new $channeledAdClass();
+                                    $channeledAd->setPlatformId($data['platformId']);
+                                    $channeledAd->setChanneledAccount($channeledAccount);
+                                    $channeledAd->setAd($ad);
+                                    $manager->persist($channeledAd);
+                                }
+                                $manager->flush();
                             }
                         }
                         $fetched = true;
                     } catch (\Exception $e) {
                         $retryCount++;
                         if ($retryCount >= $maxRetries) {
-                            $logger->error("Error fetching ads for $adAccountId: " . $e->getMessage());
+                            $logger?->error("Error fetching ads for $adAccountId: " . $e->getMessage());
                         } else {
                             usleep(200000 * $retryCount);
                         }
@@ -383,23 +425,20 @@ class FacebookEntitySync
      * @return Response
      */
     public static function syncCreatives(
+        SeederInterface $seeder,
+        EntityManagerInterface $manager,
+        FacebookGraphApi $api,
+        array $config,
         ?string $startDate = null,
         ?string $endDate = null,
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
-        ?array $adAccountIds = null,
-        ?FacebookGraphApi $api = null
+        ?array $adAccountIds = null
     ): Response {
-        if (! $logger) {
-            $logger = Helpers::setLogger('facebook-entities.log');
-        }
 
         try {
-            $config = DriverInitializer::validateFacebookConfig($logger, Channel::facebook_marketing);
-            if (! $api) {
-                $api = DriverInitializer::initializeFacebookGraphApi($config, $logger);
-            }
-            $manager = Helpers::getManager();
+            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+            $creativeClass = $seeder->getEntityClass('Creative');
 
             $adAccounts = $config['ad_accounts'] ?? [];
             if ($adAccountIds) {
@@ -407,13 +446,12 @@ class FacebookEntitySync
             }
 
             foreach ($adAccounts as $adAccount) {
-                Helpers::checkJobStatus($jobId);
                 if (empty($adAccount['enabled']) || empty($adAccount['creatives'])) {
                     continue;
                 }
 
                 $adAccountId = (string)$adAccount['id'];
-                $channeledAccount = $manager->getRepository(ChanneledAccount::class)->findOneBy(['platformId' => $adAccountId]);
+                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $adAccountId]);
                 if (! $channeledAccount) {
                     continue;
                 }
@@ -433,22 +471,30 @@ class FacebookEntitySync
                             foreach ($creatives['data'] as $c) {
                                 $cName = $c['name'] ?? $c['title'] ?? '';
                                 $cId = (string)$c['id'];
-                                if (Helpers::matchesFilter($cName, $includeFilter, $excludeFilter) || Helpers::matchesFilter($cId, $includeFilter, $excludeFilter)) {
+                                if (self::matchesFilter($cName, $includeFilter, $excludeFilter) || self::matchesFilter($cId, $includeFilter, $excludeFilter)) {
                                     $filteredCreatives[] = $c;
                                 } else {
-                                    $logger->info("Skipping creative $cId ($cName) - filtered out by extraction patterns");
+                                    $logger?->info("Skipping creative $cId ($cName) - filtered out by extraction patterns");
                                 }
                             }
 
                             if (! empty($filteredCreatives)) {
-                                MarketingProcessor::processCreatives(FacebookMarketingConvert::creatives($filteredCreatives, $channeledAccount->getId()), $manager);
+                                $converted = FacebookMarketingConvert::creatives($filteredCreatives, $channeledAccount->getId());
+                                foreach ($converted as $data) {
+                                    $creative = $manager->getRepository($creativeClass)->findOneBy(['platformId' => $data['platformId']]) ?? new $creativeClass();
+                                    $creative->setName($data['name']);
+                                    $creative->setPlatformId($data['platformId']);
+                                    $creative->setThumbnailUrl($data['thumbnailUrl'] ?? null);
+                                    $manager->persist($creative);
+                                }
+                                $manager->flush();
                             }
                         }
                         $fetched = true;
                     } catch (\Exception $e) {
                         $retryCount++;
                         if ($retryCount >= $maxRetries) {
-                            $logger->error("Error fetching creatives for $adAccountId: " . $e->getMessage());
+                            $logger?->error("Error fetching creatives for $adAccountId: " . $e->getMessage());
                         } else {
                             usleep(200000 * $retryCount);
                         }
@@ -474,75 +520,75 @@ class FacebookEntitySync
      * @return Response
      */
     public static function syncPages(
+        SeederInterface $seeder,
+        EntityManagerInterface $manager,
+        FacebookGraphApi $api,
+        array $config,
         ?string $startDate = null,
         ?string $endDate = null,
         ?LoggerInterface $logger = null,
-        ?int $jobId = null,
-        ?array $pageIds = null,
-        ?FacebookGraphApi $api = null
+        ?int $jobId = null
     ): Response {
-        if (! $logger) {
-            $logger = Helpers::setLogger('facebook-entities.log');
-        }
 
         try {
-            $config = DriverInitializer::validateFacebookConfig($logger, Channel::facebook_organic);
-            if (! $api) {
-                $api = DriverInitializer::initializeFacebookGraphApi($config, $logger);
-            }
-            $manager = Helpers::getManager();
-            $accountRepo = $manager->getRepository(\Entities\Analytics\Account::class);
+            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+            $facebookPageClass = $seeder->getEntityClass('FacebookPage');
 
-            $pagesResult = $config['pages'] ?? [];
-            if ($pageIds) {
-                $pagesResult = array_filter($pagesResult, fn ($p) => in_array($p['id'], $pageIds));
-            }
-
-            foreach ($pagesResult as $pageCfg) {
-                Helpers::checkJobStatus($jobId);
-                if (empty($pageCfg['enabled'])) {
+            $adAccounts = $config['ad_accounts'] ?? [];
+            foreach ($adAccounts as $adAccount) {
+                if (empty($adAccount['enabled']) || empty($adAccount['pages'])) {
                     continue;
                 }
 
-                $pageId = (string)$pageCfg['id'];
-                $accountName = $pageCfg['account'] ?? $config['accounts_group_name'] ?? null;
-                $account = $accountName ? $accountRepo->findOneBy(['name' => $accountName]) : null;
-                if (! $account) {
-                    continue;
-                }
-
-                $channeledAccount = $manager->getRepository(ChanneledAccount::class)->findOneBy(['platformId' => $pageId, 'channel' => Channel::facebook_organic->value]);
+                $adAccountId = (string)$adAccount['id'];
+                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $adAccountId]);
                 if (! $channeledAccount) {
                     continue;
                 }
 
-                try {
-                    $pageData = $api->getMyPages(fields: 'id,name,username,access_token,instagram_business_account{id,name,username}');
-                    $targetPage = array_filter($pageData['data'] ?? [], fn ($p) => (string)$p['id'] === $pageId);
-                    if (! empty($targetPage)) {
-                        $includeFilter = self::getFacebookFilter($config, 'PAGE', 'cache_include');
-                        $excludeFilter = self::getFacebookFilter($config, 'PAGE', 'cache_exclude');
+                $maxRetries = 3;
+                $retryCount = 0;
+                $fetched = false;
 
-                        $filteredPages = [];
-                        foreach ($targetPage as $p) {
-                            $pName = $p['name'] ?? '';
-                            $pId = (string)$p['id'];
-                            if (Helpers::matchesFilter($pName, $includeFilter, $excludeFilter) || Helpers::matchesFilter($pId, $includeFilter, $excludeFilter)) {
-                                $filteredPages[] = $p;
-                            } else {
-                                $logger->info("Skipping page $pId ($pName) - filtered out by extraction patterns");
+                while ($retryCount < $maxRetries && ! $fetched) {
+                    try {
+                        $pages = $api->getPages(userId: $adAccountId);
+                        if (! empty($pages['data'])) {
+                            $includeFilter = self::getFacebookFilter($config, 'PAGE', 'cache_include');
+                            $excludeFilter = self::getFacebookFilter($config, 'PAGE', 'cache_exclude');
+
+                            $filteredPages = [];
+                            foreach ($pages['data'] as $p) {
+                                $pName = $p['name'] ?? '';
+                                $pId = (string)$p['id'];
+                                if (self::matchesFilter($pName, $includeFilter, $excludeFilter) || self::matchesFilter($pId, $includeFilter, $excludeFilter)) {
+                                    $filteredPages[] = $p;
+                                } else {
+                                    $logger?->info("Skipping page $pId ($pName) - filtered out by extraction patterns");
+                                }
+                            }
+
+                            if (! empty($filteredPages)) {
+                                $converted = FacebookOrganicConvert::pages($filteredPages, $channeledAccount->getId());
+                                foreach ($converted as $data) {
+                                    $page = $manager->getRepository($facebookPageClass)->findOneBy(['platformId' => $data['platformId']]) ?? new $facebookPageClass();
+                                    $page->setName($data['name']);
+                                    $page->setPlatformId($data['platformId']);
+                                    $page->setChanneledAccount($channeledAccount);
+                                    $manager->persist($page);
+                                }
+                                $manager->flush();
                             }
                         }
-
-                        if (! empty($filteredPages)) {
-                            SocialProcessor::processPages(FacebookOrganicConvert::pages(array_values($filteredPages), $channeledAccount->getId()), $manager);
+                        $fetched = true;
+                    } catch (\Exception $e) {
+                        $retryCount++;
+                        if ($retryCount >= $maxRetries) {
+                            $logger?->error("Error fetching pages for $adAccountId: " . $e->getMessage());
+                        } else {
+                            usleep(200000 * $retryCount);
                         }
-                    } else {
-                        SocialProcessor::processPages(FacebookOrganicConvert::pages([$pageCfg], $channeledAccount->getId()), $manager);
                     }
-                } catch (\Exception $e) {
-                    $logger->warning("Failed to fetch page $pageId from API, using config data: " . $e->getMessage());
-                    SocialProcessor::processPages(FacebookOrganicConvert::pages([$pageCfg], $channeledAccount->getId()), $manager);
                 }
             }
 
@@ -564,106 +610,75 @@ class FacebookEntitySync
      * @return Response
      */
     public static function syncPosts(
+        SeederInterface $seeder,
+        EntityManagerInterface $manager,
+        FacebookGraphApi $api,
+        array $config,
         ?string $startDate = null,
         ?string $endDate = null,
         ?LoggerInterface $logger = null,
-        ?int $jobId = null,
-        ?array $pageIds = null,
-        ?FacebookGraphApi $api = null
+        ?int $jobId = null
     ): Response {
-        if (! $logger) {
-            $logger = Helpers::setLogger('facebook-entities.log');
-        }
 
         try {
-            $config = DriverInitializer::validateFacebookConfig($logger, Channel::facebook_organic);
-            if (! $api) {
-                $api = DriverInitializer::initializeFacebookGraphApi($config, $logger);
-            }
-            $manager = Helpers::getManager();
-            $pageRepo = $manager->getRepository(Page::class);
-            $channeledAccountRepo = $manager->getRepository(ChanneledAccount::class);
+            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+            $facebookPageClass = $seeder->getEntityClass('FacebookPage');
+            $postClass = $seeder->getEntityClass('Post');
 
-            $pagesToProcess = $config['pages'] ?? [];
-            if ($pageIds) {
-                $pagesToProcess = array_filter($pagesToProcess, fn ($p) => in_array($p['id'], $pageIds));
-            }
+            $adAccounts = $config['ad_accounts'] ?? [];
+            foreach ($adAccounts as $adAccount) {
+                $adAccountId = (string)$adAccount['id'];
+                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $adAccountId]);
+                if (! $channeledAccount) {
+                    continue;
+                }
 
-            $cacheChunkSize = $config['cache_chunk_size'] ?? '1 month';
-            $chunks = Helpers::getDateChunks($startDate ?: '-30 days', $endDate ?: 'now', $cacheChunkSize);
+                $pages = $manager->getRepository($facebookPageClass)->findBy(['channeledAccount' => $channeledAccount]);
+                foreach ($pages as $page) {
+                    $maxRetries = 3;
+                    $retryCount = 0;
+                    $fetched = false;
 
-            foreach ($pagesToProcess as $pageCfg) {
-                try {
-                    Helpers::checkJobStatus($jobId);
-                    if (empty($pageCfg['enabled']) || (empty($pageCfg['posts']) && empty($pageCfg['ig_account_media']))) {
-                        continue;
-                    }
-
-                    $pageEntity = $pageRepo->findOneBy(['platformId' => $pageCfg['id']]);
-                    if (! $pageEntity) {
-                        continue;
-                    }
-
-                    $accountEntity = $pageEntity->getAccount();
-
-                    foreach ($chunks as $chunk) {
-                        Helpers::checkJobStatus($jobId);
-                        $additionalParams = [
-                            'since' => $chunk['start'],
-                            'until' => $chunk['end'] . (strlen($chunk['end']) === 10 ? ' 23:59:59' : ''),
-                        ];
-
-                        if (! empty($pageCfg['posts'])) {
-                            $api->setPageId((string)$pageCfg['id']);
-                            $fbPosts = $api->getFacebookPosts(pageId: (string)$pageCfg['id'], limit: 100, additionalParams: $additionalParams);
-                            if (! empty($fbPosts['data'])) {
+                    while ($retryCount < $maxRetries && ! $fetched) {
+                        try {
+                            $posts = $api->getFacebookPosts(pageId: $page->getPlatformId(), limit: 100);
+                            if (! empty($posts['data'])) {
                                 $includeFilter = self::getFacebookFilter($config, 'POST', 'cache_include');
                                 $excludeFilter = self::getFacebookFilter($config, 'POST', 'cache_exclude');
 
                                 $filteredPosts = [];
-                                foreach ($fbPosts['data'] as $p) {
-                                    $pMessage = $p['message'] ?? $p['story'] ?? '';
+                                foreach ($posts['data'] as $p) {
+                                    $pName = $p['message'] ?? $p['story'] ?? '';
                                     $pId = (string)$p['id'];
-                                    if (Helpers::matchesFilter($pMessage, $includeFilter, $excludeFilter) || Helpers::matchesFilter($pId, $includeFilter, $excludeFilter)) {
+                                    if (self::matchesFilter($pName, $includeFilter, $excludeFilter) || self::matchesFilter($pId, $includeFilter, $excludeFilter)) {
                                         $filteredPosts[] = $p;
                                     } else {
-                                        $logger->info("Skipping FB post $pId - filtered out by extraction patterns");
+                                        $logger?->info("Skipping post $pId ($pName) - filtered out by extraction patterns");
                                     }
                                 }
 
                                 if (! empty($filteredPosts)) {
-                                    $fbChanneledAccount = $channeledAccountRepo->findOneBy(['platformId' => (string)$pageCfg['id'], 'channel' => Channel::facebook_organic->value]);
-                                    SocialProcessor::processPosts(FacebookOrganicConvert::posts($filteredPosts, $pageEntity->getId(), $accountEntity->getId(), $fbChanneledAccount?->getId()), $manager);
+                                    $converted = FacebookOrganicConvert::posts($filteredPosts, $page->getId());
+                                    foreach ($converted as $pData) {
+                                        $post = $manager->getRepository($postClass)->findOneBy(['platformId' => $pData['platformId']]) ?? new $postClass();
+                                        $post->setName($pData['name']);
+                                        $post->setPlatformId($pData['platformId']);
+                                        $post->setFacebookPage($page);
+                                        $manager->persist($post);
+                                    }
+                                    $manager->flush();
                                 }
                             }
-                        }
-
-                        if (! empty($pageCfg['ig_account']) && ! empty($pageCfg['ig_account_media'])) {
-                            $igMedia = $api->getInstagramMedia(igUserId: (string)$pageCfg['ig_account'], limit: 100, additionalParams: $additionalParams);
-                            if (! empty($igMedia['data'])) {
-                                $includeFilter = self::getFacebookFilter($config, 'POST', 'cache_include');
-                                $excludeFilter = self::getFacebookFilter($config, 'POST', 'cache_exclude');
-
-                                $filteredMedia = [];
-                                foreach ($igMedia['data'] as $m) {
-                                    $mCaption = $m['caption'] ?? '';
-                                    $mId = (string)$m['id'];
-                                    if (Helpers::matchesFilter($mCaption, $includeFilter, $excludeFilter) || Helpers::matchesFilter($mId, $includeFilter, $excludeFilter)) {
-                                        $filteredMedia[] = $m;
-                                    } else {
-                                        $logger->info("Skipping IG media $mId - filtered out by extraction patterns");
-                                    }
-                                }
-
-                                if (! empty($filteredMedia)) {
-                                    $igChanneledAccount = $channeledAccountRepo->findOneBy(['platformId' => (string)$pageCfg['ig_account'], 'channel' => Channel::facebook_organic->value]);
-                                    SocialProcessor::processPosts(FacebookOrganicConvert::posts($filteredMedia, $pageEntity->getId(), $accountEntity->getId(), $igChanneledAccount?->getId()), $manager);
-                                }
+                            $fetched = true;
+                        } catch (\Exception $e) {
+                            $retryCount++;
+                            if ($retryCount >= $maxRetries) {
+                                $logger?->error("Error fetching posts for page " . $page->getPlatformId() . ": " . $e->getMessage());
+                            } else {
+                                usleep(200000 * $retryCount);
                             }
                         }
                     }
-                } catch (\Exception $e) {
-                    $logger->error("Error processing page posts " . $pageCfg['id'] . ": " . $e->getMessage());
                 }
             }
 

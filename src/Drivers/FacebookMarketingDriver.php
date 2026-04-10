@@ -14,6 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
 use Exception;
+use Carbon\Carbon;
+use Doctrine\Common\Collections\ArrayCollection;
+use Anibalealvarezs\ApiSkeleton\Interfaces\SeederInterface;
+use Doctrine\ORM\EntityManagerInterface;
 
 class FacebookMarketingDriver implements SyncDriverInterface
 {
@@ -129,45 +133,71 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $jobId = $config['jobId'] ?? null;
         $filters = $config['filters'] ?? null;
 
+        $syncService = \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::class;
+
         switch ($entity) {
             case 'campaigns':
-                return \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::syncCampaigns(
-                    startDate: $startDateStr,
-                    endDate: $endDateStr,
-                    logger: $this->logger,
-                    jobId: $jobId,
-                    adAccountIds: $filters->adAccountIds ?? null,
-                    api: $api
-                );
+                if (class_exists($syncService)) {
+                    return $syncService::syncCampaigns(
+                        seeder: $config['seeder'],
+                        manager: $config['manager'],
+                        api: $api,
+                        config: $config,
+                        startDate: $startDateStr,
+                        endDate: $endDateStr,
+                        logger: $this->logger,
+                        jobId: $jobId,
+                        adAccountIds: $filters->adAccountIds ?? null
+                    );
+                }
+                throw new Exception("FacebookEntitySync service not found in host.");
             case 'ad_groups':
-                return \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::syncAdGroups(
-                    startDate: $startDateStr,
-                    endDate: $endDateStr,
-                    logger: $this->logger,
-                    jobId: $jobId,
-                    adAccountIds: $filters->adAccountIds ?? null,
-                    api: $api,
-                    parentIdsMap: $filters->parentIdsMap ?? null
-                );
+                if (class_exists($syncService)) {
+                    return $syncService::syncAdGroups(
+                        seeder: $config['seeder'],
+                        manager: $config['manager'],
+                        api: $api,
+                        config: $config,
+                        startDate: $startDateStr,
+                        endDate: $endDateStr,
+                        logger: $this->logger,
+                        jobId: $jobId,
+                        adAccountIds: $filters->adAccountIds ?? null,
+                        parentIdsMap: $filters->parentIdsMap ?? null
+                    );
+                }
+                throw new Exception("FacebookEntitySync service not found in host.");
             case 'ads':
-                return \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::syncAds(
-                    startDate: $startDateStr,
-                    endDate: $endDateStr,
-                    logger: $this->logger,
-                    jobId: $jobId,
-                    adAccountIds: $filters->adAccountIds ?? null,
-                    api: $api,
-                    parentIdsMap: $filters->parentIdsMap ?? null
-                );
+                if (class_exists($syncService)) {
+                    return $syncService::syncAds(
+                        seeder: $config['seeder'],
+                        manager: $config['manager'],
+                        api: $api,
+                        config: $config,
+                        startDate: $startDateStr,
+                        endDate: $endDateStr,
+                        logger: $this->logger,
+                        jobId: $jobId,
+                        adAccountIds: $filters->adAccountIds ?? null,
+                        parentIdsMap: $filters->parentIdsMap ?? null
+                    );
+                }
+                throw new Exception("FacebookEntitySync service not found in host.");
             case 'creatives':
-                return \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::syncCreatives(
-                    startDate: $startDateStr,
-                    endDate: $endDateStr,
-                    logger: $this->logger,
-                    jobId: $jobId,
-                    adAccountIds: $filters->adAccountIds ?? null,
-                    api: $api
-                );
+                if (class_exists($syncService)) {
+                    return $syncService::syncCreatives(
+                        seeder: $config['seeder'],
+                        manager: $config['manager'],
+                        api: $api,
+                        config: $config,
+                        startDate: $startDateStr,
+                        endDate: $endDateStr,
+                        logger: $this->logger,
+                        jobId: $jobId,
+                        adAccountIds: $filters->adAccountIds ?? null
+                    );
+                }
+                throw new Exception("FacebookEntitySync service not found in host.");
             default:
                 throw new Exception("Entity sync for '{$entity}' not implemented in FacebookMarketingDriver");
         }
@@ -275,6 +305,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
+    /**
+     * @inheritdoc
+     */
     public function validateConfig(array $config): array
     {
         $globalExclude = $config['exclude_from_caching'] ?? [];
@@ -293,5 +326,209 @@ class FacebookMarketingDriver implements SyncDriverInterface
             }, $config['ad_accounts'] ?? []);
         }
         return $config;
+    }
+
+    /**
+     * @inheritdoc
+     */
+
+    public function seedDemoData(SeederInterface $seeder, array $config = []): void
+    {
+        $output = $config['output'] ?? null;
+        if ($output) $output->writeln("📊 FB Marketing (Massive Simulation, JSON Source Logic)...");
+
+        $em = $seeder->getEntityManager();
+        
+        $channelClass = $seeder->getEnumClass('channel');
+        $fbChan = $channelClass::facebook_marketing;
+        
+        $accCount = 30; 
+        $dates = $seeder->getDates(30);
+        $statuses = ['ACTIVE', 'PAUSED', 'ARCHIVED'];
+        $objectives = ['OUTCOME_SALES', 'OUTCOME_AWARENESS', 'OUTCOME_LEADS', 'OUTCOME_TRAFFIC'];
+
+        $accountClass = $seeder->getEntityClass('account');
+        $chanAccountClass = $seeder->getEntityClass('channeled_account');
+        $campaignClass = $seeder->getEntityClass('campaign');
+        $chanCampaignClass = $seeder->getEntityClass('channeled_campaign');
+        $chanAdGroupClass = $seeder->getEntityClass('channeled_ad_group');
+        $chanAdClass = $seeder->getEntityClass('channeled_ad');
+        $accTypeEnumClass = $seeder->getEnumClass('account_type');
+
+        $faker = \Faker\Factory::create('en_US');
+
+        // Parent Account (Client)
+        $fbParent = $em->getRepository($accountClass)->findOneBy(['name' => "Marketing Demo Client"]);
+        if (!$fbParent) {
+            $fbParent = (new $accountClass())->addName("Marketing Demo Client");
+            $em->persist($fbParent);
+            $em->flush();
+        }
+        $gId = $fbParent->getId();
+
+        $progress = $config['progress'] ?? null;
+        if ($progress) {
+            $progress->setMaxSteps($accCount);
+            $progress->start();
+        }
+
+        for ($i = 0; $i < $accCount; $i++) {
+            $caPId = 'act_' . $this->generateSeedingPlatformId();
+            $ca = (new $chanAccountClass())
+                ->addPlatformId($caPId)
+                ->addAccount($fbParent)
+                ->addType($accTypeEnumClass::META_AD_ACCOUNT)
+                ->addChannel($fbChan->value)
+                ->addName($faker->company())
+                ->addData([
+                    'id' => $caPId,
+                    'account_status' => 1,
+                    'currency' => 'USD',
+                    'timezone_name' => 'America/New_York',
+                    'business_name' => $faker->company(),
+                ]);
+            $em->persist($ca);
+            $em->flush();
+
+            $campCount = rand(5, 10);
+            for ($c = 0; $c < $campCount; $c++) {
+                $gCpPId = $this->generateSeedingPlatformId();
+                $campG = (new $campaignClass())->addCampaignId($gCpPId)->addName($faker->catchPhrase());
+                $em->persist($campG);
+
+                $cp = (new $chanCampaignClass())
+                    ->addPlatformId($gCpPId)
+                    ->addChanneledAccount($ca)
+                    ->addCampaign($campG)
+                    ->addChannel($fbChan->value)
+                    ->addBudget(rand(100, 500))
+                    ->addData([
+                        'id' => $gCpPId,
+                        'name' => $campG->getName(),
+                        'objective' => $objectives[array_rand($objectives)],
+                        'status' => $statuses[array_rand($statuses)],
+                        'buying_type' => 'AUCTION',
+                        'daily_budget' => rand(5000, 20000), 
+                    ]);
+                $em->persist($cp);
+                $em->flush();
+
+                $agCount = rand(2, 4);
+                for ($s = 0; $s < $agCount; $s++) {
+                    $agPId = $this->generateSeedingPlatformId();
+                    $agName = "AdSet: " . $faker->words(3, true);
+                    $ag = (new $chanAdGroupClass())
+                        ->addPlatformId($agPId)
+                        ->addChanneledAccount($ca)
+                        ->addChannel($fbChan->value)
+                        ->addName($agName)
+                        ->addChanneledCampaign($cp)
+                        ->addData([
+                            'id' => $agPId,
+                            'name' => $agName,
+                            'status' => $statuses[array_rand($statuses)],
+                            'billing_event' => 'IMPRESSIONS',
+                            'optimization_goal' => 'REACH',
+                            'targeting' => ['geo_locations' => ['countries' => ['US']]],
+                        ]);
+                    $em->persist($ag);
+                    $em->flush();
+
+                    $adCount = rand(2, 5);
+                    for ($a = 0; $a < $adCount; $a++) {
+                        $adPId = $this->generateSeedingPlatformId();
+                        $adName = "Ad: " . $faker->words(2, true);
+                        $ad = (new $chanAdClass())
+                            ->addPlatformId($adPId)
+                            ->addChanneledAccount($ca)
+                            ->addChannel($fbChan->value)
+                            ->addName($adName)
+                            ->addChanneledAdGroup($ag)
+                            ->addData([
+                                'id' => $adPId,
+                                'name' => $adName,
+                                'status' => $statuses[array_rand($statuses)],
+                                'creative' => ['id' => 'cre_' . rand(1000, 9999)],
+                                'preview_shareable_link' => "https://fb.com/ads/preview/$adPId",
+                            ]);
+                        $em->persist($ad);
+                        $em->flush();
+
+                        $this->seedRealisticAdDaily($seeder, $dates, $fbChan, $gId, $ca->getId(), $campG->getId(), $cp->getId(), $ag->getId(), $ad->getId(), $fbParent->getName(), $caPId, $gCpPId, $gCpPId, $agPId, $adPId);
+                    }
+                }
+            }
+            if ($progress) $progress->advance();
+            $em->clear();
+            $fbParent = $em->getRepository($accountClass)->findOneBy(['id' => $gId]);
+        }
+        if ($progress) $progress->finish();
+    }
+
+    private function generateSeedingPlatformId(): string
+    {
+        return substr(str_shuffle(str_repeat('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 5)), 0, 15);
+    }
+
+    private function seedRealisticAdDaily($seeder, $dates, $fbChan, $gId, $caId, $gCpId, $cpId, $agId, $adId, $accName, $caPId, $gCpPId, $cpPId, $agPId, $adPId): void
+    {
+        $ages = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+        $genders = ['Female', 'Male', 'Unknown'];
+        
+        foreach ($dates as $date) {
+            $used = [];
+            for ($b = 0; $b < rand(1, 2); $b++) { 
+                $age = $ages[array_rand($ages)];
+                $gen = $genders[array_rand($genders)];
+                if (isset($used["$age|$gen"])) {
+                    continue;
+                } 
+                $used["$age|$gen"] = true;
+                
+                // We assume the seeder provides dimension hash resolution
+                $setInfo = $seeder->getDimensionSetInfo($age, $gen);
+                $setId = $setInfo['id'];
+                $setHash = $setInfo['hash'];
+
+                $imps = rand(100, 2000);
+                $reach = (int)($imps * rand(70, 95) / 100);
+                $spend = (float)($imps * rand(5, 15) / 1000);
+                $clicks = (int)($imps * rand(1, 5) / 100);
+
+                $data = [
+                    'impressions' => $imps,
+                    'spend' => $spend,
+                    'reach' => $reach,
+                    'clicks' => $clicks,
+                    'ctr' => $imps > 0 ? $clicks / $imps : 0,
+                    'cpc' => $clicks > 0 ? $spend / $clicks : 0,
+                    'results' => (int)($clicks * rand(5, 15) / 100),
+                ];
+
+                foreach ($data as $name => $val) {
+                    $seeder->queueMetric(
+                        channel: $fbChan,
+                        name: $name,
+                        date: $date,
+                        value: $val,
+                        setId: $setId,
+                        setHash: $setHash,
+                        caId: $caId,
+                        gAccId: $gId,
+                        gCpId: $gCpId,
+                        cpId: $cpId,
+                        agId: $agId,
+                        adId: $adId,
+                        accName: $accName,
+                        caPId: $caPId,
+                        gCpPId: $gCpPId,
+                        cpPId: $cpPId,
+                        agPId: $agPId,
+                        adPId: $adPId,
+                        data: json_encode($data)
+                    );
+                }
+            }
+        }
     }
 }
