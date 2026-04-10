@@ -6,8 +6,8 @@ namespace Anibalealvarezs\MetaHubDriver\Services;
 
 use Anibalealvarezs\ApiDriverCore\Enums\Channel;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
-use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookMarketingConvert;
-use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookOrganicConvert;
+use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingConvert;
+use Anibalealvarezs\MetaHubDriver\Conversions\FacebookOrganicConvert;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;

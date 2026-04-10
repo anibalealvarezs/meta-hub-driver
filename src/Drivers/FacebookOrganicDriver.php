@@ -4,7 +4,7 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MediaType;
-use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookOrganicMetricConvert;
+use Anibalealvarezs\MetaHubDriver\Conversions\FacebookOrganicMetricConvert;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;

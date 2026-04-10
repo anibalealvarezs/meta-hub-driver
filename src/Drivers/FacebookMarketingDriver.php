@@ -5,7 +5,7 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricBreakdown;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
-use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookMarketingMetricConvert;
+use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingMetricConvert;
 use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
