@@ -527,8 +527,15 @@ class FacebookMarketingDriver implements SyncDriverInterface
                         adPId: $adPId,
                         data: json_encode($data)
                     );
-                }
             }
         }
+    }
+}
+
+    public function boot(): void
+    {
+        \Repositories\BaseRepository::registerRelations([
+            'linked_fb_page_id' => ['table' => 'channeled_accounts', 'fk' => 'channeled_account_id', 'field' => 'data', 'alias' => 'rca', 'isJSON' => true, 'jsonPath' => 'facebook_page_id', 'isAttribute' => true],
+        ]);
     }
 }
