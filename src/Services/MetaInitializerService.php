@@ -74,6 +74,12 @@ class MetaInitializerService
         foreach ($pages as $page) {
             $platformId = (string)$page['id'];
             $title = $page['name'] ?? "Page " . $platformId;
+
+            if (\Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($title, $config, 'PAGE')) {
+                $this->logger?->info("Skipping filtered FB Page: $title");
+                continue;
+            }
+
             $pageUrl = $page['url'] ?? "https://www.facebook.com/" . $platformId;
             $hostname = $page['hostname'] ?? 'www.facebook.com';
 
@@ -169,13 +175,18 @@ class MetaInitializerService
 
         foreach ($adAccounts as $adAccount) {
             $adAccountId = (string)$adAccount['id'];
+            $name = $adAccount['name'] ?? "Ad Account " . $adAccountId;
+
+            if (\Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($name, $config, 'AD_ACCOUNT')) {
+                $this->logger?->info("Skipping filtered FB Ad Account: $name");
+                continue;
+            }
+            
             $adAccEntity = $channeledAccountRepository->findOneBy([
                 'platformId' => $adAccountId,
                 'channel' => Channel::facebook_marketing->value
             ]);
 
-            $name = $adAccount['name'] ?? "Ad Account " . $adAccountId;
-            
             if (!$adAccEntity) {
                 $adAccEntity = new $channeledAccountClass();
                 $adAccEntity->addPlatformId($adAccountId)
