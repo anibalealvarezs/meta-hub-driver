@@ -74,6 +74,35 @@ class FacebookOrganicDriver implements SyncDriverInterface
     {
         return 'FacebookOrganic';
     }
+
+    /**
+     * Get the routes served by this driver.
+     * 
+     * @return array
+     */
+    public static function getRoutes(): array
+    {
+        return [
+        '/fb-login' => [
+            'httpMethod' => 'GET',
+            'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->login(),
+            'public' => true,
+            'admin' => false
+        ],
+        '/fb-auth-start' => [
+            'httpMethod' => 'GET',
+            'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->start(),
+            'public' => true,
+            'admin' => false
+        ],
+        '/fb-callback' => [
+            'httpMethod' => 'GET',
+            'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->callback($args['request'] ?? \Symfony\Component\HttpFoundation\Request::createFromGlobals()),
+            'public' => true,
+            'admin' => false
+        ]
+    ];
+    }
     use HasUpdatableCredentials;
 
     public array $updatableCredentials = [
