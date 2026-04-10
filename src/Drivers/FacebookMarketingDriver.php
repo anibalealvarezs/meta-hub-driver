@@ -21,6 +21,11 @@ use Doctrine\ORM\EntityManagerInterface;
 
 class FacebookMarketingDriver implements SyncDriverInterface
 {
+
+    public static function getCommonConfigKey(): ?string
+    {
+        return 'facebook';
+    }
     use HasUpdatableCredentials;
 
     public array $updatableCredentials = [
