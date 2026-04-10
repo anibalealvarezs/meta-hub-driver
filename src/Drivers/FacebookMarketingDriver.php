@@ -6,17 +6,17 @@ use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricBreakdown;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
 use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookMarketingMetricConvert;
-use Anibalealvarezs\ApiSkeleton\Helpers\DateHelper;
-use Anibalealvarezs\ApiSkeleton\Interfaces\SyncDriverInterface;
-use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
-use Anibalealvarezs\ApiSkeleton\Traits\HasUpdatableCredentials;
+use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
+use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
+use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
 use Exception;
 use Carbon\Carbon;
 use Doctrine\Common\Collections\ArrayCollection;
-use Anibalealvarezs\ApiSkeleton\Interfaces\SeederInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 class FacebookMarketingDriver implements SyncDriverInterface
@@ -310,6 +310,46 @@ class FacebookMarketingDriver implements SyncDriverInterface
      */
     public function validateConfig(array $config): array
     {
+        // 1. Explicit environment variable mappings (Agnostic version of Helpers' logic)
+        $envOverrides = [
+            'FACEBOOK_APP_ID' => 'app_id',
+            'FACEBOOK_APP_SECRET' => 'app_secret',
+            'FACEBOOK_REDIRECT_URI' => 'app_redirect_uri',
+            'FACEBOOK_USER_TOKEN' => 'graph_user_access_token',
+            'FACEBOOK_PAGE_TOKEN' => 'graph_page_access_token',
+            'FACEBOOK_TOKEN_PATH' => 'graph_token_path',
+            'FACEBOOK_USER_ID' => 'user_id',
+            'FACEBOOK_ACCOUNTS_GROUP' => 'accounts_group_name',
+        ];
+
+        foreach ($envOverrides as $envKey => $configPath) {
+            $val = getenv($envKey);
+            if ($val !== false && $val !== '') {
+                $config[$configPath] = $val;
+            }
+        }
+
+        // 2. --- 🛡️ SMART STORAGE AUTH MAPPING --- (Moved from Helpers)
+        $tokenPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? $config['graph_token_path'] ?? './storage/tokens/facebook_tokens.json';
+        if (is_string($tokenPath) && str_starts_with($tokenPath, './')) {
+            $tokenPath = dirname(__DIR__, 4) . substr($tokenPath, 1);
+        }
+        
+        if (file_exists($tokenPath)) {
+            $tokens = json_decode(file_get_contents($tokenPath), true);
+            $marketingToken = $tokens['facebook_marketing']['access_token'] ?? null;
+            $marketingUserId = $tokens['facebook_marketing']['user_id'] ?? null;
+            
+            if ($marketingToken) {
+                $config['graph_user_access_token'] = $marketingToken;
+                $config['access_token'] = $marketingToken;
+            }
+            if ($marketingUserId) {
+                $config['user_id'] = $marketingUserId;
+            }
+        }
+
+        // 3. Ad Accounts preparation
         $globalExclude = $config['exclude_from_caching'] ?? [];
         if (!is_array($globalExclude)) {
             $globalExclude = [$globalExclude];
@@ -534,8 +574,19 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     public function boot(): void
     {
-        \Anibalealvarezs\ApiSkeleton\Classes\RepositoryRegistry::registerRelations([
+        \Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry::registerRelations([
             'linked_fb_page_id' => ['table' => 'channeled_accounts', 'fk' => 'channeled_account_id', 'field' => 'data', 'alias' => 'rca', 'isJSON' => true, 'jsonPath' => 'facebook_page_id', 'isAttribute' => true],
         ]);
+    }
+
+    public function getAssetPatterns(): array
+    {
+        return [
+            'facebook_ad_account' => [
+                'prefix' => 'fa:acc',
+                'hostnames' => ['facebook.com'],
+                'url_id_regex' => '/act_([0-9]+)/'
+            ]
+        ];
     }
 }

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "309934c28e935739e07d59d847396c20",
+    "content-hash": "c7f60ebc4ead3ddac3c3f27123be3051",
     "packages": [
         {
             "name": "anibalealvarezs/api-client-skeleton",
@@ -12,25 +12,19 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "2de5e57741e8ee4c6a4e57691a3f090efed18fa5"
+                "reference": "d66e4acee23b8c327e90ec18d0b18c78e92d0291"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-2de5e57741e8ee4c6a4e57691a3f090efed18fa5-zip-0d7edf.zip",
-                "reference": "2de5e57741e8ee4c6a4e57691a3f090efed18fa5",
-                "shasum": "364b59bb8ec2bb9e60fc9849b4a6070655c162a5"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-d66e4acee23b8c327e90ec18d0b18c78e92d0291-zip-d1ec2a.zip",
+                "reference": "d66e4acee23b8c327e90ec18d0b18c78e92d0291",
+                "shasum": "6c8678f2adb53a2e1db791d5086463387848ca63"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "@dev",
-                "doctrine/collections": "^1.6 || ^2.0",
-                "doctrine/orm": "^2.12.3 || ^3.0",
                 "ext-json": "*",
                 "guzzlehttp/guzzle": "^7.0",
-                "nesbot/carbon": "^2.61 || ^3.0",
-                "php": ">=8.1",
-                "psr/log": "^1.1 || ^2.0 || ^3.0",
-                "symfony/http-foundation": "^5.4 || ^6.0 || ^7.0",
-                "symfony/yaml": "^5.4.10 || ^6.0 || ^7.0"
+                "php": ">=8.1"
             },
             "require-dev": {
                 "fakerphp/faker": "^1.20",
@@ -71,7 +65,49 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-04-10T02:02:43+00:00"
+            "time": "2026-04-10T03:10:54+00:00"
+        },
+        {
+            "name": "anibalealvarezs/api-driver-core",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:anibalealvarezs/api-driver-core.git",
+                "reference": "aba85ee935de76f91929d653a3fdc2e7d90d583c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-aba85ee935de76f91929d653a3fdc2e7d90d583c-zip-f1b6cc.zip",
+                "reference": "aba85ee935de76f91929d653a3fdc2e7d90d583c",
+                "shasum": "36cf6466878c5fd0232a33fad09c51ddca88ab0c"
+            },
+            "require": {
+                "anibalealvarezs/api-client-skeleton": "dev-main",
+                "doctrine/collections": "^2.0",
+                "doctrine/orm": "^2.0 || ^3.0",
+                "nesbot/carbon": "^2.61 || ^3.0",
+                "php": ">=8.1",
+                "psr/log": "^1.1 || ^2.0 || ^3.0",
+                "symfony/http-foundation": "^6.0 || ^7.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Anibalealvarezs\\ApiDriverCore\\": "src/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Anibal Alvarez",
+                    "email": "aalvarez@chmw.co"
+                }
+            ],
+            "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
+            "time": "2026-04-10T03:16:02+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -3389,6 +3425,7 @@
     "minimum-stability": "dev",
     "stability-flags": {
         "anibalealvarezs/api-client-skeleton": 20,
+        "anibalealvarezs/api-driver-core": 20,
         "anibalealvarezs/facebook-graph-api": 20
     },
     "prefer-stable": false,

@@ -5,6 +5,7 @@
     "require" : {
         "php" : ">=8.1",
         "anibalealvarezs/api-client-skeleton" : "dev-main",
+        "anibalealvarezs/api-driver-core" : "dev-main",
         "anibalealvarezs/facebook-graph-api" : "dev-main",
         "symfony/http-foundation" : "^5.4 || ^6.0 || ^7.0",
         "psr/log" : "^1.0 || ^2.0 || ^3.0",

@@ -5,17 +5,17 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MediaType;
 use Anibalealvarezs\FacebookGraphApi\Conversions\FacebookOrganicMetricConvert;
-use Anibalealvarezs\ApiSkeleton\Interfaces\SyncDriverInterface;
-use Anibalealvarezs\ApiSkeleton\Interfaces\AuthProviderInterface;
-use Anibalealvarezs\ApiSkeleton\Traits\HasUpdatableCredentials;
-use Anibalealvarezs\ApiSkeleton\Enums\Period;
+use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
+use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
+use Anibalealvarezs\ApiDriverCore\Enums\Period;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
 use Exception;
 use Carbon\Carbon;
 use Doctrine\Common\Collections\ArrayCollection;
-use Anibalealvarezs\ApiSkeleton\Interfaces\SeederInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 class FacebookOrganicDriver implements SyncDriverInterface
@@ -93,7 +93,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
             $api->setPageId($pageId);
 
-            $chunks = \Anibalealvarezs\ApiSkeleton\Helpers\DateHelper::getDateChunks(
+            $chunks = \Anibalealvarezs\ApiDriverCore\Helpers\DateHelper::getDateChunks(
                 $startDate->format('Y-m-d'),
                 $endDate->format('Y-m-d'),
                 $chunkSize
@@ -289,6 +289,46 @@ class FacebookOrganicDriver implements SyncDriverInterface
      */
     public function validateConfig(array $config): array
     {
+        // 1. Explicit environment variable mappings (Agnostic version of Helpers' logic)
+        $envOverrides = [
+            'FACEBOOK_APP_ID' => 'app_id',
+            'FACEBOOK_APP_SECRET' => 'app_secret',
+            'FACEBOOK_REDIRECT_URI' => 'app_redirect_uri',
+            'FACEBOOK_USER_TOKEN' => 'graph_user_access_token',
+            'FACEBOOK_PAGE_TOKEN' => 'graph_page_access_token',
+            'FACEBOOK_TOKEN_PATH' => 'graph_token_path',
+            'FACEBOOK_USER_ID' => 'user_id',
+            'FACEBOOK_ACCOUNTS_GROUP' => 'accounts_group_name',
+        ];
+
+        foreach ($envOverrides as $envKey => $configPath) {
+            $val = getenv($envKey);
+            if ($val !== false && $val !== '') {
+                $config[$configPath] = $val;
+            }
+        }
+
+        // 2. --- 🛡️ SMART STORAGE AUTH MAPPING --- (Moved from Helpers)
+        $tokenPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? $config['graph_token_path'] ?? './storage/tokens/facebook_tokens.json';
+        if (is_string($tokenPath) && str_starts_with($tokenPath, './')) {
+            $tokenPath = dirname(__DIR__, 4) . substr($tokenPath, 1);
+        }
+        
+        if (file_exists($tokenPath)) {
+            $tokens = json_decode(file_get_contents($tokenPath), true);
+            $organicToken = $tokens['facebook_organic']['access_token'] ?? null;
+            $organicUserId = $tokens['facebook_organic']['user_id'] ?? null;
+            
+            if ($organicToken) {
+                $config['graph_user_access_token'] = $organicToken;
+                $config['access_token'] = $organicToken;
+            }
+            if ($organicUserId) {
+                $config['user_id'] = $organicUserId;
+            }
+        }
+
+        // 3. Pages preparation
         $globalExclude = $config['exclude_from_caching'] ?? [];
         if (!is_array($globalExclude)) {
             $globalExclude = [$globalExclude];
@@ -582,7 +622,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     public function boot(): void
     {
-        \Anibalealvarezs\ApiSkeleton\Classes\RepositoryRegistry::registerRelations([
+        \Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry::registerRelations([
             'post'              => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'post_id', 'alias' => 'rpo'],
             'post_id'           => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'post_id', 'alias' => 'rpo_id'],
             'permalink_url'     => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'data', 'alias' => 'rpo_pu', 'isJSON' => true, 'jsonPath' => 'permalink_url', 'isAttribute' => true],
@@ -593,5 +633,19 @@ class FacebookOrganicDriver implements SyncDriverInterface
             'message'           => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'data', 'alias' => 'rpo_msg', 'isJSON' => true, 'jsonPath' => 'message', 'isAttribute' => true],
             'caption'           => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'data', 'alias' => 'rpo_cap', 'isJSON' => true, 'jsonPath' => 'caption', 'isAttribute' => true],
         ]);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getAssetPatterns(): array
+    {
+        return [
+            'facebook_page' => [
+                'prefix' => 'fb:page',
+                'hostnames' => ['facebook.com', 'instagram.com'],
+                'url_id_regex' => '~(\d+)/?$~'
+            ]
+        ];
     }
 }
