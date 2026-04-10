@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Anibalealvarezs\MetaHubDriver\Auth;
 
-use Anibalealvarezs\ApiSkeleton\Auth\BaseAuthProvider;
+use Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider;
 use Anibalealvarezs\ApiDriverCore\Interfaces\OAuthProviderInterface;
 use Anibalealvarezs\FacebookGraphApi\Enums\UserPermission;
 use Anibalealvarezs\FacebookGraphApi\Enums\PagePermission;
