@@ -608,7 +608,168 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     public function seedDemoData(SeederInterface $seeder, array $config = []): void
     {
-        // Seeding logic...
+        $output = $config['output'] ?? null;
+        if ($output) $output->writeln("🚀 Facebook Marketing (5 Campaigns, 180 Days)...");
+
+        $em = $seeder->getEntityManager();
+        $faker = \Faker\Factory::create('en_US');
+        $dates = $seeder->getDates(180);
+
+        $chanEnumClass = $seeder->getEnumClass('channel');
+        $accTypeEnumClass = $seeder->getEnumClass('account_type');
+        $fbChan = $chanEnumClass::facebook_marketing;
+
+        $accClass = $seeder->getEntityClass('account');
+        $chanAccountClass = $seeder->getEntityClass('channeled_account');
+        $campaignClass = $seeder->getEntityClass('campaign');
+        $chanCampaignClass = $seeder->getEntityClass('channeled_campaign');
+        $adGroupClass = $seeder->getEntityClass('ad_group');
+        $chanAdGroupClass = $seeder->getEntityClass('channeled_ad_group');
+        $adClass = $seeder->getEntityClass('ad');
+        $chanAdClass = $seeder->getEntityClass('channeled_ad');
+
+        $accRepo = $em->getRepository($accClass);
+        $demoAccount = $accRepo->findOneBy(['name' => 'Demo Agency Marketing']) ?? (new $accClass())->addName('Demo Agency Marketing');
+        $em->persist($demoAccount);
+        $em->flush();
+
+        $adAccountId = "act_" . $faker->numerify('################');
+        $ca = $em->getRepository($chanAccountClass)->findOneBy(['platformId' => $adAccountId]) ?? (new $chanAccountClass());
+        $ca->addPlatformId($adAccountId)
+            ->addAccount($demoAccount)
+            ->addType($accTypeEnumClass::META_AD_ACCOUNT)
+            ->addChannel($fbChan->value)
+            ->addName("Demo Ad Account");
+        $em->persist($ca);
+        $em->flush();
+
+        $campaigns = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $cId = $faker->numerify('##########');
+            $cName = "Demo " . $faker->catchPhrase() . " Campaign";
+            
+            $campaign = $em->getRepository($campaignClass)->findOneBy(['campaignId' => $cId]) ?? new $campaignClass();
+            $campaign->addCampaignId($cId)->addName($cName);
+            $em->persist($campaign);
+
+            $chanCampaign = $em->getRepository($chanCampaignClass)->findOneBy(['platformId' => $cId, 'channeledAccount' => $ca]) ?? new $chanCampaignClass();
+            $chanCampaign->addPlatformId($cId)
+                ->addChannel($fbChan->value)
+                ->addChanneledAccount($ca)
+                ->addCampaign($campaign)
+                ->addBudget($faker->randomFloat(2, 50, 500));
+            $em->persist($chanCampaign);
+            
+            $adGroups = [];
+            for ($j = 1; $j <= 2; $j++) {
+                $agId = $faker->numerify('##########');
+                $agName = "AdSet $j - " . $faker->word();
+                
+                $adGroup = $em->getRepository($adGroupClass)->findOneBy(['adGroupId' => $agId]) ?? new $adGroupClass();
+                $adGroup->addAdGroupId($agId)->addName($agName)->addCampaign($campaign);
+                $em->persist($adGroup);
+
+                $chanAdGroup = $em->getRepository($chanAdGroupClass)->findOneBy(['platformId' => $agId, 'channeledAccount' => $ca]) ?? new $chanAdGroupClass();
+                $chanAdGroup->addPlatformId($agId)
+                    ->addChannel($fbChan->value)
+                    ->addChanneledAccount($ca)
+                    ->addAdGroup($adGroup)
+                    ->addChanneledCampaign($chanCampaign);
+                $em->persist($chanAdGroup);
+                
+                for ($k = 1; $k <= 2; $k++) {
+                    $adId = $faker->numerify('##########');
+                    $adName = "Ad $k (" . $faker->colorName() . ")";
+                    
+                    $ad = $em->getRepository($adClass)->findOneBy(['adId' => $adId]) ?? new $adClass();
+                    $ad->addAdId($adId)->addName($adName)->addAdGroup($adGroup);
+                    $em->persist($ad);
+
+                    $chanAd = $em->getRepository($chanAdClass)->findOneBy(['platformId' => $adId, 'channeledAccount' => $ca]) ?? new $chanAdClass();
+                    $chanAd->addPlatformId($adId)
+                        ->addChannel($fbChan->value)
+                        ->addChanneledAccount($ca)
+                        ->addAd($ad)
+                        ->addChanneledAdGroup($chanAdGroup)
+                        ->addChanneledCampaign($chanCampaign);
+                    $em->persist($chanAd);
+                    
+                    $adGroups[] = ['ad' => $ad, 'chanAd' => $chanAd, 'chanAdGroup' => $chanAdGroup, 'chanCampaign' => $chanCampaign];
+                }
+            }
+            $campaigns[] = ['campaign' => $campaign, 'chanCampaign' => $chanCampaign, 'adGroups' => $adGroups];
+        }
+        $em->flush();
+
+        $dimManager = $seeder->getDimensionManager();
+        $countryEnumValues = ['USA', 'ESP', 'MEX', 'COL'];
+        $deviceEnumValues = ['desktop', 'mobile', 'tablet'];
+
+        $countries = [];
+        foreach ($countryEnumValues as $code) {
+            $enumClass = $seeder->getEnumClass('country');
+            $countryClass = $seeder->getEntityClass('country');
+            $enum = $enumClass::from($code);
+            $c = $em->getRepository($countryClass)->findOneBy(['code' => $enum]);
+            if (!$c) {
+                $c = (new $countryClass())->addCode($enum)->addName($code);
+                $em->persist($c);
+            }
+            $countries[$code] = $c;
+        }
+        $devices = [];
+        foreach ($deviceEnumValues as $type) {
+            $enumClass = $seeder->getEnumClass('device');
+            $deviceClass = $seeder->getEntityClass('device');
+            $enum = $enumClass::from($type);
+            $d = $em->getRepository($deviceClass)->findOneBy(['type' => $enum]);
+            if (!$d) {
+                $d = (new $deviceClass())->addType($enum);
+                $em->persist($d);
+            }
+            $devices[$type] = $d;
+        }
+        $em->flush();
+
+        foreach ($dates as $date) {
+            foreach ($campaigns as $cpData) {
+                foreach ($cpData['adGroups'] as $agData) {
+                    $code = $countryEnumValues[array_rand($countryEnumValues)];
+                    $type = $deviceEnumValues[array_rand($deviceEnumValues)];
+                    $country = $countries[$code];
+                    $device = $devices[$type];
+
+                    $imps = rand(100, 1000);
+                    $clicks = (int)($imps * rand(1, 5) / 100);
+                    $spend = (float)($clicks * rand(5, 20) / 10);
+                    
+                    $metrics = ['impressions' => $imps, 'clicks' => $clicks, 'spend' => $spend];
+                    
+                    foreach ($metrics as $name => $val) {
+                        if ($val <= 0) continue;
+                        $seeder->queueMetric(
+                            channel: $fbChan,
+                            name: $name,
+                            date: $date,
+                            value: $val,
+                            caId: $ca->getId(),
+                            cpId: $agData['chanCampaign']->getId(),
+                            agId: $agData['chanAdGroup']->getId(),
+                            adId: $agData['chanAd']->getId(),
+                            countryId: $country->getId(),
+                            deviceId: $device->getId(),
+                            data: json_encode(['raw' => $val]),
+                            channeledAccountPlatformId: $ca->getPlatformId(),
+                            countryPId: $code,
+                            devicePId: $type
+                        );
+                    }
+                }
+            }
+            if ($output) $output->write(".");
+        }
+        $em->clear();
+        if ($output) $output->writeln("\n   - Facebook Marketing complete.");
     }
 
     public function boot(): void
