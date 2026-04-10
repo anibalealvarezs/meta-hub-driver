@@ -589,7 +589,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $chanAccountClass = $seeder->getEntityClass('channeled_account');
         $postClass = $seeder->getEntityClass('post');
         $accTypeEnumClass = $seeder->getEnumClass('account_type');
-        $convertClass = "\\Anibalealvarezs\\FacebookGraphApi\\Conversions\\FacebookOrganicMetricConvert";
+        $convertClass = "\\Anibalealvarezs\\MetaHubDriver\\Conversions\\FacebookOrganicMetricConvert";
 
         $faker = \Faker\Factory::create('en_US');
 
