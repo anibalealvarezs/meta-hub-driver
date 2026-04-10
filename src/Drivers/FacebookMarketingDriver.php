@@ -65,6 +65,16 @@ class FacebookMarketingDriver implements SyncDriverInterface
     {
         return ['metrics' => 'fb_metrics', 'campaigns' => 'fb_campaigns'];
     }
+
+    /**
+     * Get the display label for the channel.
+     * 
+     * @return string
+     */
+    public static function getChannelLabel(): string
+    {
+        return 'FacebookMarketing';
+    }
     use HasUpdatableCredentials;
 
     public array $updatableCredentials = [

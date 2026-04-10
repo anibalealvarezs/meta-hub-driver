@@ -64,6 +64,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
     {
         return ['metrics' => 'fb_metrics'];
     }
+
+    /**
+     * Get the display label for the channel.
+     * 
+     * @return string
+     */
+    public static function getChannelLabel(): string
+    {
+        return 'FacebookOrganic';
+    }
     use HasUpdatableCredentials;
 
     public array $updatableCredentials = [
