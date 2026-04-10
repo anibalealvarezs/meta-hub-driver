@@ -25,6 +25,35 @@ class FacebookOrganicDriver implements SyncDriverInterface
     {
         return 'facebook';
     }
+
+    /**
+     * Store credentials for this driver.
+     * 
+     * @param array $credentials
+     * @return void
+     */
+    public static function storeCredentials(array $credentials): void
+    {
+        $tokenPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? getcwd() . '/storage/tokens/facebook_tokens.json';
+        $tokenKey = 'facebook_auth';
+        
+        if (!is_dir(dirname($tokenPath))) {
+            mkdir(dirname($tokenPath), 0755, true);
+        }
+
+        $tokens = file_exists($tokenPath) ? (json_decode(file_get_contents($tokenPath), true) ?? []) : [];
+        
+        $tokens[$tokenKey] = [
+            'access_token' => $credentials['access_token'] ?? null,
+            'refresh_token' => $credentials['refresh_token'] ?? null,
+            'user_id' => $credentials['user_id'] ?? null,
+            'scopes' => $credentials['scopes'] ?? [],
+            'updated_at' => date('Y-m-d H:i:s'),
+            'expires_at' => date('Y-m-d H:i:s', strtotime('+60 days'))
+        ];
+        
+        file_put_contents($tokenPath, json_encode($tokens, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
     use HasUpdatableCredentials;
 
     public array $updatableCredentials = [
