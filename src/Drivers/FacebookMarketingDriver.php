@@ -623,9 +623,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $chanAccountClass = $seeder->getEntityClass('channeled_account');
         $campaignClass = $seeder->getEntityClass('campaign');
         $chanCampaignClass = $seeder->getEntityClass('channeled_campaign');
-        $adGroupClass = $seeder->getEntityClass('ad_group');
         $chanAdGroupClass = $seeder->getEntityClass('channeled_ad_group');
-        $adClass = $seeder->getEntityClass('ad');
         $chanAdClass = $seeder->getEntityClass('channeled_ad');
 
         $accRepo = $em->getRepository($accClass);
@@ -665,15 +663,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 $agId = $faker->numerify('##########');
                 $agName = "AdSet $j - " . $faker->word();
                 
-                $adGroup = $em->getRepository($adGroupClass)->findOneBy(['adGroupId' => $agId]) ?? new $adGroupClass();
-                $adGroup->addAdGroupId($agId)->addName($agName)->addCampaign($campaign);
-                $em->persist($adGroup);
-
                 $chanAdGroup = $em->getRepository($chanAdGroupClass)->findOneBy(['platformId' => $agId, 'channeledAccount' => $ca]) ?? new $chanAdGroupClass();
                 $chanAdGroup->addPlatformId($agId)
                     ->addChannel($fbChan->value)
+                    ->addName($agName)
                     ->addChanneledAccount($ca)
-                    ->addAdGroup($adGroup)
+                    ->addCampaign($campaign)
                     ->addChanneledCampaign($chanCampaign);
                 $em->persist($chanAdGroup);
                 
@@ -681,20 +676,16 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     $adId = $faker->numerify('##########');
                     $adName = "Ad $k (" . $faker->colorName() . ")";
                     
-                    $ad = $em->getRepository($adClass)->findOneBy(['adId' => $adId]) ?? new $adClass();
-                    $ad->addAdId($adId)->addName($adName)->addAdGroup($adGroup);
-                    $em->persist($ad);
-
                     $chanAd = $em->getRepository($chanAdClass)->findOneBy(['platformId' => $adId, 'channeledAccount' => $ca]) ?? new $chanAdClass();
                     $chanAd->addPlatformId($adId)
                         ->addChannel($fbChan->value)
+                        ->addName($adName)
                         ->addChanneledAccount($ca)
-                        ->addAd($ad)
                         ->addChanneledAdGroup($chanAdGroup)
                         ->addChanneledCampaign($chanCampaign);
                     $em->persist($chanAd);
                     
-                    $adGroups[] = ['ad' => $ad, 'chanAd' => $chanAd, 'chanAdGroup' => $chanAdGroup, 'chanCampaign' => $chanCampaign];
+                    $adGroups[] = ['chanAd' => $chanAd, 'chanAdGroup' => $chanAdGroup, 'chanCampaign' => $chanCampaign];
                 }
             }
             $campaigns[] = ['campaign' => $campaign, 'chanCampaign' => $chanCampaign, 'adGroups' => $adGroups];
