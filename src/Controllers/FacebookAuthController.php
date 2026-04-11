@@ -5,10 +5,10 @@ namespace Anibalealvarezs\MetaHubDriver\Controllers;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Helpers\Helpers;
+use Anibalealvarezs\ApiDriverCore\Helpers\Helpers;
 use Anibalealvarezs\FacebookGraphApi\Enums\UserPermission;
 use Anibalealvarezs\FacebookGraphApi\Enums\PagePermission;
-use Core\Drivers\DriverFactory;
+use Anibalealvarezs\ApiDriverCore\Drivers\DriverFactory;
 
 class FacebookAuthController
 {
@@ -19,7 +19,7 @@ class FacebookAuthController
     public function __construct()
     {
         // Forzamos la carga de la configuración para asegurar que $_ENV esté poblado
-        Helpers::getProjectConfig();
+        // Helpers::getProjectConfig(); // Removed dependency on host-specific helper
         
         // Se cargan desde el .env (basado en la estructura del proyecto)
         $this->clientId = $_ENV['FACEBOOK_APP_ID'] ?? '';

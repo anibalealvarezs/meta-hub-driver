@@ -115,7 +115,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 'httpMethod' => 'GET',
                 'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\ReportController())->marketing($args),
                 'public' => ($_ENV['APP_ENV'] ?? '') === 'testing' || str_contains(strtolower($_ENV['PROJECT_NAME'] ?? ''), 'demo'),
-                'admin' => false
+                'admin' => false,
+                'html' => true
             ]
         ]);
     }
