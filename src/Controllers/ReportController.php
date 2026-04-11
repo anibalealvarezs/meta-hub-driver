@@ -6,21 +6,21 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ReportController
 {
-    public function marketing(): Response
+    public function marketing(array $args = []): Response
     {
         $html = file_get_contents(__DIR__ . '/../Views/facebook-reports.html');
-        return $this->renderFacebookReport($html, 'facebook_marketing', '<!-- FB_CONFIG_PLACEHOLDER -->');
+        return $this->renderFacebookReport($html, 'facebook_marketing', '<!-- FB_CONFIG_PLACEHOLDER -->', $args);
     }
 
-    public function organic(): Response
+    public function organic(array $args = []): Response
     {
         $html = file_get_contents(__DIR__ . '/../Views/facebook-organic-reports.html');
-        return $this->renderFacebookReport($html, 'facebook_organic', '<!-- FB_ORGANIC_CONFIG_PLACEHOLDER -->');
+        return $this->renderFacebookReport($html, 'facebook_organic', '<!-- FB_ORGANIC_CONFIG_PLACEHOLDER -->', $args);
     }
 
-    private function renderFacebookReport(string $html, string $channel, string $placeholder): Response
+    private function renderFacebookReport(string $html, string $channel, string $placeholder, array $args): Response
     {
-        $channelsConfig = \Helpers\Helpers::getChannelsConfig();
+        $channelsConfig = $args['channelsConfig'] ?? [];
         $config = $channelsConfig[$channel] ?? [];
         
         $configData = [
@@ -29,7 +29,7 @@ class ReportController
             'metrics_level' => $this->deriveMetricsLevel($config)
         ];
 
-        $isDemo = \Helpers\Helpers::isDemo();
+        $isDemo = $args['isDemo'] ?? false;
         $autoAuthScript = $isDemo ? "<script>localStorage.setItem('apis_hub_admin_auth', JSON.stringify({token: 'DEMO_BYPASS', timestamp: Date.now()})); window.AUTH_BYPASS = true;</script>" : "";
         
         $html = str_replace(

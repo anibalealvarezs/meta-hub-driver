@@ -113,7 +113,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             ],
             '/fb-reports' => [
                 'httpMethod' => 'GET',
-                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\ReportController())->marketing(),
+                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\ReportController())->marketing($args),
                 'public' => ($_ENV['APP_ENV'] ?? '') === 'testing' || str_contains(strtolower($_ENV['PROJECT_NAME'] ?? ''), 'demo'),
                 'admin' => false
             ]
