@@ -1185,7 +1185,7 @@ function renderSparkline(container, points, config = {}) {
   if (!color) {
     // Momentum coloring logic
     if (endVal === startVal) {
-      color = "var(--text-dim)"; // Neutral Grey for flat lines
+      color = "#8b949e"; // Solid Grey for flat lines
     } else if (endVal > startVal) {
       color = isInverted ? "#f85149" : "#3fb950"; // Green if Standard Up or Inverted Down
     } else {
@@ -1197,7 +1197,7 @@ function renderSparkline(container, points, config = {}) {
     (p, i) =>
       `${(i / (points.length - 1)) * width},${height - ((p - min) / range) * (height - 4) - 2}`,
   );
-  container.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="opacity: ${endVal === startVal && !config.sparkline_color ? "0.2" : "1"}"><polyline fill="none" stroke="${color}" stroke-width="1.5" points="${svgPoints.join(" ")}" /></svg>`;
+  container.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="opacity: ${endVal === startVal && !config.sparkline_color ? "0.6" : "1"}"><polyline fill="none" stroke="${color}" stroke-width="1.5" points="${svgPoints.join(" ")}" /></svg>`;
 }
 
 // Global hooks
