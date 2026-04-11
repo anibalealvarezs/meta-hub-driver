@@ -804,6 +804,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         $metric->page = $page;
                         $metric->account = $fbParent;
                         $metric->channeledAccount = $caIg;
+                        $metric->gId = $gId;
                         $allIgMetrics->add($metric);
                     }
                 }

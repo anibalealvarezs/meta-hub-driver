@@ -106,7 +106,7 @@ async function loadReport() {
         const payload = { 
             aggregations: aggs, 
             filters: { account_type: 'instagram' },
-            groupBy: ["channeledAccount", "account", "linked_fb_page_id", "channeled_account_id", "page_id"], 
+            groupBy: ["channeledAccount", "channeled_account_id"], 
             startDate: start, endDate: end 
         };
         const resMain = await fetch('/facebook_organic/metric/aggregate', { method: 'POST', headers, body: JSON.stringify(payload) }).then(r => r.json());
@@ -121,7 +121,12 @@ async function loadReport() {
             
             const resTrend = await fetch('/facebook_organic/metric/aggregate', { 
                 method: 'POST', headers, 
-                body: JSON.stringify({ aggregations: trendAggs, groupBy: ['daily', 'channeledAccount', 'channeled_account_id'], startDate: start, endDate: end }) 
+                body: JSON.stringify({ 
+                    aggregations: trendAggs, 
+                    filters: { account_type: 'instagram' },
+                    groupBy: ['daily', 'channeledAccount', 'channeled_account_id'], 
+                    startDate: start, endDate: end 
+                }) 
             }).then(r => r.json());
 
             if (resTrend.status === 'success' && resTrend.data) {
@@ -168,7 +173,7 @@ function render(start, end) {
         const cid_raw = row.channeledAccount || row.channeledaccount;
         const rowId = `row-ig-${cid_raw}`.replace(/[^a-z0-9\-]/gi, '-');
         tr.id = rowId;
-        const fbLinkedId = row.page_id || row.page_id_id || row.linked_fb_page_id || 'N/A';
+        const fbLinkedId = (row.page_id || row.page_id_id || row.linked_fb_page_id) ? 'Linked' : 'None';
         const accountId = row.channeled_account_id || row.channeled_account_id_id;
         
         tr.innerHTML = `
