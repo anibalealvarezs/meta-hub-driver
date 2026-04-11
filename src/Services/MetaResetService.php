@@ -71,6 +71,8 @@ class MetaResetService
                 DELETE FROM pages 
                 WHERE account_id IN (SELECT id FROM channeled_accounts WHERE channel = ?)
             ", [$channelId], [\Doctrine\DBAL\ParameterType::INTEGER]);
+
+            $connection->executeStatement("DELETE FROM channeled_accounts WHERE channel = ?", [$channelId], [\Doctrine\DBAL\ParameterType::INTEGER]);
         }
 
         return $stats;
