@@ -75,6 +75,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
     }
 
     /**
+     * Get the display icon for the channel.
+     * 
+     * @return string
+     */
+    public static function getChannelIcon(): string
+    {
+        return 'M';
+    }
+
+    /**
      * Get the routes served by this driver.
      * 
      * @return array
