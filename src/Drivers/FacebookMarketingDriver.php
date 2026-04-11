@@ -100,6 +100,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
             'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->callback($args['request'] ?? \Symfony\Component\HttpFoundation\Request::createFromGlobals()),
             'public' => true,
             'admin' => false
+        ],
+        '/fb-reports' => [
+            'httpMethod' => 'GET',
+            'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\ReportController())->marketing(),
+            'public' => ($_ENV['APP_ENV'] ?? '') === 'testing' || str_contains(strtolower($_ENV['PROJECT_NAME'] ?? ''), 'demo'),
+            'admin' => false
         ]
     ];
     }

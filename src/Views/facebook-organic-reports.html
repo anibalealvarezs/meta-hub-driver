@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APIs Hub | Facebook Organic Reports</title>
+    <meta name="app-env" content="demo">
+    <link rel="icon" type="image/png" href="/assets/images/apishub-favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Design System & Dependencies -->
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="/assets/navbar.js"></script>
+    <script src="/assets/footer.js"></script>
+</head>
+<body class="full-screen">
+
+    <div id="loader" class="loader-overlay">
+        <div class="spinner"></div>
+        <p class="loader-text">AGGREGATING ORGANIC METRICS...</p>
+    </div>
+
+    <main>
+        <div class="section-title">
+            <i data-lucide="instagram" class="meta-blue-icon" style="color: #E1306C;"></i>
+            Facebook & Instagram Organic Performance
+        </div>
+
+        <div class="controls-card">
+            <div class="control-group">
+                <i data-lucide="calendar" class="control-icon"></i>
+                <input type="date" id="startDate" class="date-input">
+                <span class="date-separator">to</span>
+                <input type="date" id="endDate" class="date-input">
+            </div>
+            <button class="btn btn-primary" onclick="loadReport()">
+                <i data-lucide="refresh-cw"></i> Update Reports
+            </button>
+            <button class="btn" onclick="forceRefresh()">
+                <i data-lucide="zap"></i> Flush Cache
+            </button>
+        </div>
+
+        <div class="summary-grid">
+            <div class="card-stat">
+                <div class="stat-label"><i data-lucide="users"></i> Total Reach</div>
+                <div class="stat-value" id="total-reach">0</div>
+            </div>
+            <div class="card-stat">
+                <div class="stat-label"><i data-lucide="eye"></i> Views</div>
+                <div class="stat-value" id="total-impressions">0</div>
+            </div>
+            <div class="card-stat">
+                <div class="stat-label"><i data-lucide="heart"></i> Interactions</div>
+                <div class="stat-value" id="total-interactions">0</div>
+            </div>
+            <div class="card-stat">
+                <div class="stat-label"><i data-lucide="trending-up"></i> Eng. Rate</div>
+                <div class="stat-value" id="total-eng-rate">0.00%</div>
+            </div>
+            <div class="card-stat">
+                <div class="stat-label" id="total-followers-label"><i data-lucide="user-plus"></i> New Followers</div>
+                <div class="stat-value" id="total-followers">0</div>
+            </div>
+        </div>
+
+        <div class="report-card">
+            <div class="table-header">
+                <div class="table-title">
+                    <i data-lucide="layers" class="meta-blue-icon" style="color: #8b5cf6;"></i>
+                    Organic Accounts Hierarchy
+                </div>
+                <div class="table-meta">
+                    <span id="cache-badge" style="display: none;">
+                        <i data-lucide="database" size="12"></i> CACHED
+                    </span>
+                    <span id="record-count">0</span> accounts found in range
+                </div>
+            </div>
+
+            <div class="table-scroll-area">
+                <table id="reports-table">
+                    <thead>
+                        <tr id="table-head-row">
+                            <th class="col-actions">&nbsp;</th>
+                            <th class="col-account">Platform Account</th>
+                            <th class="col-status text-center">Linked IG</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+                <div id="empty-msg">
+                    <i data-lucide="database"></i>
+                    <p>Select a date range and click update to load Meta metrics</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FB_ORGANIC_CONFIG_PLACEHOLDER -->
+    <script src="/assets/views/fb-organic-reports.js?v=1.3"></script>
+</body>
+</html>
