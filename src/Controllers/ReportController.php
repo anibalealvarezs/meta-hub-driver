@@ -52,7 +52,7 @@ class ReportController
             $html
         );
 
-        return new Response($html);
+        return new Response($html, 200, ['Content-Type' => 'text/html']);
     }
 
     private function deriveMetricsLevel(array $config): string
