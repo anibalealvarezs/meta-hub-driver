@@ -18,9 +18,6 @@ class FacebookAuthController
 
     public function __construct()
     {
-        // Forzamos la carga de la configuración para asegurar que $_ENV esté poblado
-        // Helpers::getProjectConfig(); // Removed dependency on host-specific helper
-        
         // Se cargan desde el .env (basado en la estructura del proyecto)
         $this->clientId = $_ENV['FACEBOOK_APP_ID'] ?? '';
         $this->clientSecret = $_ENV['FACEBOOK_APP_SECRET'] ?? '';
