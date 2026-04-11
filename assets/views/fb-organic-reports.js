@@ -106,7 +106,7 @@ async function loadReport() {
         const payload = { 
             aggregations: aggs, 
             filters: { account_type: 'instagram' },
-            groupBy: ["channeledAccount", "channeled_account_id"], 
+            groupBy: ["channeledAccount", "channeled_account_id", "page_id"], 
             startDate: start, endDate: end 
         };
         const resMain = await fetch('/facebook_organic/metric/aggregate', { method: 'POST', headers, body: JSON.stringify(payload) }).then(r => r.json());
@@ -173,13 +173,14 @@ function render(start, end) {
         const cid_raw = row.channeledAccount || row.channeledaccount;
         const rowId = `row-ig-${cid_raw}`.replace(/[^a-z0-9\-]/gi, '-');
         tr.id = rowId;
-        const fbLinkedId = (row.page_id || row.page_id_id || row.linked_fb_page_id) ? 'Linked' : 'None';
+        const fbValue = row.page_id || row.page_id_id || row.linked_fb_page_id;
+        const fbDisplay = fbValue ? 'Linked' : 'None';
         const accountId = row.channeled_account_id || row.channeled_account_id_id;
         
         tr.innerHTML = `
             <td class="col-actions">
                 <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
-                    <button class="btn-expand next-btn-fb" onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(fbLinkedId).replace(/'/g, "\\'")}')" title="View Linked Facebook Page">
+                    <button class="btn-expand next-btn-fb" onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(fbValue || '').replace(/'/g, "\\'")}')" title="View Linked Facebook Page">
                         <i data-lucide="layers" size="14"></i>
                     </button>
                     <button class="btn-expand next-btn-ig" onclick="toggleOrganicHierarchy(this, '${rowId}', 'content', '${accountId}', null)" title="View Instagram Posts" style="background-color:rgba(139,92,246,0.1); color:#8b5cf6; border-color:rgba(139,92,246,0.3);">
@@ -188,7 +189,7 @@ function render(start, end) {
                 </div>
             </td>
             <td style="text-align: left;"><strong>${cid_raw}</strong></td>
-            <td style="text-align: left;"><span class="badge-${fbLinkedId !== 'N/A' ? 'success' : 'dim'}">${fbLinkedId}</span></td>
+            <td style="text-align: left;"><span class="badge-${fbValue ? 'success' : 'dim'}">${fbDisplay}</span></td>
             ${metrics.map(m => {
                 const val = row[m.key] || row[String(m.key).toLowerCase()] || 0;
                 const cid = row.channeledAccount || row.channeledaccount;

@@ -779,6 +779,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 $accountMetrics = $convertClass::igAccountMetrics($accountPayload, $date, $page, $fbParent, $caIg);
                 foreach ($accountMetrics as $m) {
                     $m->date = new DateTime($date);
+                    $m->page = $page;
                     $allIgMetrics->add($m);
                 }
 
