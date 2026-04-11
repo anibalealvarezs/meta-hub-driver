@@ -634,11 +634,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
             }
 
             $igPId = "ig_acc_$i";
-            $caIg = $em->getRepository($chanAccountClass)->findOneBy(['platformId' => $igPId]);
+            $caIg = $em->getRepository($chanAccountClass)->findOneBy(['platformId' => $igPId, 'channel' => $fbChan->value]);
+            if (!$caIg) {
+                $caIg = $em->getRepository($chanAccountClass)->findOneBy(['name' => "$name IG Account", 'channel' => $fbChan->value]);
+            }
             if (!$caIg) {
                 $caIg = (new $chanAccountClass())->addPlatformId($igPId)->addAccount($fbAcc)->addType($accTypeEnumClass::INSTAGRAM)->addChannel($fbChan->value)->addName("$name IG Account");
                 $caIg->addData(['instagram_id' => $igPId, 'facebook_page_id' => $fbPId]); 
                 $em->persist($caIg);
+            } else {
+                $caIg->addPlatformId($igPId)->addAccount($fbAcc)->addData(['instagram_id' => $igPId, 'facebook_page_id' => $fbPId]);
             }
             $em->flush();
             $seededPages[] = ['page' => $page, 'fbAcc' => $fbAcc, 'caIg' => $caIg, 'caFb' => $caFb];
