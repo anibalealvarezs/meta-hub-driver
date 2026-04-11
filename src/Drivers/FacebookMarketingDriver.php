@@ -725,35 +725,46 @@ class FacebookMarketingDriver implements SyncDriverInterface
         foreach ($dates as $date) {
             foreach ($campaigns as $cpData) {
                 foreach ($cpData['adGroups'] as $agData) {
-                    $code = $countryEnumValues[array_rand($countryEnumValues)];
-                    $type = $deviceEnumValues[array_rand($deviceEnumValues)];
-                    $country = $countries[$code];
-                    $device = $devices[$type];
+                    foreach ($seeder->getAges() as $age) {
+                        foreach ($seeder->getGenders() as $gender) {
+                            $code = $countryEnumValues[array_rand($countryEnumValues)];
+                            $type = $deviceEnumValues[array_rand($deviceEnumValues)];
+                            $country = $countries[$code];
+                            $device = $devices[$type];
 
-                    $imps = rand(100, 1000);
-                    $clicks = (int)($imps * rand(1, 5) / 100);
-                    $spend = (float)($clicks * rand(5, 20) / 10);
-                    
-                    $metrics = ['impressions' => $imps, 'clicks' => $clicks, 'spend' => $spend];
-                    
-                    foreach ($metrics as $name => $val) {
-                        if ($val <= 0) continue;
-                        $seeder->queueMetric(
-                            channel: $fbChan,
-                            name: $name,
-                            date: $date,
-                            value: $val,
-                            caId: $ca->getId(),
-                            cpId: $agData['chanCampaign']->getId(),
-                            agId: $agData['chanAdGroup']->getId(),
-                            adId: $agData['chanAd']->getId(),
-                            countryId: $country->getId(),
-                            deviceId: $device->getId(),
-                            data: json_encode(['raw' => $val]),
-                            channeledAccountPlatformId: $ca->getPlatformId(),
-                            countryPId: $code,
-                            devicePId: $type
-                        );
+                            $dimSet = $dimManager->resolveDimensionSet([
+                                ['dimensionKey' => 'age', 'dimensionValue' => $age],
+                                ['dimensionKey' => 'gender', 'dimensionValue' => $gender],
+                            ]);
+
+                            $imps = rand(10, 100);
+                            $clicks = (int)($imps * rand(1, 5) / 100);
+                            $spend = (float)($clicks * rand(5, 20) / 10);
+                            
+                            $metrics = ['impressions' => $imps, 'clicks' => $clicks, 'spend' => $spend];
+                            
+                            foreach ($metrics as $name => $val) {
+                                if ($val <= 0) continue;
+                                $seeder->queueMetric(
+                                    channel: $fbChan,
+                                    name: $name,
+                                    date: $date,
+                                    value: $val,
+                                    setId: $dimSet->getId(),
+                                    caId: $ca->getId(),
+                                    cpId: $agData['chanCampaign']->getId(),
+                                    agId: $agData['chanAdGroup']->getId(),
+                                    adId: $agData['chanAd']->getId(),
+                                    countryId: $country->getId(),
+                                    deviceId: $device->getId(),
+                                    data: json_encode(['raw' => $val]),
+                                    setHash: $dimSet->getHash(),
+                                    channeledAccountPlatformId: $ca->getPlatformId(),
+                                    countryPId: $code,
+                                    devicePId: $type
+                                );
+                            }
+                        }
                     }
                 }
             }
