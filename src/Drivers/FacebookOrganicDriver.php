@@ -81,32 +81,32 @@ class FacebookOrganicDriver implements SyncDriverInterface
      */
     public static function getRoutes(): array
     {
-        return [
-        '/fb-login' => [
-            'httpMethod' => 'GET',
-            'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->login(),
-            'public' => true,
-            'admin' => false
-        ],
-        '/fb-auth-start' => [
-            'httpMethod' => 'GET',
-            'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->start(),
-            'public' => true,
-            'admin' => false
-        ],
-        '/fb-callback' => [
-            'httpMethod' => 'GET',
-            'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->callback($args['request'] ?? \Symfony\Component\HttpFoundation\Request::createFromGlobals()),
-            'public' => true,
-            'admin' => false
-        ],
-        '/fb-organic-reports' => [
-            'httpMethod' => 'GET',
-            'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\ReportController())->organic(),
-            'public' => ($_ENV['APP_ENV'] ?? '') === 'testing' || str_contains(strtolower($_ENV['PROJECT_NAME'] ?? ''), 'demo'),
-            'admin' => false
-        ]
-    ];
+        return array_merge(\Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes::get(), [
+            '/fb-login' => [
+                'httpMethod' => 'GET',
+                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->login(),
+                'public' => true,
+                'admin' => false
+            ],
+            '/fb-auth-start' => [
+                'httpMethod' => 'GET',
+                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->start(),
+                'public' => true,
+                'admin' => false
+            ],
+            '/fb-callback' => [
+                'httpMethod' => 'GET',
+                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->callback($args['request'] ?? \Symfony\Component\HttpFoundation\Request::createFromGlobals()),
+                'public' => true,
+                'admin' => false
+            ],
+            '/fb-organic-reports' => [
+                'httpMethod' => 'GET',
+                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\ReportController())->organic(),
+                'public' => ($_ENV['APP_ENV'] ?? '') === 'testing' || str_contains(strtolower($_ENV['PROJECT_NAME'] ?? ''), 'demo'),
+                'admin' => false
+            ]
+        ]);
     }
 
     /**
