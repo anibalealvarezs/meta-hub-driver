@@ -854,6 +854,14 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $ui['fb_metrics_config'] = $channelConfig['metrics_config'] ?? [];
         }
 
+        $ui['fb_marketing_enabled'] = $channelConfig['enabled'] ?? true;
+        $ui['fb_marketing_history_range'] = $channelConfig['cache_history_range'] ?? '2 years';
+        $ui['fb_marketing_cron_entities_hour'] = $channelConfig['cron_entities_hour'] ?? 1;
+        $ui['fb_marketing_cron_entities_minute'] = $channelConfig['cron_entities_minute'] ?? 0;
+        $ui['fb_marketing_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 5;
+        $ui['fb_marketing_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
+        $ui['fb_metrics_strategy'] = $channelConfig['metrics_strategy'] ?? 'default';
+
         $ui['fb_cache_chunk_size'] = $channelConfig['cache_chunk_size'] ?? '1 week';
         $ui['fb_ad_account_ids'] = [];
         foreach (($channelConfig['ad_accounts'] ?? []) as $a) {
@@ -862,9 +870,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         $features = ['ad_account_metrics', 'campaigns', 'campaign_metrics', 'adsets', 'adset_metrics', 'ads', 'ad_metrics', 'creatives', 'creative_metrics'];
         foreach ($features as $f) {
-            $ui['fb_feature_toggles'][$f] = $channelConfig['AD_ACCOUNT'][$f] ?? false; 
+            $ui['fb_feature_toggles'][$f] = $channelConfig['AD_ACCOUNT'][$f] ?? false;
         }
-        
+        $ui['fb_feature_toggles']['cache_aggregations'] = $channelConfig['cache_aggregations'] ?? false;
+
         $entities = ['CAMPAIGN', 'ADSET', 'AD', 'CREATIVE'];
         foreach ($entities as $e) {
             $ui['fb_entity_filters'][$e] = $channelConfig[$e]['cache_include'] ?? '';
