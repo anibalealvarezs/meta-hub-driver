@@ -252,11 +252,23 @@ class FacebookOrganicDriver implements SyncDriverInterface
      */
     public function validateAuthentication(): array
     {
-        return [
-            'success' => true,
-            'message' => 'Status unknown for this driver.',
-            'details' => []
-        ];
+        try {
+            $api = $this->getApi();
+            $api->performRequest('GET', 'me', ['fields' => 'id,name']);
+            return [
+                'success' => true,
+                'message' => 'Authentication is valid.',
+                'details' => [
+                    'user_id' => $api->getUserId()
+                ]
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'details' => []
+            ];
+        }
     }
     use HasUpdatableCredentials;
 
