@@ -18,9 +18,14 @@ class FacebookAuthController
 
     public function __construct()
     {
-        // Se cargan desde el .env (basado en la estructura del proyecto)
-        $this->clientId = $_ENV['FACEBOOK_APP_ID'] ?? '';
-        $this->clientSecret = $_ENV['FACEBOOK_APP_SECRET'] ?? '';
+        $config = [];
+        if (class_exists('\Helpers\Helpers')) {
+            $config = \Helpers\Helpers::getChannelsConfig()['facebook'] ?? [];
+        }
+
+        // Se cargan desde el orquestador (prioridad) o directamente del .env
+        $this->clientId = $config['client_id'] ?? $_ENV['FACEBOOK_APP_ID'] ?? '';
+        $this->clientSecret = $config['client_secret'] ?? $_ENV['FACEBOOK_APP_SECRET'] ?? '';
         
         // Detección mejorada de Protocolo (HTTPS detrás de Proxies como Nginx en Docker)
         $isHttps = (
@@ -34,7 +39,7 @@ class FacebookAuthController
             $protocol = 'https';
         }
 
-        $this->redirectUri = $_ENV['FACEBOOK_REDIRECT_URI'] ?? "$protocol://$_SERVER[HTTP_HOST]/fb-callback";
+        $this->redirectUri = $config['redirect_uri'] ?? $_ENV['FACEBOOK_REDIRECT_URI'] ?? "$protocol://$_SERVER[HTTP_HOST]/fb-callback";
     }
 
     /**
