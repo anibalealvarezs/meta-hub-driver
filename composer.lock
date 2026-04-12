@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "7065448224e4b8a449d7b2e9fdab5d0f36cad50d"
+                "reference": "57d15deb348d470e28c26dc12dc35d0240fc715f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-7065448224e4b8a449d7b2e9fdab5d0f36cad50d-zip-2366c2.zip",
-                "reference": "7065448224e4b8a449d7b2e9fdab5d0f36cad50d",
-                "shasum": "56dfa7437c51d37d7bf61739f9f30ac36d191cbc"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-57d15deb348d470e28c26dc12dc35d0240fc715f-zip-dbd290.zip",
+                "reference": "57d15deb348d470e28c26dc12dc35d0240fc715f",
+                "shasum": "938cd0088a121f910962bb76515b8b354361cbb6"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -111,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-12T01:13:01+00:00"
+            "time": "2026-04-12T14:42:42+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -1561,12 +1561,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/CarbonPHP/carbon.git",
-                "reference": "e890471a3494740f7d9326d72ce6a8c559ffee60"
+                "reference": "223ab55b3fa726d369c9c3098c6933135fa97f53"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/CarbonPHP/carbon/zipball/e890471a3494740f7d9326d72ce6a8c559ffee60",
-                "reference": "e890471a3494740f7d9326d72ce6a8c559ffee60",
+                "url": "https://api.github.com/repos/CarbonPHP/carbon/zipball/223ab55b3fa726d369c9c3098c6933135fa97f53",
+                "reference": "223ab55b3fa726d369c9c3098c6933135fa97f53",
                 "shasum": ""
             },
             "require": {
@@ -1659,7 +1659,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-07T09:57:54+00:00"
+            "time": "2026-04-12T10:58:34+00:00"
         },
         {
             "name": "predis/predis",
