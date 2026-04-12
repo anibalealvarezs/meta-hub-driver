@@ -42,10 +42,9 @@ class FacebookAuthController
      */
     public function login(): Response
     {
-        $projectDir = dirname(__DIR__, 4);
-        $viewPath = $projectDir . '/src/views/fb-login.html';
-        $content = file_exists($viewPath) ? file_get_contents($viewPath) : '<h1>Login with Meta</h1><a href="/fb-auth-start">Continue</a>';
-        return new Response($content);
+        $viewPath = dirname(__DIR__, 2) . '/src/Views/fb-login.html';
+        $content = file_exists($viewPath) ? file_get_contents($viewPath) : '<h1>Login with Meta</h1><p>View not found.</p><a href="/fb-auth-start">Continue</a>';
+        return new Response($content, 200, ['Content-Type' => 'text/html']);
     }
 
     /**
