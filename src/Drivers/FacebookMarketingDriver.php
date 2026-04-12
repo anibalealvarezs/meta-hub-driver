@@ -491,7 +491,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             appId: $config['app_id'] ?? $config['facebook']['app_id'] ?? '',
             appSecret: $config['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
             redirectUrl: $config['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
-            userAccessToken: $this->authProvider->getAccessToken(),
+            userAccessToken: $config['access_token'] ?? $config['graph_user_access_token'] ?? $this->authProvider->getAccessToken(),
             apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0'
         );
     }
@@ -603,10 +603,15 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
 
         $tokenPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? $config['graph_token_path'] ?? './storage/tokens/facebook_tokens.json';
+        if (is_string($tokenPath) && str_starts_with($tokenPath, './')) {
+            $tokenPath = getcwd() . substr($tokenPath, 1);
+        }
+
         if (file_exists($tokenPath)) {
             $tokens = json_decode(file_get_contents($tokenPath), true);
-            $marketingToken = $tokens['facebook_marketing']['access_token'] ?? null;
-            $marketingUserId = $tokens['facebook_marketing']['user_id'] ?? null;
+            $tokenData = $tokens['facebook_auth'] ?? $tokens['facebook_marketing'] ?? [];
+            $marketingToken = $tokenData['access_token'] ?? null;
+            $marketingUserId = $tokenData['user_id'] ?? null;
             
             if ($marketingToken) {
                 $config['graph_user_access_token'] = $marketingToken;

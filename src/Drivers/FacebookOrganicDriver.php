@@ -459,7 +459,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             appId: $config['app_id'] ?? $config['facebook']['app_id'] ?? '',
             appSecret: $config['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
             redirectUrl: $config['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
-            userAccessToken: $this->authProvider->getAccessToken(),
+            userAccessToken: $config['access_token'] ?? $config['graph_user_access_token'] ?? $this->authProvider->getAccessToken(),
             apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0'
         );
     }
@@ -564,13 +564,14 @@ class FacebookOrganicDriver implements SyncDriverInterface
         // 2. --- 🛡️ SMART STORAGE AUTH MAPPING --- (Moved from Helpers)
         $tokenPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? $config['graph_token_path'] ?? './storage/tokens/facebook_tokens.json';
         if (is_string($tokenPath) && str_starts_with($tokenPath, './')) {
-            $tokenPath = dirname(__DIR__, 4) . substr($tokenPath, 1);
+            $tokenPath = getcwd() . substr($tokenPath, 1);
         }
         
         if (file_exists($tokenPath)) {
             $tokens = json_decode(file_get_contents($tokenPath), true);
-            $organicToken = $tokens['facebook_organic']['access_token'] ?? null;
-            $organicUserId = $tokens['facebook_organic']['user_id'] ?? null;
+            $tokenData = $tokens['facebook_auth'] ?? $tokens['facebook_organic'] ?? [];
+            $organicToken = $tokenData['access_token'] ?? null;
+            $organicUserId = $tokenData['user_id'] ?? null;
             
             if ($organicToken) {
                 $config['graph_user_access_token'] = $organicToken;
