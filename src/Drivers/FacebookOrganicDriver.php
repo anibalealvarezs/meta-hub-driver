@@ -639,7 +639,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 $caIg = $em->getRepository($chanAccountClass)->findOneBy(['name' => "$name IG Account", 'channel' => $fbChan->value]);
             }
             if (!$caIg) {
-                $caIg = (new $chanAccountClass())->addPlatformId($igPId)->addAccount($fbAcc)->addType($accTypeEnumClass::INSTAGRAM)->addChannel($fbChan->value)->addName("$name IG Account");
+                $caIg = (new $chanAccountClass())->addPlatformId($igPId)->addAccount($fbAcc)->addType('instagram')->addChannel($fbChan->value)->addName("$name IG Account");
                 $caIg->addData(['instagram_id' => $igPId, 'facebook_page_id' => $fbPId]); 
                 $em->persist($caIg);
             } else {
