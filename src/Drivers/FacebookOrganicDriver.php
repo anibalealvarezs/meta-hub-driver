@@ -629,7 +629,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
             $caFb = $em->getRepository($chanAccountClass)->findOneBy(['platformId' => $fbPId]);
             if (!$caFb) {
-                $caFb = (new $chanAccountClass())->addPlatformId($fbPId)->addAccount($fbAcc)->addType($accTypeEnumClass::FACEBOOK_PAGE)->addChannel($fbChan->value)->addName("$name FB Page");
+                $caFb = (new $chanAccountClass())->addPlatformId($fbPId)->addAccount($fbAcc)->addType('facebook_page')->addChannel($fbChan->value)->addName("$name FB Page");
                 $em->persist($caFb);
             }
 

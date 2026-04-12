@@ -652,7 +652,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $ca = $em->getRepository($chanAccountClass)->findOneBy(['platformId' => $adAccountId]) ?? (new $chanAccountClass());
         $ca->addPlatformId($adAccountId)
             ->addAccount($demoAccount)
-            ->addType($accTypeEnumClass::META_AD_ACCOUNT)
+            ->addType('meta_ad_account')
             ->addChannel($fbChan->value)
             ->addName("Demo Ad Account");
         $em->persist($ca);
