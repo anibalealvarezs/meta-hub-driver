@@ -73,13 +73,15 @@ class FacebookAuthController
         ];
 
         // Marketing Scopes (Only if the channel is globally enabled)
-        if ($allConfigs['facebook_marketing_enabled'] ?? false) {
+        $isMarketingEnabled = ($allConfigs['facebook_marketing']['enabled'] ?? false) || ($allConfigs['facebook']['enabled'] ?? false);
+        if ($isMarketingEnabled) {
             $scopes[] = UserPermission::ADS_READ->value;
             $scopes[] = PagePermission::BUSINESS_MANAGEMENT->value;
         }
 
         // Organic Pages and Instagram Scopes (Only if the channel is globally enabled)
-        if ($allConfigs['facebook_organic_enabled'] ?? false) {
+        $isOrganicEnabled = ($allConfigs['facebook_organic']['enabled'] ?? false) || ($allConfigs['facebook_organic_enabled'] ?? false);
+        if ($isOrganicEnabled) {
             $scopes[] = PagePermission::PAGES_SHOW_LIST->value;
             $scopes[] = PagePermission::PAGES_READ_ENGAGEMENT->value;
             $scopes[] = PagePermission::PAGES_READ_USER_CONTENT->value;
