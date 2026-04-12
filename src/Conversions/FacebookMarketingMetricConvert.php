@@ -212,4 +212,21 @@ class FacebookMarketingMetricConvert
             'fallback_platform_id' => $channeledAdId
         ], $logger);
     }
+
+    /**
+     * Metrics proxy for dynamic levels.
+     */
+    public static function metrics(
+        array $rows,
+        string $accountId,
+        string $level = 'account',
+        ?LoggerInterface $logger = null
+    ): ArrayCollection {
+        return match ($level) {
+            'campaign' => self::campaignMetrics(rows: $rows, logger: $logger, channeledAccount: $accountId),
+            'adset' => self::adsetMetrics(rows: $rows, logger: $logger, channeledAccount: $accountId),
+            'ad' => self::adMetrics(rows: $rows, logger: $logger, channeledAccount: $accountId),
+            default => self::adAccountMetrics(rows: $rows, logger: $logger, channeledAccountPlatformId: $accountId),
+        };
+    }
 }

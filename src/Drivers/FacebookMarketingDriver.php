@@ -374,24 +374,27 @@ class FacebookMarketingDriver implements SyncDriverInterface
             );
 
             foreach ($chunks as $chunk) {
-                $rows = $this->fetchInsights($api, $accountId, $chunk['start'], $chunk['end'], $config);
-                
-                if (empty($rows['data'])) continue;
+                // Determine which levels to fetch based on config
+                $levelsToFetch = [];
+                if (!empty($config['AD_ACCOUNT']['ad_account_metrics'])) $levelsToFetch[] = 'account';
+                if (!empty($config['AD_ACCOUNT']['campaign_metrics'])) $levelsToFetch[] = 'campaign';
+                if (!empty($config['AD_ACCOUNT']['adset_metrics'])) $levelsToFetch[] = 'adset';
+                if (!empty($config['AD_ACCOUNT']['ad_metrics'])) $levelsToFetch[] = 'ad';
 
-                $collection = FacebookMarketingMetricConvert::adAccountMetrics(
-                    rows: $rows['data'] ?? [],
-                    logger: $this->logger,
-                    account: $config['accounts_group_name'] ?? 'Default',
-                    channeledAccountPlatformId: $accountId,
-                    period: \Anibalealvarezs\ApiSkeleton\Enums\Period::Daily
-                );
+                // Default to account if nothing specified
+                if (empty($levelsToFetch)) $levelsToFetch = ['account'];
 
-                if ($this->dataProcessor && $collection->count() > 0) {
-                    $result = ($this->dataProcessor)($collection, $this->logger);
-                    
-                    $totalStats['metrics'] += $result['metrics'] ?? $collection->count();
-                    $totalStats['rows'] += $result['rows'] ?? count($rows['data']);
-                    $totalStats['duplicates'] += $result['duplicates'] ?? 0;
+                foreach ($levelsToFetch as $level) {
+                    $rows = $this->fetchInsights($api, $accountId, $chunk['start'], $chunk['end'], $config, $level);
+                    if (!empty($rows['data'])) {
+                        $collection = FacebookMarketingMetricConvert::metrics($rows['data'], $accountId, $level, $this->logger);
+                        if ($this->dataProcessor && $collection->count() > 0) {
+                            $result = ($this->dataProcessor)($collection, $this->logger);
+                            $totalStats['metrics'] += $result['metrics'] ?? $collection->count();
+                            $totalStats['rows'] += $result['rows'] ?? count($rows['data']);
+                            $totalStats['duplicates'] += $result['duplicates'] ?? 0;
+                        }
+                    }
                 }
             }
         }
@@ -471,6 +474,31 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
+            case 'entities':
+                $results = [];
+                // 1. Campaigns
+                $campResponse = $this->syncEntities('campaigns', $startDate, $endDate, $config, $api);
+                $results['campaigns'] = json_decode($campResponse->getContent(), true);
+                $campaignMap = $results['campaigns']['authorized_ids_map'] ?? null;
+
+                // 2. Ad Groups
+                if ($campaignMap) {
+                    $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $campaignMap]);
+                }
+                $agResponse = $this->syncEntities('ad_groups', $startDate, $endDate, $config, $api);
+                $results['ad_groups'] = json_decode($agResponse->getContent(), true);
+                $adSetMap = $results['ad_groups']['authorized_ids_map'] ?? null;
+
+                // 3. Creatives
+                $results['creatives'] = json_decode($this->syncEntities('creatives', $startDate, $endDate, $config, $api)->getContent(), true);
+
+                // 4. Ads
+                if ($adSetMap) {
+                    $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $adSetMap]);
+                }
+                $results['ads'] = json_decode($this->syncEntities('ads', $startDate, $endDate, $config, $api)->getContent(), true);
+
+                return new Response(json_encode(['status' => 'success', 'results' => $results]), 200, ['Content-Type' => 'application/json']);
             default:
                 throw new Exception("Entity sync for '{$entity}' not implemented in FacebookMarketingDriver");
         }
@@ -496,11 +524,13 @@ class FacebookMarketingDriver implements SyncDriverInterface
         );
     }
 
-    private function fetchInsights(FacebookGraphApi $api, string $accountId, string $start, string $end, array $config): array
+    protected function fetchInsights(FacebookGraphApi $api, string $accountId, string $startDate, string $endDate, array $config, string $level = 'account'): array
     {
         $metricConfig = $this->getMetricsConfig($config);
+
         $params = [
-            'time_range' => json_encode(['since' => $start, 'until' => $end]),
+            'time_range' => json_encode(['since' => $startDate, 'until' => $endDate]),
+            'level' => $level,
             'fields' => $metricConfig['fields']
         ];
 

@@ -233,8 +233,8 @@ class FacebookEntitySync
 
                         $adsets = $api->getAdsets(adAccountId: $adAccountId, additionalParams: $additionalParams);
                         if (! empty($adsets['data'])) {
-                            $includeFilter = self::getFacebookFilter($config, 'AD_SET', 'cache_include');
-                            $excludeFilter = self::getFacebookFilter($config, 'AD_SET', 'cache_exclude');
+                            $includeFilter = self::getFacebookFilter($config, 'ADSET', 'cache_include');
+                            $excludeFilter = self::getFacebookFilter($config, 'ADSET', 'cache_exclude');
 
                             $filteredAdsets = [];
                             foreach ($adsets['data'] as $a) {
