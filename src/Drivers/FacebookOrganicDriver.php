@@ -440,12 +440,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
     protected function initializeApi(array $config): FacebookGraphApi
     {
         return new FacebookGraphApi(
-            userId: $config['facebook_organic']['user_id'] ?? $config['facebook']['user_id'] ?? 'system',
-            appId: $config['facebook_organic']['app_id'] ?? $config['facebook']['app_id'] ?? '',
-            appSecret: $config['facebook_organic']['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
-            redirectUrl: $config['facebook_organic']['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
+            userId: $config['user_id'] ?? $config['facebook']['user_id'] ?? 'system',
+            appId: $config['app_id'] ?? $config['facebook']['app_id'] ?? '',
+            appSecret: $config['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
+            redirectUrl: $config['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
             userAccessToken: $this->authProvider->getAccessToken(),
-            apiVersion: $config['facebook_organic']['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0'
+            apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0'
         );
     }
 
