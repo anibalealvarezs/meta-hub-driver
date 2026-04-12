@@ -434,7 +434,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     public function getApi(array $config = []): FacebookGraphApi
     {
-        if (empty($config) && $this->authProvider && method_exists($this->authProvider, 'getConfig')) {
+        if (empty($config) && $this->authProvider instanceof \Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider) {
             $config = $this->authProvider->getConfig();
         }
         return $this->initializeApi($config);
