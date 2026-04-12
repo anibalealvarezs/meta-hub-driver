@@ -954,4 +954,17 @@ class FacebookMarketingDriver implements SyncDriverInterface
     {
         return [];
     }
+
+    /**
+     * @inheritdoc
+     */
+    public static function getInstanceRules(): array
+    {
+        return [
+            'history_months' => 24,
+            'entities_sync' => 'entities',
+            'recent_cron_hour' => 5,
+            'recent_cron_minute' => 30,
+        ];
+    }
 }
