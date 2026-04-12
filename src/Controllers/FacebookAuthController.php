@@ -62,9 +62,9 @@ class FacebookAuthController
         }
 
         try {
-            $config = DriverFactory::getChannelConfig('facebook_marketing');
+            $allConfigs = \Helpers\Helpers::getChannelsConfig();
         } catch (\Exception $e) {
-            $config = [];
+            $allConfigs = [];
         }
 
         $scopes = [
@@ -72,14 +72,14 @@ class FacebookAuthController
             UserPermission::EMAIL->value,
         ];
 
-        // Marketing Scopes (Check both list existence and enablement flag)
-        if (!empty($config['ad_accounts']) || ($config['marketing_enabled'] ?? false)) {
+        // Marketing Scopes (Only if the channel is globally enabled)
+        if ($allConfigs['facebook_marketing_enabled'] ?? false) {
             $scopes[] = UserPermission::ADS_READ->value;
             $scopes[] = PagePermission::BUSINESS_MANAGEMENT->value;
         }
 
-        // Organic Pages and Instagram Scopes (Check both list existence and enablement flag)
-        if (!empty($config['pages']) || ($config['organic_enabled'] ?? false)) {
+        // Organic Pages and Instagram Scopes (Only if the channel is globally enabled)
+        if ($allConfigs['facebook_organic_enabled'] ?? false) {
             $scopes[] = PagePermission::PAGES_SHOW_LIST->value;
             $scopes[] = PagePermission::PAGES_READ_ENGAGEMENT->value;
             $scopes[] = PagePermission::PAGES_READ_USER_CONTENT->value;
