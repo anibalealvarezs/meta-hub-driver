@@ -817,6 +817,34 @@ class FacebookMarketingDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
+    public static function getPageTypes(): array
+    {
+        return [
+            'meta_ad_account' => 'Meta Ad Account'
+        ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public static function getAccountTypes(): array
+    {
+        return [
+            'meta_ad_account' => 'Meta Ad Account'
+        ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public static function getEntityPaths(): array
+    {
+        return [];
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function prepareUiConfig(array $channelConfig): array
     {
         $ui = [];
@@ -871,5 +899,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         $resetter = new \Anibalealvarezs\MetaHubDriver\Services\MetaResetService($entityManager);
         return $resetter->reset($this->getChannel(), $mode);
+    }
+    /**
+     * @inheritdoc
+     */
+    public function getDateFilterMapping(): array
+    {
+        return [];
     }
 }

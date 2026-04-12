@@ -911,6 +911,36 @@ class FacebookOrganicDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
+    public static function getPageTypes(): array
+    {
+        return [
+            'facebook_page' => 'Facebook Page',
+            'instagram' => 'Instagram Account'
+        ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public static function getAccountTypes(): array
+    {
+        return [
+            'facebook_page' => 'Facebook Page',
+            'instagram' => 'Instagram Account'
+        ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public static function getEntityPaths(): array
+    {
+        return [];
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function prepareUiConfig(array $channelConfig): array
     {
         $ui = [];
@@ -968,5 +998,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         $resetter = new \Anibalealvarezs\MetaHubDriver\Services\MetaResetService($entityManager);
         return $resetter->reset($this->getChannel(), $mode);
+    }
+    /**
+     * @inheritdoc
+     */
+    public function getDateFilterMapping(): array
+    {
+        return [];
     }
 }
