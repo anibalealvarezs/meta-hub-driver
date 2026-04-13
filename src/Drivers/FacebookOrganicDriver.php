@@ -554,7 +554,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $config = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::hydrate(
             $this->getChannel(),
             'global',
-            $config
+            $config,
+            $this->getConfigSchema()
         );
 
         // 1. Explicit environment variable mappings (Agnostic version of Helpers' logic)
