@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Anibalealvarezs\MetaHubDriver\Auth;
 
 use Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider;
+use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\OAuthProviderInterface;
 use Anibalealvarezs\FacebookGraphApi\Enums\UserPermission;
 use Anibalealvarezs\FacebookGraphApi\Enums\PagePermission;
 
-class FacebookAuthProvider extends BaseAuthProvider implements OAuthProviderInterface
+class FacebookAuthProvider extends BaseAuthProvider implements OAuthProviderInterface, AuthProviderInterface
 {
     public function getAccessToken(): string
     {
