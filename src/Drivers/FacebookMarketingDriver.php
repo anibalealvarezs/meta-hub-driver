@@ -580,7 +580,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
     {
         return [
             'global' => [
-                'enabled' => true,
+                'enabled' => false,
                 'cache_history_range' => '2 years',
                 'cache_aggregations' => false,
                 'metrics_strategy' => 'default',
@@ -614,6 +614,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
      */
     public function validateConfig(array $config): array
     {
+        $config = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::hydrate(
+            $this->getChannel(),
+            'global',
+            $config
+        );
+
         $envOverrides = [
             'FACEBOOK_APP_ID' => 'app_id',
             'FACEBOOK_APP_SECRET' => 'app_secret',
@@ -892,7 +898,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $ui['fb_metrics_config'] = $channelConfig['metrics_config'] ?? [];
         }
 
-        $ui['fb_marketing_enabled'] = $channelConfig['enabled'] ?? true;
+        $ui['fb_marketing_enabled'] = $channelConfig['enabled'] ?? false;
         $ui['fb_marketing_history_range'] = $channelConfig['cache_history_range'] ?? '2 years';
         $ui['fb_marketing_cron_entities_hour'] = $channelConfig['cron_entities_hour'] ?? 1;
         $ui['fb_marketing_cron_entities_minute'] = $channelConfig['cron_entities_minute'] ?? 0;

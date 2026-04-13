@@ -126,7 +126,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
     public function updateConfiguration(array $newData, array $currentConfig): array
     {
         $selectedAssets = $newData['assets']['pages'] ?? [];
-        $enabled = $newData['enabled'] ?? true;
+        $enabled = $newData['enabled'] ?? false;
         $historyRange = $newData['cache_history_range'] ?? $newData['organic_history_range'] ?? null;
         $featureToggles = $newData['feature_toggles'] ?? [];
         $entityFilters = $newData['entity_filters'] ?? [];
@@ -184,7 +184,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 'title' => $pData['title'] ?? null,
                 'url' => $pData['url'] ?? null,
                 'hostname' => $pData['hostname'] ?? null,
-                'enabled' => filter_var($pData['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'enabled' => filter_var($pData['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'exclude_from_caching' => filter_var($pData['exclude_from_caching'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'ig_account' => $pData['ig_account'] ?? null,
                 'ig_account_name' => $pData['ig_account_name'] ?? null,
@@ -518,7 +518,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
     {
         return [
             'global' => [
-                'enabled' => true,
+                'enabled' => false,
                 'cache_history_range' => '2 years',
                 'cache_aggregations' => false,
             ],
@@ -547,6 +547,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
      */
     public function validateConfig(array $config): array
     {
+        $config = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::hydrate(
+            $this->getChannel(),
+            'global',
+            $config
+        );
+
         // 1. Explicit environment variable mappings (Agnostic version of Helpers' logic)
         $envOverrides = [
             'FACEBOOK_APP_ID' => 'app_id',
@@ -966,7 +972,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
     {
         $ui = [];
         $ui['fb_cache_chunk_size'] = $channelConfig['cache_chunk_size'] ?? '1 week';
-        $ui['fb_organic_enabled'] = $channelConfig['enabled'] ?? true;
+        $ui['fb_organic_enabled'] = $channelConfig['enabled'] ?? false;
         $ui['fb_organic_history_range'] = $channelConfig['cache_history_range'] ?? '2 years';
         $ui['fb_organic_cron_entities_hour'] = $channelConfig['cron_entities_hour'] ?? 2;
         $ui['fb_organic_cron_entities_minute'] = $channelConfig['cron_entities_minute'] ?? 0;

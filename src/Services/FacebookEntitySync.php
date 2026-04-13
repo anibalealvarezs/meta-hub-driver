@@ -515,7 +515,6 @@ class FacebookEntitySync
      * @param string|null $endDate
      * @param LoggerInterface|null $logger
      * @param int|null $jobId
-     * @param array|null $pageIds
      * @param FacebookGraphApi|null $api
      * @return Response
      */
@@ -605,7 +604,6 @@ class FacebookEntitySync
      * @param string|null $endDate
      * @param LoggerInterface|null $logger
      * @param int|null $jobId
-     * @param array|null $pageIds
      * @param FacebookGraphApi|null $api
      * @return Response
      */
