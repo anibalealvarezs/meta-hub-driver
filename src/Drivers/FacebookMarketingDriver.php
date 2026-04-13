@@ -515,7 +515,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
     protected function initializeApi(array $config): FacebookGraphApi
     {
         return new FacebookGraphApi(
-            userId: $config['user_id'] ?? $config['facebook']['user_id'] ?? 'system',
+            userId: $config['user_id'] ?? $config['facebook']['user_id'] ?? $this->authProvider->getUserId() ?: 'system',
             appId: $config['app_id'] ?? $config['facebook']['app_id'] ?? '',
             appSecret: $config['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
             redirectUrl: $config['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
