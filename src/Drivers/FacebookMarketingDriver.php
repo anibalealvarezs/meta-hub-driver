@@ -124,7 +124,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
-    public function fetchAvailableAssets(): array
+    public function fetchAvailableAssets(bool $throwOnError = false): array
     {
         if (!$this->authProvider) {
             return [];
@@ -174,6 +174,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
             return $assets;
         } catch (\Exception $e) {
+            if ($this->logger) $this->logger->error("FacebookMarketingDriver: Error fetching available assets: " . $e->getMessage());
+            if ($throwOnError) {
+                throw $e;
+            }
             return [];
         }
     }
@@ -354,7 +358,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $api = $this->initializeApi($config);
         $entity = $config['entity'] ?? 'metrics';
 
-        if ($entity !== 'metrics') {
+        if ($entity !== 'metrics' && $entity !== 'metric') {
             return $this->syncEntities($entity, $startDate, $endDate, $config, $api);
         }
 
@@ -935,7 +939,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             throw new Exception("EntityManagerInterface required for FacebookMarketingDriver entity initialization.");
         }
 
-        $assets = $this->fetchAvailableAssets();
+        $assets = $this->fetchAvailableAssets(throwOnError: true);
         $initializer = new MetaInitializerService($entityManager, $this->logger);
         
         return $initializer->initialize($this->getChannel(), $config, ['ad_accounts' => $assets['facebook_ad_accounts'] ?? []]);

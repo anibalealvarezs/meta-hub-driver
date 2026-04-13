@@ -212,14 +212,14 @@ class FacebookOrganicDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
-    public function fetchAvailableAssets(): array
+    public function fetchAvailableAssets(bool $throwOnError = false): array
     {
         if (!$this->authProvider) {
             return [];
         }
 
         try {
-            $api = $this->initializeApi([]); // Using default from env/provider
+            $api = $this->getApi();
             $userId = $api->getUserId();
             
             $pagesData = $api->getPages(
@@ -243,6 +243,10 @@ class FacebookOrganicDriver implements SyncDriverInterface
             }
             return $assets;
         } catch (\Exception $e) {
+            if ($this->logger) $this->logger->error("FacebookOrganicDriver: Error fetching available assets: " . $e->getMessage());
+            if ($throwOnError) {
+                throw $e;
+            }
             return [];
         }
     }
@@ -328,7 +332,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $api = $this->initializeApi($config);
         $entity = $config['entity'] ?? 'metrics';
 
-        if ($entity !== 'metrics') {
+        if ($entity !== 'metrics' && $entity !== 'metric') {
             return $this->syncEntities($entity, $startDate, $endDate, $config, $api);
         }
 
@@ -1008,7 +1012,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             throw new Exception("EntityManagerInterface required for FacebookOrganicDriver entity initialization.");
         }
 
-        $assets = $this->fetchAvailableAssets();
+        $assets = $this->fetchAvailableAssets(throwOnError: true);
         $initializer = new MetaInitializerService($entityManager, $this->logger);
         
         return $initializer->initialize($this->getChannel(), $config, ['pages' => $assets['facebook_pages'] ?? []]);
