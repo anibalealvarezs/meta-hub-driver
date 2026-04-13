@@ -113,7 +113,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             '/fb-organic-reports' => [
                 'httpMethod' => 'GET',
                 'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\ReportController())->organic($args),
-                'public' => ($_ENV['APP_ENV'] ?? '') === 'testing' || str_contains(strtolower($_ENV['PROJECT_NAME'] ?? ''), 'demo'),
+                'public' => true,
                 'admin' => false,
                 'html' => true
             ]
