@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "55258ce4872c7c547abf6d6ee7fc6324063f3cb3"
+                "reference": "be42f153e702464a0a730c4c6c30dcb4fa70ee3b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-55258ce4872c7c547abf6d6ee7fc6324063f3cb3-zip-4b1f43.zip",
-                "reference": "55258ce4872c7c547abf6d6ee7fc6324063f3cb3",
-                "shasum": "40acc3b80f2c7a60a2b3b9ff33a4941aaee10ada"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-be42f153e702464a0a730c4c6c30dcb4fa70ee3b-zip-1b2637.zip",
+                "reference": "be42f153e702464a0a730c4c6c30dcb4fa70ee3b",
+                "shasum": "5e8dfb6d6d52e897d71c1432ed7c61c6caa37ab0"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -111,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-13T15:06:30+00:00"
+            "time": "2026-04-13T22:57:17+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -2219,12 +2219,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "d9a32b4e5479fd0c83efda41ee795b490be25111"
+                "reference": "f9f8ca824967b8543fba4906ce9d0f172edcb04d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/d9a32b4e5479fd0c83efda41ee795b490be25111",
-                "reference": "d9a32b4e5479fd0c83efda41ee795b490be25111",
+                "url": "https://api.github.com/repos/symfony/console/zipball/f9f8ca824967b8543fba4906ce9d0f172edcb04d",
+                "reference": "f9f8ca824967b8543fba4906ce9d0f172edcb04d",
                 "shasum": ""
             },
             "require": {
@@ -2309,7 +2309,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-13T14:28:23+00:00"
+            "time": "2026-04-13T15:40:04+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
@@ -2317,12 +2317,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/deprecation-contracts.git",
-                "reference": "96de97c7f2da31afbbeacd75f3c54f7e6e06c643"
+                "reference": "50f59d1f3ca46d41ac911f97a78626b6756af35b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/96de97c7f2da31afbbeacd75f3c54f7e6e06c643",
-                "reference": "96de97c7f2da31afbbeacd75f3c54f7e6e06c643",
+                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/50f59d1f3ca46d41ac911f97a78626b6756af35b",
+                "reference": "50f59d1f3ca46d41ac911f97a78626b6756af35b",
                 "shasum": ""
             },
             "require": {
@@ -2381,7 +2381,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-13T14:54:26+00:00"
+            "time": "2026-04-13T15:52:40+00:00"
         },
         {
             "name": "symfony/http-foundation",
@@ -3060,12 +3060,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/string.git",
-                "reference": "b68f4b71feeeb9a4fef46c4126b8b07fca12adca"
+                "reference": "25a8779a628ad72804baac692999ba58ca3b6dd4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/string/zipball/b68f4b71feeeb9a4fef46c4126b8b07fca12adca",
-                "reference": "b68f4b71feeeb9a4fef46c4126b8b07fca12adca",
+                "url": "https://api.github.com/repos/symfony/string/zipball/25a8779a628ad72804baac692999ba58ca3b6dd4",
+                "reference": "25a8779a628ad72804baac692999ba58ca3b6dd4",
                 "shasum": ""
             },
             "require": {
@@ -3143,7 +3143,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-13T14:28:23+00:00"
+            "time": "2026-04-13T15:32:30+00:00"
         },
         {
             "name": "symfony/translation",
@@ -3151,12 +3151,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/translation.git",
-                "reference": "20689d98e6daed00a02cd98974548992b9ce79de"
+                "reference": "6d002d478b4e1cad8704c531dfa373187ffd7889"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/translation/zipball/20689d98e6daed00a02cd98974548992b9ce79de",
-                "reference": "20689d98e6daed00a02cd98974548992b9ce79de",
+                "url": "https://api.github.com/repos/symfony/translation/zipball/6d002d478b4e1cad8704c531dfa373187ffd7889",
+                "reference": "6d002d478b4e1cad8704c531dfa373187ffd7889",
                 "shasum": ""
             },
             "require": {
@@ -3243,7 +3243,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-13T14:28:23+00:00"
+            "time": "2026-04-13T15:32:30+00:00"
         },
         {
             "name": "symfony/translation-contracts",
@@ -3334,12 +3334,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/var-exporter.git",
-                "reference": "dc41fcd59d96f54d86d92c6c9b5078b0a4860377"
+                "reference": "6e5ad609515395a920b5aa460e677a569b8771bb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/dc41fcd59d96f54d86d92c6c9b5078b0a4860377",
-                "reference": "dc41fcd59d96f54d86d92c6c9b5078b0a4860377",
+                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/6e5ad609515395a920b5aa460e677a569b8771bb",
+                "reference": "6e5ad609515395a920b5aa460e677a569b8771bb",
                 "shasum": ""
             },
             "require": {
@@ -3407,7 +3407,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-13T14:28:23+00:00"
+            "time": "2026-04-13T15:32:30+00:00"
         },
         {
             "name": "symfony/yaml",
