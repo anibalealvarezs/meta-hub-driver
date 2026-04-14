@@ -601,6 +601,14 @@ class FacebookEntitySync
             $facebookPageClass = $seeder->getEntityClass('FacebookPage');
 
             $adAccounts = $config['ad_accounts'] ?? [];
+            $pagesFromConfig = $config['pages'] ?? [];
+
+            if (empty($adAccounts) && !empty($pagesFromConfig)) {
+                // If no ad accounts (Organic Sync), we might still want to ensure pages from config exist in DB
+                // but usually syncPages is for discovery. For now let's just log and skip discovery if no ad accounts.
+                $logger?->info("Direct page sync from config not implemented in syncPages discovery. Skipping discovery.");
+            }
+
             foreach ($adAccounts as $adAccount) {
                 if (empty($adAccount['enabled']) || empty($adAccount['pages'])) {
                     continue;
@@ -692,15 +700,31 @@ class FacebookEntitySync
             $postClass = $seeder->getEntityClass('Post');
 
             $adAccounts = $config['ad_accounts'] ?? [];
-            foreach ($adAccounts as $adAccount) {
-                $adAccountId = (string)$adAccount['id'];
-                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $adAccountId]);
-                if (! $channeledAccount) {
-                    continue;
-                }
+            $pagesFromConfig = $config['pages'] ?? [];
 
-                $pages = $manager->getRepository($facebookPageClass)->findBy(['channeledAccount' => $channeledAccount]);
-                foreach ($pages as $page) {
+            $pagesToProcess = [];
+            
+            if (!empty($adAccounts)) {
+                foreach ($adAccounts as $adAccount) {
+                    $adAccountId = (string)$adAccount['id'];
+                    $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $adAccountId]);
+                    if (! $channeledAccount) {
+                        continue;
+                    }
+                    $dbPages = $manager->getRepository($facebookPageClass)->findBy(['channeledAccount' => $channeledAccount]);
+                    foreach ($dbPages as $p) $pagesToProcess[] = $p;
+                }
+            } elseif (!empty($pagesFromConfig)) {
+                foreach ($pagesFromConfig as $pageCfg) {
+                    if (empty($pageCfg['enabled']) || empty($pageCfg['posts'])) continue;
+                    $pId = (string)($pageCfg['id'] ?? '');
+                    if (!$pId) continue;
+                    $page = $manager->getRepository($facebookPageClass)->findOneBy(['platformId' => $pId]);
+                    if ($page) $pagesToProcess[] = $page;
+                }
+            }
+
+            foreach ($pagesToProcess as $page) {
                     $maxRetries = 3;
                     $retryCount = 0;
                     $fetched = false;
@@ -746,7 +770,6 @@ class FacebookEntitySync
                         }
                     }
                 }
-            }
 
             return new Response(json_encode(['message' => 'Posts synchronized']), 200, ['Content-Type' => 'application/json']);
         } catch (\Exception $e) {
