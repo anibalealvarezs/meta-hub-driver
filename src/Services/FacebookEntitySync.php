@@ -83,14 +83,13 @@ class FacebookEntitySync
             $syncErrorRepo = $manager->getRepository($channeledSyncErrorClass);
 
             foreach ($adAccounts as $adAccount) {
-                // Job status check removed for host-agnosticism
+                $adAccountId = (string)$adAccount['id'];
+                $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Processing ad account: $adAccountId");
 
                 if (empty($adAccount['enabled']) || empty($adAccount['campaigns'])) {
-                    $logger?->info("Skipping campaigns sync for ad account: " . $adAccount['id'] . " (disabled in config)");
+                    $logger?->info("Skipping campaigns sync for ad account: $adAccountId (disabled in config)");
                     continue;
                 }
-
-                $adAccountId = (string)$adAccount['id'];
                 $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
                     'platformId' => $adAccountId,
                 ]);
@@ -229,12 +228,14 @@ class FacebookEntitySync
             }
 
             foreach ($adAccounts as $adAccount) {
+                $adAccountId = (string)$adAccount['id'];
+                $logger?->info("DEBUG: FacebookEntitySync::syncAdGroups - Processing ad account: $adAccountId");
+
                 if (empty($adAccount['enabled']) || empty($adAccount['adsets'])) {
-                    $logger?->info("Skipping adsets sync for ad account: " . $adAccount['id'] . " (disabled in config)");
+                    $logger?->info("Skipping adsets sync for ad account: $adAccountId (disabled in config)");
                     continue;
                 }
 
-                $adAccountId = (string)$adAccount['id'];
                 $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
                     'platformId' => $adAccountId,
                 ]);
@@ -379,11 +380,13 @@ class FacebookEntitySync
             }
 
             foreach ($adAccounts as $adAccount) {
+                $adAccountId = (string)$adAccount['id'];
+                $logger?->info("DEBUG: FacebookEntitySync::syncAds - Processing ad account: $adAccountId");
+
                 if (empty($adAccount['enabled']) || empty($adAccount['ads'])) {
                     continue;
                 }
 
-                $adAccountId = (string)$adAccount['id'];
                 $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $adAccountId]);
                 if (! $channeledAccount) {
                     continue;
