@@ -731,6 +731,7 @@ class FacebookEntitySync
 
                     while ($retryCount < $maxRetries && ! $fetched) {
                         try {
+                            $api->setPageId($page->getPlatformId());
                             $posts = $api->getFacebookPosts(pageId: $page->getPlatformId(), limit: 100);
                             if (! empty($posts['data'])) {
                                 $includeFilter = self::getFacebookFilter($config, 'POST', 'cache_include');
