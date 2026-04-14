@@ -98,7 +98,9 @@ class FacebookEntitySync
 
                 while ($retryCount < $maxRetries && ! $fetched) {
                     try {
+                        $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Phase 1. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
                         $campaigns = $api->getCampaigns(adAccountId: $adAccountId);
+                        $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Phase 2. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
                         if (! empty($campaigns['data'])) {
                             $includeFilter = self::getFacebookFilter($config, 'CAMPAIGN', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'CAMPAIGN', 'cache_exclude');
