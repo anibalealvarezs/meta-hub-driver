@@ -12,13 +12,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "17a041884f3cb41a2250ebbc0c07be23c8040b5e"
+                "reference": "64e442084a7ff81399b8de8f2f8841ff7bcd5b71"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-17a041884f3cb41a2250ebbc0c07be23c8040b5e-zip-d9f867.zip",
-                "reference": "17a041884f3cb41a2250ebbc0c07be23c8040b5e",
-                "shasum": "552a654dd9fc43d45133907c60e679e0a40f6eb4"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-64e442084a7ff81399b8de8f2f8841ff7bcd5b71-zip-f19b3a.zip",
+                "reference": "64e442084a7ff81399b8de8f2f8841ff7bcd5b71",
+                "shasum": "91682b2da3b06a31fd06d8f96909a7af4d917ff7"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "@dev",
@@ -67,7 +67,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-04-11T22:17:53+00:00"
+            "time": "2026-04-14T13:43:28+00:00"
         },
         {
             "name": "anibalealvarezs/api-driver-core",
@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "b317a65a2366e899d5513146d228b04a2c542a67"
+                "reference": "64974c2ada3e603b12d54c17da118c48ed5ff0cb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-b317a65a2366e899d5513146d228b04a2c542a67-zip-79efcb.zip",
-                "reference": "b317a65a2366e899d5513146d228b04a2c542a67",
-                "shasum": "e334c874842e0b19727dabe5fc3c25104c33be0b"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-64974c2ada3e603b12d54c17da118c48ed5ff0cb-zip-aa5f07.zip",
+                "reference": "64974c2ada3e603b12d54c17da118c48ed5ff0cb",
+                "shasum": "7bbf86834748e563b24d1772bd88b3aefa83c46b"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -111,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-13T23:32:34+00:00"
+            "time": "2026-04-14T13:58:46+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -119,13 +119,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "6be500aefaa65febf48da1dc53bdc8382525bd88"
+                "reference": "fe1b065ff7f2c7d7e9a84ac1371099dcab9253a0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-6be500aefaa65febf48da1dc53bdc8382525bd88-zip-57301d.zip",
-                "reference": "6be500aefaa65febf48da1dc53bdc8382525bd88",
-                "shasum": "bdf409ec2814edd98e2a0bd84448357b971f0465"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-fe1b065ff7f2c7d7e9a84ac1371099dcab9253a0-zip-fe329e.zip",
+                "reference": "fe1b065ff7f2c7d7e9a84ac1371099dcab9253a0",
+                "shasum": "5fb42eb38a7e1a4e65cd8921167cacbb87eb7857"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -176,7 +176,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-04-11T22:24:35+00:00"
+            "time": "2026-04-14T13:52:01+00:00"
         },
         {
             "name": "anibalealvarezs/oauth-v1",
@@ -3151,12 +3151,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/translation.git",
-                "reference": "6d002d478b4e1cad8704c531dfa373187ffd7889"
+                "reference": "350eb0b8e6334e5cc46a36121bd2ede5571f3f40"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/translation/zipball/6d002d478b4e1cad8704c531dfa373187ffd7889",
-                "reference": "6d002d478b4e1cad8704c531dfa373187ffd7889",
+                "url": "https://api.github.com/repos/symfony/translation/zipball/350eb0b8e6334e5cc46a36121bd2ede5571f3f40",
+                "reference": "350eb0b8e6334e5cc46a36121bd2ede5571f3f40",
                 "shasum": ""
             },
             "require": {
@@ -3243,7 +3243,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-13T15:32:30+00:00"
+            "time": "2026-04-14T06:40:07+00:00"
         },
         {
             "name": "symfony/translation-contracts",
@@ -3334,12 +3334,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/var-exporter.git",
-                "reference": "6e5ad609515395a920b5aa460e677a569b8771bb"
+                "reference": "c337020d7fa4364cb03180a628a999e6ac55e4c6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/6e5ad609515395a920b5aa460e677a569b8771bb",
-                "reference": "6e5ad609515395a920b5aa460e677a569b8771bb",
+                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/c337020d7fa4364cb03180a628a999e6ac55e4c6",
+                "reference": "c337020d7fa4364cb03180a628a999e6ac55e4c6",
                 "shasum": ""
             },
             "require": {
@@ -3407,7 +3407,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-13T15:32:30+00:00"
+            "time": "2026-04-14T12:21:03+00:00"
         },
         {
             "name": "symfony/yaml",
