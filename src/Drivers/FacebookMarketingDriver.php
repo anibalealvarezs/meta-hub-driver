@@ -958,6 +958,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $resetter = new \Anibalealvarezs\MetaHubDriver\Services\MetaResetService($entityManager);
         return $resetter->reset($this->getChannel(), $mode);
     }
+
     /**
      * @inheritdoc
      */
