@@ -615,19 +615,18 @@ class FacebookEntitySync
                     
                     try {
                         $api->setPageId($pId);
-                        $pageData = $api->getPage($pId); // Need to ensure getPage exists or use getPages with ID
-                        
-                        if ($pageData) {
-                            $converted = FacebookOrganicConvert::pages([$pageData], $channeledAccount?->getId());
-                            foreach ($converted as $data) {
-                                $page = $manager->getRepository($facebookPageClass)->findOneBy(['platformId' => $data->platformId]) ?? new $facebookPageClass();
-                                $page->addTitle($data->name);
-                                $page->addPlatformId($data->platformId);
-                                if ($channeledAccount) $page->addAccount($channeledAccount->getAccount());
-                                $manager->persist($page);
-                            }
-                            $manager->flush();
+
+                        // Use the data directly from the configuration panel
+                        // The UI provides id, title, url, etc.
+                        $converted = FacebookOrganicConvert::pages([$pageCfg], $channeledAccount?->getId());
+                        foreach ($converted as $data) {
+                            $page = $manager->getRepository($facebookPageClass)->findOneBy(['platformId' => $data->platformId]) ?? new $facebookPageClass();
+                            $page->addTitle($data->name); // $data->name comes from title mapping in converter
+                            $page->addPlatformId($data->platformId);
+                            if ($channeledAccount) $page->addAccount($channeledAccount->getAccount());
+                            $manager->persist($page);
                         }
+                        $manager->flush();
                     } catch (\Exception $e) {
                         $logger?->error("Error syncing organic page $pId: " . $e->getMessage());
                     }
