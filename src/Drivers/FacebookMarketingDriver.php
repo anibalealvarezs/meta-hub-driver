@@ -384,18 +384,25 @@ class FacebookMarketingDriver implements SyncDriverInterface
             );
 
             foreach ($chunks as $chunk) {
-                // Determine which levels to fetch based on config
+                // Determine which levels to fetch based on current account config or global config
                 $levelsToFetch = [];
-                if (!empty($config['AD_ACCOUNT']['ad_account_metrics'])) $levelsToFetch[] = 'account';
-                if (!empty($config['AD_ACCOUNT']['campaign_metrics'])) $levelsToFetch[] = 'campaign';
-                if (!empty($config['AD_ACCOUNT']['adset_metrics'])) $levelsToFetch[] = 'adset';
-                if (!empty($config['AD_ACCOUNT']['ad_metrics'])) $levelsToFetch[] = 'ad';
+                $accCfg = $account['account_data'] ?? $account;
+                
+                if (!empty($accCfg['ad_account_metrics']) || !empty($config['AD_ACCOUNT']['ad_account_metrics'])) $levelsToFetch[] = 'account';
+                if (!empty($accCfg['campaign_metrics']) || !empty($config['AD_ACCOUNT']['campaign_metrics'])) $levelsToFetch[] = 'campaign';
+                if (!empty($accCfg['adset_metrics']) || !empty($config['AD_ACCOUNT']['adset_metrics'])) $levelsToFetch[] = 'adset';
+                if (!empty($accCfg['ad_metrics']) || !empty($config['AD_ACCOUNT']['ad_metrics'])) $levelsToFetch[] = 'ad';
+
+                $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Levels to fetch for $accountId", ['levels' => $levelsToFetch]);
 
                 // Default to account if nothing specified
                 if (empty($levelsToFetch)) $levelsToFetch = ['account'];
 
                 foreach ($levelsToFetch as $level) {
+                    $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Fetching $level insights for $accountId");
                     $rows = $this->fetchInsights($api, $accountId, $chunk['start'], $chunk['end'], $config, $level);
+                    $rowCount = count($rows['data'] ?? []);
+                    $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Fetched $rowCount rows for $level");
                     if (!empty($rows['data'])) {
                         $collection = FacebookMarketingMetricConvert::metrics($rows['data'], $accountId, $level, $this->logger);
                         if ($this->dataProcessor && $collection->count() > 0) {
