@@ -604,12 +604,38 @@ class FacebookEntitySync
             $pagesFromConfig = $config['pages'] ?? [];
 
             if (empty($adAccounts) && !empty($pagesFromConfig)) {
-                // If no ad accounts (Organic Sync), we might still want to ensure pages from config exist in DB
-                // but usually syncPages is for discovery. For now let's just log and skip discovery if no ad accounts.
-                $logger?->info("Direct page sync from config not implemented in syncPages discovery. Skipping discovery.");
+                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $config['user_id'] ?? 'system']);
+                
+                foreach ($pagesFromConfig as $pageCfg) {
+                    if (empty($pageCfg['enabled'])) continue;
+                    $pId = (string)($pageCfg['id'] ?? '');
+                    if (!$pId) continue;
+
+                    $logger?->info("DEBUG: FacebookEntitySync::syncPages - Syncing Page $pId from config");
+                    
+                    try {
+                        $api->setPageId($pId);
+                        $pageData = $api->getPage($pId); // Need to ensure getPage exists or use getPages with ID
+                        
+                        if ($pageData) {
+                            $converted = FacebookOrganicConvert::pages([$pageData], $channeledAccount?->getId());
+                            foreach ($converted as $data) {
+                                $page = $manager->getRepository($facebookPageClass)->findOneBy(['platformId' => $data->platformId]) ?? new $facebookPageClass();
+                                $page->addTitle($data->name);
+                                $page->addPlatformId($data->platformId);
+                                if ($channeledAccount) $page->addAccount($channeledAccount->getAccount());
+                                $manager->persist($page);
+                            }
+                            $manager->flush();
+                        }
+                    } catch (\Exception $e) {
+                        $logger?->error("Error syncing organic page $pId: " . $e->getMessage());
+                    }
+                }
             }
 
             foreach ($adAccounts as $adAccount) {
+                $logger?->info("DEBUG: FacebookEntitySync::syncPages - Processing Ad Account " . ($adAccount['id'] ?? 'unknown'));
                 if (empty($adAccount['enabled']) || empty($adAccount['pages'])) {
                     continue;
                 }
@@ -725,7 +751,8 @@ class FacebookEntitySync
             }
 
             foreach ($pagesToProcess as $page) {
-                    $maxRetries = 3;
+                $logger?->info("DEBUG: FacebookEntitySync::syncPosts - START processing page " . $page->getPlatformId());
+                $maxRetries = 3;
                     $retryCount = 0;
                     $fetched = false;
 
