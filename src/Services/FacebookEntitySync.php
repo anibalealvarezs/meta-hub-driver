@@ -13,6 +13,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use DateTime;
+use Enums\CampaignObjective;
+use Enums\CampaignStatus;
+use Enums\CampaignBuyingType;
+use Enums\OptimizationGoal;
+use Enums\BillingEvent;
 
 class FacebookEntitySync
 {
@@ -132,6 +137,23 @@ class FacebookEntitySync
                                     $channeledCampaign->addPlatformId($data->platformId);
                                     $channeledCampaign->addChanneledAccount($channeledAccount);
                                     $channeledCampaign->addCampaign($campaign);
+                                    $channeledCampaign->addChannel($channeledAccount->getChannel());
+                                    
+                                    // Handle Budget (daily_budget or lifetime_budget)
+                                    $budget = (float)($data->budget ?? $data->lifetimeBudget ?? 0.0);
+                                    $channeledCampaign->addBudget($budget);
+                                    
+                                    // Handle Enums with tryFrom for safety
+                                    if (!empty($data->objective)) {
+                                        $channeledCampaign->addObjective(CampaignObjective::tryFrom($data->objective));
+                                    }
+                                    if (!empty($data->status)) {
+                                        $channeledCampaign->addStatus(CampaignStatus::tryFrom($data->status));
+                                    }
+                                    if (!empty($data->buyingType)) {
+                                        $channeledCampaign->addBuyingType(CampaignBuyingType::tryFrom($data->buyingType));
+                                    }
+                                    
                                     $manager->persist($channeledCampaign);
                                 }
                                 $manager->flush();
@@ -257,15 +279,41 @@ class FacebookEntitySync
                                     $campaign = $manager->getRepository($campaignClass)->findOneBy(['campaignId' => $data->campaignPlatformId]);
                                     if (!$campaign) continue;
 
-                                    $channeledAdGroup = $manager->getRepository($channeledAdGroupClass)->findOneBy([
-                                        'platformId' => $data->platformId,
-                                        'channeledAccount' => $channeledAccount
-                                    ]) ?? new $channeledAdGroupClass();
-                                    $channeledAdGroup->addPlatformId($data->platformId);
-                                    $channeledAdGroup->addName($data->name);
-                                    $channeledAdGroup->addChanneledAccount($channeledAccount);
-                                    $channeledAdGroup->addCampaign($campaign);
-                                    $manager->persist($channeledAdGroup);
+                                     $channeledAdGroup = $manager->getRepository($channeledAdGroupClass)->findOneBy([
+                                         'platformId' => $data->platformId,
+                                         'channeledAccount' => $channeledAccount
+                                     ]) ?? new $channeledAdGroupClass();
+                                     $channeledAdGroup->addPlatformId($data->platformId);
+                                     $channeledAdGroup->addName($data->name);
+                                     $channeledAdGroup->addChanneledAccount($channeledAccount);
+                                     $channeledAdGroup->addCampaign($campaign);
+                                     $channeledAdGroup->addChannel($channeledAccount->getChannel());
+                                     
+                                     // Set relationships and fields
+                                     $channeledCampaign = $manager->getRepository($seeder->getEntityClass('ChanneledCampaign'))->findOneBy([
+                                         'platformId' => $data->campaignPlatformId ?? $data->channeledCampaignId,
+                                         'channeledAccount' => $channeledAccount
+                                     ]);
+                                     if ($channeledCampaign) {
+                                         $channeledAdGroup->addChanneledCampaign($channeledCampaign);
+                                     }
+                                     
+                                     if (!empty($data->startDate)) $channeledAdGroup->addStartDate(new DateTime($data->startDate));
+                                     if (!empty($data->endDate)) $channeledAdGroup->addEndDate(new DateTime($data->endDate));
+                                     if (!empty($data->targeting)) $channeledAdGroup->addTargeting($data->targeting);
+                                     
+                                     // Handle Enums with tryFrom for safety
+                                     if (!empty($data->status)) {
+                                         $channeledAdGroup->addStatus(CampaignStatus::tryFrom($data->status));
+                                     }
+                                     if (!empty($data->optimizationGoal)) {
+                                         $channeledAdGroup->addOptimizationGoal(OptimizationGoal::tryFrom($data->optimizationGoal));
+                                     }
+                                     if (!empty($data->billingEvent)) {
+                                         $channeledAdGroup->addBillingEvent(BillingEvent::tryFrom($data->billingEvent));
+                                     }
+                                     
+                                     $manager->persist($channeledAdGroup);
                                 }
                                 $manager->flush();
                             }
@@ -378,14 +426,23 @@ class FacebookEntitySync
                                     ]);
                                     if (!$channeledAdGroup) continue;
 
-                                    $channeledAd = $manager->getRepository($channeledAdClass)->findOneBy([
-                                        'platformId' => $data->platformId,
-                                        'channeledAccount' => $channeledAccount
-                                    ]) ?? new $channeledAdClass();
-                                    $channeledAd->addPlatformId($data->platformId);
-                                    $channeledAd->addName($data->name);
-                                    $channeledAd->addChanneledAccount($channeledAccount);
-                                    $channeledAd->addChanneledAdGroup($channeledAdGroup);
+                                     $channeledAd = $manager->getRepository($channeledAdClass)->findOneBy([
+                                         'platformId' => $data->platformId,
+                                         'channeledAccount' => $channeledAccount
+                                     ]) ?? new $channeledAdClass();
+                                     $channeledAd->addPlatformId($data->platformId);
+                                     $channeledAd->addName($data->name);
+                                     $channeledAd->addChanneledAccount($channeledAccount);
+                                     $channeledAd->addChanneledAdGroup($channeledAdGroup);
+                                     $channeledAd->addChannel($channeledAccount->getChannel());
+                                     
+                                     if ($channeledAdGroup->getChanneledCampaign()) {
+                                         $channeledAd->addChanneledCampaign($channeledAdGroup->getChanneledCampaign());
+                                     }
+                                     
+                                     if (!empty($data->status)) {
+                                         $channeledAd->addStatus(CampaignStatus::tryFrom($data->status));
+                                     }
                                     
                                     if (!empty($data->creativePlatformId)) {
                                         $creative = $manager->getRepository($creativeClass)->findOneBy(['creativeId' => $data->creativePlatformId]);

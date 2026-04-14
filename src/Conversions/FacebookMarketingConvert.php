@@ -29,6 +29,7 @@ class FacebookMarketingConvert
                 'buyingType' => 'buying_type',
                 'status' => 'status',
                 'budget' => 'daily_budget',
+                'lifetimeBudget' => 'lifetime_budget',
             ],
             'context' => [
                 'channeledAccountId' => $channeledAccountId,
