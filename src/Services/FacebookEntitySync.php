@@ -58,6 +58,7 @@ class FacebookEntitySync
         ?int $jobId = null,
         ?array $adAccountIds = null
     ): Response {
+        $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - ENTRY. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
 
         try {
             $authorizedIdsMap = [];
