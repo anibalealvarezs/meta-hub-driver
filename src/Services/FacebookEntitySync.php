@@ -187,18 +187,16 @@ class FacebookEntitySync
         ?array $parentIdsMap = null
     ): Response {
 
+        $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+        $channeledAdGroupClass = $seeder->getEntityClass('ChanneledAdGroup');
+        $campaignClass = $seeder->getEntityClass('Campaign');
+
         try {
             $authorizedIdsMap = [];
-            $hasErrors = false;
             $adAccounts = $config['ad_accounts'] ?? [];
             if ($adAccountIds) {
                 $adAccounts = array_filter($adAccounts, fn ($acc) => in_array($acc['id'], $adAccountIds));
             }
-
-            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
-            $adGroupClass = $seeder->getEntityClass('AdGroup');
-            $channeledAdGroupClass = $seeder->getEntityClass('ChanneledAdGroup');
-            $campaignClass = $seeder->getEntityClass('Campaign');
 
             foreach ($adAccounts as $adAccount) {
                 if (empty($adAccount['enabled']) || empty($adAccount['adsets'])) {
@@ -313,12 +311,12 @@ class FacebookEntitySync
         ?array $parentIdsMap = null
     ): Response {
 
-        try {
-            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
-            $adClass = $seeder->getEntityClass('Ad');
-            $channeledAdClass = $seeder->getEntityClass('ChanneledAd');
-            $adGroupClass = $seeder->getEntityClass('AdGroup');
+        $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+        $channeledAdClass = $seeder->getEntityClass('ChanneledAd');
+        $channeledAdGroupClass = $seeder->getEntityClass('ChanneledAdGroup');
+        $creativeClass = $seeder->getEntityClass('Creative');
 
+        try {
             $adAccounts = $config['ad_accounts'] ?? [];
             if ($adAccountIds) {
                 $adAccounts = array_filter($adAccounts, fn ($acc) => in_array($acc['id'], $adAccountIds));
