@@ -278,7 +278,7 @@ class FacebookEntitySync
                             if (! empty($filteredAdsets)) {
                                 $converted = FacebookMarketingConvert::adsets($filteredAdsets, $channeledAccount->getId());
                                 foreach ($converted as $data) {
-                                    $campaign = $manager->getRepository($campaignClass)->findOneBy(['campaignId' => $data->campaignPlatformId]);
+                                    $campaign = $manager->getRepository($campaignClass)->findOneBy(['campaignId' => $data->channeledCampaignId]);
                                     if (!$campaign) continue;
 
                                      $channeledAdGroup = $manager->getRepository($channeledAdGroupClass)->findOneBy([
@@ -293,7 +293,7 @@ class FacebookEntitySync
                                      
                                      // Set relationships and fields
                                      $channeledCampaign = $manager->getRepository($seeder->getEntityClass('ChanneledCampaign'))->findOneBy([
-                                         'platformId' => $data->campaignPlatformId ?? $data->channeledCampaignId,
+                                         'platformId' => $data->channeledCampaignId,
                                          'channeledAccount' => $channeledAccount
                                      ]);
                                      if ($channeledCampaign) {
@@ -422,10 +422,10 @@ class FacebookEntitySync
                             if (! empty($filteredAds)) {
                                 $converted = FacebookMarketingConvert::ads($filteredAds, $channeledAccount->getId());
                                 foreach ($converted as $data) {
-                                    $channeledAdGroup = $manager->getRepository($channeledAdGroupClass)->findOneBy([
-                                        'platformId' => $data->adGroupPlatformId,
-                                        'channeledAccount' => $channeledAccount
-                                    ]);
+                                     $channeledAdGroup = $manager->getRepository($channeledAdGroupClass)->findOneBy([
+                                         'platformId' => $data->channeledAdGroupId,
+                                         'channeledAccount' => $channeledAccount
+                                     ]);
                                     if (!$channeledAdGroup) continue;
 
                                      $channeledAd = $manager->getRepository($channeledAdClass)->findOneBy([
@@ -446,8 +446,8 @@ class FacebookEntitySync
                                          $channeledAd->addStatus(CampaignStatus::tryFrom($data->status));
                                      }
                                     
-                                    if (!empty($data->creativePlatformId)) {
-                                        $creative = $manager->getRepository($creativeClass)->findOneBy(['creativeId' => $data->creativePlatformId]);
+                                     if (!empty($data->channeledCreativeId)) {
+                                         $creative = $manager->getRepository($creativeClass)->findOneBy(['creativeId' => $data->channeledCreativeId]);
                                         if ($creative) {
                                             $channeledAd->addCreative($creative);
                                         }
