@@ -18,6 +18,7 @@ use Enums\CampaignStatus;
 use Enums\CampaignBuyingType;
 use Enums\OptimizationGoal;
 use Enums\BillingEvent;
+use Helpers\Helpers;
 
 class FacebookEntitySync
 {
@@ -63,6 +64,7 @@ class FacebookEntitySync
         ?int $jobId = null,
         ?array $adAccountIds = null
     ): Response {
+        Helpers::reconnectIfNeeded($manager);
         $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - ENTRY. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
 
         try {
@@ -214,7 +216,7 @@ class FacebookEntitySync
         ?array $adAccountIds = null,
         ?array $parentIdsMap = null
     ): Response {
-
+        Helpers::reconnectIfNeeded($manager);
         $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
         $channeledAdGroupClass = $seeder->getEntityClass('ChanneledAdGroup');
         $campaignClass = $seeder->getEntityClass('Campaign');
@@ -364,7 +366,7 @@ class FacebookEntitySync
         ?array $adAccountIds = null,
         ?array $parentIdsMap = null
     ): Response {
-
+        Helpers::reconnectIfNeeded($manager);
         $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
         $channeledAdClass = $seeder->getEntityClass('ChanneledAd');
         $channeledAdGroupClass = $seeder->getEntityClass('ChanneledAdGroup');
