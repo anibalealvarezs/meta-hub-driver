@@ -342,7 +342,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $totalStats = ['metrics' => 0, 'rows' => 0, 'duplicates' => 0];
 
         foreach ($pagesToProcess as $page) {
-            $pageId = (string)($page['id'] ?? '');
+            $this->logger?->info("DEBUG: FacebookOrganicDriver::sync - Processing page data", ['page_data' => $page]);
+            $pageId = (string)($page['id'] ?? $page);
+            $this->logger?->info("DEBUG: FacebookOrganicDriver::sync - Resolved Page ID", ['id' => $pageId]);
             if (!$pageId) continue;
 
             $api->setPageId($pageId);
@@ -463,13 +465,15 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     protected function initializeApi(array $config): FacebookGraphApi
     {
+        $this->logger?->info("DEBUG: FacebookOrganicDriver::initializeApi - START");
         return new FacebookGraphApi(
             userId: $config['user_id'] ?? $config['facebook']['user_id'] ?? 'system',
             appId: $config['app_id'] ?? $config['facebook']['app_id'] ?? '',
             appSecret: $config['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
             redirectUrl: $config['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
             userAccessToken: $config['access_token'] ?? $config['graph_user_access_token'] ?? $this->authProvider->getAccessToken(),
-            apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0'
+            apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0',
+            logger: $this->logger
         );
     }
 
