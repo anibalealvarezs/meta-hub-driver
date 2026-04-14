@@ -544,6 +544,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     protected function fetchInsights(FacebookGraphApi $api, string $accountId, string $startDate, string $endDate, array $config, string $level = 'account'): array
     {
+        $this->logger?->info("DEBUG: FacebookMarketingDriver::fetchInsights - Requesting level '$level' for '$accountId' from $startDate to $endDate");
         $metricConfig = $this->getMetricsConfig($config);
 
         $params = [
@@ -551,6 +552,13 @@ class FacebookMarketingDriver implements SyncDriverInterface
             'level' => $level,
             'fields' => $metricConfig['fields']
         ];
+        $this->logger?->info("DEBUG: FacebookMarketingDriver::fetchInsights - Request details", [
+            'level' => $level,
+            'metricBreakdown' => $metricConfig['breakdowns'],
+            'additionalParams' => $params,
+            'metricSet' => $metricConfig['metricSet'],
+            'customMetrics' => $metricConfig['metrics']
+        ]);
 
         $maxRetries = 3;
         $retryCount = 0;
