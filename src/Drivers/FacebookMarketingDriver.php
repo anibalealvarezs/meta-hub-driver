@@ -372,7 +372,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $totalStats = ['metrics' => 0, 'rows' => 0, 'duplicates' => 0];
 
         foreach ($accountsToProcess as $account) {
-            $accountId = (string)($account['id'] ?? '');
+            $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Processing account data", ['account_data' => $account]);
+            $accountId = (string)($account['id'] ?? $account);
+            $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Resolved Account ID", ['id' => $accountId]);
             if (!$accountId) continue;
 
             $chunks = DateHelper::getDateChunks(
