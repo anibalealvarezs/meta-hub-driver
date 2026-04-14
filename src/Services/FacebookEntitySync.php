@@ -139,12 +139,15 @@ class FacebookEntitySync
                         }
                         $fetched = true;
                     } catch (\Exception $e) {
+                        $logger?->error("CRITICAL ERROR in syncCampaigns loop: " . $e->getMessage(), [
+                            'exception' => get_class($e),
+                            'manager_open' => ($manager->isOpen() ? 'YES' : 'NO')
+                        ]);
                         $retryCount++;
-                        if ($retryCount >= $maxRetries) {
+                        if ($retryCount >= $maxRetries || !$manager->isOpen()) {
                             $hasErrors = true;
-                            // logError is problematic because it's usually dynamic. 
-                            // For now, we'll just throw the exception or log to PHP logger.
-                            $logger?->error("Error syncing campaigns for $adAccountId: " . $e->getMessage());
+                            $logger?->error("Sync aborted or retries exhausted for $adAccountId. Manager closed: " . (!$manager->isOpen() ? 'YES' : 'NO'));
+                            break; 
                         } else {
                             usleep(200000 * $retryCount);
                         }
