@@ -353,9 +353,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         if ($this->logger) {
             $this->logger->info("Starting FacebookMarketingDriver sync (Modular)...");
+            error_log("DEBUG: FacebookMarketingDriver::sync - START");
         }
 
+        error_log("DEBUG: FacebookMarketingDriver::sync - BEFORE initializeApi");
         $api = $this->initializeApi($config);
+        error_log("DEBUG: FacebookMarketingDriver::sync - AFTER initializeApi");
         $entity = $config['entity'] ?? 'metrics';
 
         if ($entity !== 'metrics' && $entity !== 'metric') {
@@ -363,6 +366,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
 
         $accountsToProcess = $config['ad_accounts'] ?? [];
+        error_log("DEBUG: FacebookMarketingDriver::sync - Ad accounts found: " . count($accountsToProcess));
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
         
         $totalStats = ['metrics' => 0, 'rows' => 0, 'duplicates' => 0];
@@ -518,6 +522,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     protected function initializeApi(array $config): FacebookGraphApi
     {
+        error_log("DEBUG: FacebookMarketingDriver::initializeApi - START");
         return new FacebookGraphApi(
             userId: $config['user_id'] ?? $config['facebook']['user_id'] ?? $this->authProvider->getUserId() ?: 'system',
             appId: $config['app_id'] ?? $config['facebook']['app_id'] ?? '',
