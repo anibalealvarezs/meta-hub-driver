@@ -594,6 +594,7 @@ class FacebookEntitySync
         ?LoggerInterface $logger = null,
         ?int $jobId = null
     ): Response {
+        Helpers::reconnectIfNeeded($manager);
 
         try {
             $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
@@ -683,6 +684,7 @@ class FacebookEntitySync
         ?LoggerInterface $logger = null,
         ?int $jobId = null
     ): Response {
+        Helpers::reconnectIfNeeded($manager);
 
         try {
             $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
