@@ -118,7 +118,7 @@ class FacebookEntitySync
                                 $converted = FacebookMarketingConvert::campaigns($filteredCampaigns, $channeledAccount->getId());
                                 foreach ($converted as $data) {
                                     $campaign = $manager->getRepository($campaignClass)->findOneBy(['campaignId' => $data->platformId]) ?? new $campaignClass();
-                                    $campaign->setName($data->name);
+                                    $campaign->addName($data->name);
                                     $campaign->addCampaignId($data->platformId);
                                     $manager->persist($campaign);
                                     
@@ -126,9 +126,9 @@ class FacebookEntitySync
                                         'platformId' => $data->platformId,
                                         'channeledAccount' => $channeledAccount
                                     ]) ?? new $channeledCampaignClass();
-                                    $channeledCampaign->setPlatformId($data->platformId);
-                                    $channeledCampaign->setChanneledAccount($channeledAccount);
-                                    $channeledCampaign->setCampaign($campaign);
+                                    $channeledCampaign->addPlatformId($data->platformId);
+                                    $channeledCampaign->addChanneledAccount($channeledAccount);
+                                    $channeledCampaign->addCampaign($campaign);
                                     $manager->persist($channeledCampaign);
                                 }
                                 $manager->flush();
@@ -255,7 +255,7 @@ class FacebookEntitySync
                                         'platformId' => $data->platformId,
                                         'channeledAccount' => $channeledAccount
                                     ]) ?? new $channeledAdGroupClass();
-                                    $channeledAdGroup->setPlatformId($data->platformId);
+                                    $channeledAdGroup->addPlatformId($data->platformId);
                                     $channeledAdGroup->addName($data->name);
                                     $channeledAdGroup->addChanneledAccount($channeledAccount);
                                     $channeledAdGroup->addCampaign($campaign);
@@ -376,7 +376,7 @@ class FacebookEntitySync
                                         'platformId' => $data->platformId,
                                         'channeledAccount' => $channeledAccount
                                     ]) ?? new $channeledAdClass();
-                                    $channeledAd->setPlatformId($data->platformId);
+                                    $channeledAd->addPlatformId($data->platformId);
                                     $channeledAd->addName($data->name);
                                     $channeledAd->addChanneledAccount($channeledAccount);
                                     $channeledAd->addChanneledAdGroup($channeledAdGroup);
