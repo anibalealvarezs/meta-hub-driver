@@ -617,16 +617,28 @@ class FacebookEntitySync
                     try {
                         $api->setPageId($pId);
 
-                        // Use the data directly from the configuration panel
-                        // The UI provides id, title, url, etc.
-                        $converted = FacebookOrganicConvert::pages([$pageCfg], $channeledAccount?->getId());
-                        foreach ($converted as $data) {
-                            $page = $manager->getRepository($facebookPageClass)->findOneBy(['platformId' => $data->platformId]) ?? new $facebookPageClass();
-                            $page->addTitle($data->name); // $data->name comes from title mapping in converter
-                            $page->addPlatformId($data->platformId);
-                            if ($channeledAccount) $page->addAccount($channeledAccount->getAccount());
-                            $manager->persist($page);
-                        }
+                        // Build all required page fields from config
+                        $pageTitle    = $pageCfg['title'] ?? $pageCfg['name'] ?? null;
+                        $pageUrl      = $pageCfg['url'] ?? ('https://www.facebook.com/' . $pId);
+                        $pageHostname = $pageCfg['hostname'] ?? 'facebook.com';
+                        $canonicalId  = \Helpers\Helpers::getCanonicalPageId(
+                            url: $pageUrl,
+                            platformId: $pId,
+                            hostname: $pageHostname
+                        );
+
+                        $page = $manager->getRepository($facebookPageClass)->findOneBy(['platformId' => $pId])
+                            ?? $manager->getRepository($facebookPageClass)->findOneBy(['canonicalId' => $canonicalId])
+                            ?? new $facebookPageClass();
+
+                        $page->addPlatformId($pId);
+                        $page->addUrl($pageUrl);
+                        $page->addTitle($pageTitle);
+                        $page->addHostname($pageHostname);
+                        $page->addCanonicalId($canonicalId);
+                        if ($channeledAccount) $page->addAccount($channeledAccount->getAccount());
+
+                        $manager->persist($page);
                         $manager->flush();
                     } catch (\Exception $e) {
                         $logger?->error("Error syncing organic page $pId: " . $e->getMessage());
