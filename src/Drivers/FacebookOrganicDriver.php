@@ -933,8 +933,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
     public function getAssetPatterns(): array
     {
         return [
-            'facebook_pages' => [
-                'prefix' => 'fb:page',
+            'facebook_page' => [
+                'prefix' => 'fb',
                 'hostnames' => ['facebook.com'],
                 'url_id_regex' => '~(\d+)/?$~',
                 'type' => 'facebook_page',

@@ -1014,4 +1014,20 @@ class FacebookMarketingDriver implements SyncDriverInterface
             'recent_cron_minute' => 30,
         ];
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function getAssetPatterns(): array
+    {
+        return [
+            'facebook_ad_account' => [
+                'prefix' => 'fb',
+                'hostnames' => [],
+                'url_id_regex' => null,
+                'type' => 'facebook_ad_account',
+                'key' => 'ad_accounts'
+            ]
+        ];
+    }
 }

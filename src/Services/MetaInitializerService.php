@@ -73,7 +73,7 @@ class MetaInitializerService
 
         foreach ($pages as $page) {
             $platformId = (string)$page['id'];
-            $title = $page['name'] ?? "Page " . $platformId;
+            $title = $page['title'] ?? $page['name'] ?? "Page " . $platformId;
 
             if (\Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($title, $config, 'PAGE')) {
                 $this->logger?->info("Skipping filtered FB Page: $title");
@@ -83,8 +83,8 @@ class MetaInitializerService
             $pageUrl = $page['url'] ?? "https://www.facebook.com/" . $platformId;
             $hostname = $page['hostname'] ?? 'www.facebook.com';
 
-            $typeEnum = defined("$pageTypeClass::FACEBOOK_PAGE") ? constant("$pageTypeClass::FACEBOOK_PAGE") : 'FACEBOOK_PAGE';
-            $canonicalId = AssetRegistry::getCanonicalId($pageUrl, $platformId, $typeEnum);
+            $typeEnum = defined("$pageTypeClass::FACEBOOK_PAGE") ? constant("$pageTypeClass::FACEBOOK_PAGE") : 'facebook_page';
+            $canonicalId = AssetRegistry::getCanonicalId($pageUrl, $platformId, $typeEnum, $hostname);
 
             $pageEntity = $pageRepository->findOneBy(['canonicalId' => $canonicalId]);
             $isNew = false;
