@@ -882,17 +882,14 @@ class FacebookMarketingDriver implements SyncDriverInterface
         ]);
     }
 
-    /**
-     * @inheritdoc
-     */
     public function getAssetPatterns(): array
     {
         return [
-            'facebook_ad_accounts' => [
-                'prefix' => 'fa:acc',
+            'facebook_ad_account' => [
+                'prefix' => 'fb',
                 'hostnames' => ['facebook.com'],
                 'url_id_regex' => '/act_([0-9]+)/',
-                'type' => 'meta_ad_account',
+                'type' => 'facebook_ad_account',
                 'key' => 'ad_accounts'
             ]
         ];
@@ -1015,19 +1012,4 @@ class FacebookMarketingDriver implements SyncDriverInterface
         ];
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function getAssetPatterns(): array
-    {
-        return [
-            'facebook_ad_account' => [
-                'prefix' => 'fb',
-                'hostnames' => [],
-                'url_id_regex' => null,
-                'type' => 'facebook_ad_account',
-                'key' => 'ad_accounts'
-            ]
-        ];
-    }
 }
