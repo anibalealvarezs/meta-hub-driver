@@ -541,8 +541,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         // 2. Instagram Account Insights
         if (!empty($page['ig_account']) && !empty($page['ig_account_metrics'])) {
-            // Meta only provides IG insights for the last 2 years
-            $igTwoYearsAgo = (new \DateTime())->modify('-2 years')->format('Y-m-d');
+            // Meta only provides IG insights for the last 2 years (approx 730 days)
+            // We use -2 years + 1 day to be safe and avoid edge-of-window errors
+            $igTwoYearsAgo = (new \DateTime())->modify('-2 years + 1 day')->format('Y-m-d');
             $igSince = $start < $igTwoYearsAgo ? $igTwoYearsAgo : $start;
 
             foreach ([1, 2, 3, 4, 5] as $option) {
