@@ -751,14 +751,19 @@ class FacebookEntitySync
 
             foreach ($pagesToProcess as $page) {
                 $logger?->info("DEBUG: FacebookEntitySync::syncPosts - START processing page " . $page->getPlatformId());
-                $maxRetries = 3;
+                $fetched = false;
+                $postLimits = [100, 50, 25, 10];
+
+                foreach ($postLimits as $limit) {
+                    if ($fetched) break;
+                    $maxRetries = 3;
                     $retryCount = 0;
-                    $fetched = false;
 
                     while ($retryCount < $maxRetries && ! $fetched) {
                         try {
                             $api->setPageId($page->getPlatformId());
-                            $posts = $api->getFacebookPosts(pageId: $page->getPlatformId(), limit: 100);
+                            $logger?->info("DEBUG: FacebookEntitySync::syncPosts - Trying limit=$limit for page " . $page->getPlatformId());
+                            $posts = $api->getFacebookPosts(pageId: $page->getPlatformId(), limit: $limit);
                             if (! empty($posts['data'])) {
                                 $includeFilter = self::getFacebookFilter($config, 'POST', 'cache_include');
                                 $excludeFilter = self::getFacebookFilter($config, 'POST', 'cache_exclude');
@@ -789,14 +794,22 @@ class FacebookEntitySync
                             $fetched = true;
                         } catch (\Exception $e) {
                             $retryCount++;
+                            $errMsg = $e->getMessage();
+                            // If Meta asks to reduce data, break the retry loop and try a smaller limit
+                            if (str_contains($errMsg, 'reduce the amount of data')) {
+                                $logger?->info("Meta requested data reduction for page " . $page->getPlatformId() . " at limit=$limit. Trying smaller limit.");
+                                break; // break while, move to next limit
+                            }
                             if ($retryCount >= $maxRetries) {
-                                $logger?->error("Error fetching posts for page " . $page->getPlatformId() . ": " . $e->getMessage());
+                                $logger?->error("Error fetching posts for page " . $page->getPlatformId() . ": " . $errMsg);
                             } else {
                                 usleep(200000 * $retryCount);
                             }
                         }
-                    }
-                }
+                    } // end while
+                } // end foreach postLimits
+                $logger?->info("DEBUG: FacebookEntitySync::syncPosts - END processing page " . $page->getPlatformId());
+            } // end foreach pagesToProcess
 
             return new Response(json_encode(['message' => 'Posts synchronized']), 200, ['Content-Type' => 'application/json']);
         } catch (\Exception $e) {
