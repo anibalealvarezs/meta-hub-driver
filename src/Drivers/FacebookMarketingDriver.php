@@ -253,6 +253,14 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         foreach ($currentAccs as $acc) {
             if (in_array((string)$acc['id'], $selectedIds)) {
+                $lostAccess = false;
+                foreach ($selectedAssets as $sa) {
+                    if ((string)$sa['id'] === (string)$acc['id']) {
+                        $lostAccess = filter_var($sa['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                        break;
+                    }
+                }
+                $acc['lost_access'] = $lostAccess;
                 $newAccsList[] = $acc;
             }
         }
@@ -260,14 +268,18 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $existingIds = array_map('strval', array_column($currentAccs, 'id'));
         foreach ($selectedAssets as $newAcc) {
             $accId = (string) $newAcc['id'];
+            $isLostAccess = filter_var($newAcc['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            
             if (!in_array($accId, $existingIds)) {
                 if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
-                    $newAccsList[] = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_marketing', [
+                    $schema = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_marketing', [
                         'id' => $accId,
                         'name' => $newAcc['name'] ?? ("Ad Account " . $accId),
                     ]);
+                    $schema['lost_access'] = $isLostAccess;
+                    $newAccsList[] = $schema;
                 } else {
-                    $newAccsList[] = ['id' => $accId, 'name' => $newAcc['name'] ?? ("Ad Account " . $accId)];
+                    $newAccsList[] = ['id' => $accId, 'name' => $newAcc['name'] ?? ("Ad Account " . $accId), 'lost_access' => $isLostAccess];
                 }
             }
         }
@@ -616,6 +628,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 'name' => '',
                 'enabled' => true,
                 'exclude_from_caching' => false,
+                'lost_access' => false,
             ],
             'metrics' => [
                 'spend' => ['enabled' => false, 'format' => 'currency', 'precision' => 2],
