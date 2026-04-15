@@ -196,6 +196,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 'ig_account_metrics' => filter_var($pData['ig_account_metrics'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'ig_account_media' => filter_var($pData['ig_account_media'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'ig_account_media_metrics' => filter_var($pData['ig_account_media_metrics'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'lost_access' => filter_var($pData['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN),
             ];
             
             if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
@@ -550,6 +551,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 'ig_account_metrics' => false,
                 'ig_account_media' => false,
                 'ig_account_media_insights' => false,
+                'lost_access' => false,
             ]
         ];
     }
