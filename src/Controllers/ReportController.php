@@ -45,12 +45,25 @@ class ReportController
     {
         $projectName = $_ENV['PROJECT_NAME'] ?? 'APIs Hub';
         $appEnv = $_ENV['APP_ENV'] ?? 'production';
-        
+        $isDemo = strtolower($appEnv) === 'demo';
+
         $html = str_replace(
             ['{{PROJECT_NAME}}', '{{APP_ENV}}'],
             [$projectName, $appEnv],
             $html
         );
+
+        // Replace any hardcoded app-env meta tag with the real environment value
+        $html = preg_replace(
+            '/<meta\s+name="app-env"\s+content="[^"]*"\s*>/i',
+            '<meta name="app-env" content="' . htmlspecialchars($appEnv) . '">',
+            $html
+        );
+
+        // Inject AUTH_BYPASS only in demo environments
+        if ($isDemo) {
+            $html = str_replace('<head>', '<head><script>window.AUTH_BYPASS = true;</script>', $html);
+        }
 
         return new Response($html, 200, ['Content-Type' => 'text/html']);
     }
