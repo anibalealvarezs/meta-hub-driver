@@ -610,6 +610,7 @@ class FacebookEntitySync
                     if (empty($pageCfg['enabled'])) continue;
                     $pId = (string)($pageCfg['id'] ?? '');
                     if (!$pId) continue;
+                    Helpers::checkJobStatus($jobId);
 
                     $logger?->info("DEBUG: FacebookEntitySync::syncPages - Syncing Page $pId from config");
                     
@@ -634,6 +635,7 @@ class FacebookEntitySync
             }
 
             foreach ($adAccounts as $adAccount) {
+                Helpers::checkJobStatus($jobId);
                 $logger?->info("DEBUG: FacebookEntitySync::syncPages - Processing Ad Account " . ($adAccount['id'] ?? 'unknown'));
                 if (empty($adAccount['enabled']) || empty($adAccount['pages'])) {
                     continue;
@@ -750,6 +752,7 @@ class FacebookEntitySync
             }
 
             foreach ($pagesToProcess as $page) {
+                Helpers::checkJobStatus($jobId);
                 $logger?->info("DEBUG: FacebookEntitySync::syncPosts - START processing page " . $page->getPlatformId());
                 $fetched = false;
                 $postLimits = [100, 50, 25, 10];
