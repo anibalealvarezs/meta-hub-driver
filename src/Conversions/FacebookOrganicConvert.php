@@ -56,4 +56,25 @@ class FacebookOrganicConvert
             ],
         ]);
     }
+
+    /**
+     * Converts raw Instagram media into standardized objects.
+     */
+    public static function media(
+        array $media,
+        int|string|null $pageId = null,
+        int|string|null $accountId = null,
+        int|string|null $channeledAccountId = null
+    ): ArrayCollection {
+        return UniversalEntityConverter::convert($media, [
+            'channel' => 'facebook_organic',
+            'platform_id_field' => 'id',
+            'date_field' => 'timestamp',
+            'context' => [
+                'pageId' => $pageId,
+                'accountId' => $accountId,
+                'channeledAccountId' => $channeledAccountId,
+            ],
+        ]);
+    }
 }

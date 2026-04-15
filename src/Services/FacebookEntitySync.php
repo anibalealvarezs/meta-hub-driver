@@ -833,4 +833,122 @@ class FacebookEntitySync
             return new Response(json_encode(['error' => $e->getMessage()]), 500);
         }
     }
+
+    /**
+     * @param SeederInterface $seeder
+     * @param EntityManagerInterface $manager
+     * @param FacebookGraphApi $api
+     * @param array $config
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @param LoggerInterface|null $logger
+     * @param int|null $jobId
+     * @return Response
+     */
+    public static function syncInstagramMedia(
+        SeederInterface $seeder,
+        EntityManagerInterface $manager,
+        FacebookGraphApi $api,
+        array $config,
+        ?string $startDate = null,
+        ?string $endDate = null,
+        ?LoggerInterface $logger = null,
+        ?int $jobId = null
+    ): Response {
+        Helpers::reconnectIfNeeded($manager);
+
+        try {
+            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+            $postClass = $seeder->getEntityClass('Post');
+
+            $pagesFromConfig = $config['pages'] ?? [];
+
+            foreach ($pagesFromConfig as $pageCfg) {
+                if (empty($pageCfg['enabled']) || empty($pageCfg['ig_account']) || empty($pageCfg['ig_account_media'])) {
+                    continue;
+                }
+                
+                $igId = (string)$pageCfg['ig_account'];
+                $logger?->info("DEBUG: FacebookEntitySync::syncInstagramMedia - START processing IG account " . $igId);
+                
+                Helpers::checkJobStatus($jobId);
+                
+                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $igId]);
+                if (!$channeledAccount) {
+                    $logger?->warning("ChanneledAccount not found for IG ID $igId. Skipping media sync.");
+                    continue;
+                }
+
+                $fetched = false;
+                $mediaLimits = [100, 50, 25, 10];
+
+                foreach ($mediaLimits as $limit) {
+                    if ($fetched) break;
+                    $maxRetries = 3;
+                    $retryCount = 0;
+
+                    while ($retryCount < $maxRetries && !$fetched) {
+                        try {
+                            if (!empty($pageCfg['id'])) {
+                                $api->setPageId((string)$pageCfg['id']);
+                            }
+                            
+                            $logger?->info("DEBUG: FacebookEntitySync::syncInstagramMedia - Trying limit=$limit for IG account " . $igId);
+                            $media = $api->getInstagramMedia(igUserId: $igId, limit: $limit);
+                            
+                            if (!empty($media['data'])) {
+                                $includeFilter = self::getFacebookFilter($config, 'POST', 'cache_include');
+                                $excludeFilter = self::getFacebookFilter($config, 'POST', 'cache_exclude');
+
+                                $filteredMedia = [];
+                                foreach ($media['data'] as $m) {
+                                    $mCaption = $m['caption'] ?? '';
+                                    $mId = (string)$m['id'];
+                                    if (self::matchesFilter($mCaption, $includeFilter, $excludeFilter) || self::matchesFilter($mId, $includeFilter, $excludeFilter)) {
+                                        $filteredMedia[] = $m;
+                                    }
+                                }
+
+                                if (!empty($filteredMedia)) {
+                                    $converted = FacebookOrganicConvert::media(
+                                        $filteredMedia, 
+                                        null, 
+                                        $channeledAccount->getAccount() ? $channeledAccount->getAccount()->getId() : null,
+                                        $channeledAccount->getId()
+                                    );
+                                    foreach ($converted as $mData) {
+                                        $post = $manager->getRepository($postClass)->findOneBy(['postId' => $mData->platformId]) ?? new $postClass();
+                                        $post->addPostId($mData->platformId);
+                                        $post->addChanneledAccount($channeledAccount);
+                                        $post->addAccount($channeledAccount->getAccount());
+                                        $manager->persist($post);
+                                    }
+                                    $manager->flush();
+                                }
+                            }
+                            $fetched = true;
+                        } catch (\Exception $e) {
+                            $retryCount++;
+                            $errMsg = $e->getMessage();
+                            if (str_contains($errMsg, 'reduce the amount of data')) {
+                                $logger?->info("Meta requested data reduction for IG $igId at limit=$limit. Trying smaller limit.");
+                                break;
+                            }
+                            if ($retryCount >= $maxRetries) {
+                                $logger?->error("Error fetching media for IG $igId: " . $errMsg);
+                            } else {
+                                usleep(200000 * $retryCount);
+                            }
+                        }
+                    }
+                }
+                $logger?->info("DEBUG: FacebookEntitySync::syncInstagramMedia - END processing IG account " . $igId);
+            }
+
+            return new Response(json_encode(['message' => 'Instagram media synchronized']), 200, ['Content-Type' => 'application/json']);
+        } catch (\Exception $e) {
+            $logger->error("Error in FacebookEntitySync::syncInstagramMedia: " . $e->getMessage());
+            return new Response(json_encode(['error' => $e->getMessage()]), 500);
+        }
+    }
 }

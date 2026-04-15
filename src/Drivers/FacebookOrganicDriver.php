@@ -388,10 +388,34 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     }
                 }
 
-                // 3. Process IG Media
-                if (!empty($pageData['ig_media'])) {
-                    // Logic for iterating and converting media insights would go here
-                    // For now, we delegate the conversion to the SDK if it has a way to handle it
+                // 3. Process Facebook Post Insights
+                if (!empty($pageData['fb_post_insights'])) {
+                    foreach ($pageData['fb_post_insights'] as $postInsight) {
+                        $postCollection = FacebookOrganicMetricConvert::pageMetrics(
+                            rows: $postInsight['data'],
+                            postPlatformId: $postInsight['id'],
+                            logger: $this->logger,
+                            post: $postInsight['id'],
+                            period: 'lifetime'
+                        );
+                        foreach ($postCollection as $m) $collection->add($m);
+                    }
+                }
+
+                // 4. Process IG Media Insights
+                if (!empty($pageData['ig_media_insights'])) {
+                    foreach ($pageData['ig_media_insights'] as $mediaInsight) {
+                        $igMediaCollection = FacebookOrganicMetricConvert::igMediaMetrics(
+                            rows: $mediaInsight['data'],
+                            date: $chunk['start'],
+                            page: $pageId,
+                            post: $mediaInsight['id'],
+                            account: $config['accounts_group_name'] ?? 'Default',
+                            channeledAccount: $page['ig_account'] ?? null,
+                            logger: $this->logger
+                        );
+                        foreach ($igMediaCollection as $m) $collection->add($m);
+                    }
                 }
 
                 // Persist converted collection in the host
@@ -446,10 +470,25 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
+            case 'instagram':
+                if (class_exists($syncService)) {
+                    return $syncService::syncInstagramMedia(
+                        seeder: $config['seeder'],
+                        manager: $config['manager'],
+                        api: $api,
+                        config: $config,
+                        startDate: $startDateStr,
+                        endDate: $endDateStr,
+                        logger: $this->logger,
+                        jobId: $jobId
+                    );
+                }
+                throw new Exception("FacebookEntitySync service not found in host.");
             case 'entities':
                 $results = [];
                 $results['pages'] = json_decode($this->syncEntities('pages', $startDate, $endDate, $config, $api)->getContent(), true);
                 $results['posts'] = json_decode($this->syncEntities('posts', $startDate, $endDate, $config, $api)->getContent(), true);
+                $results['instagram'] = json_decode($this->syncEntities('instagram', $startDate, $endDate, $config, $api)->getContent(), true);
                 return new Response(json_encode(['status' => 'success', 'results' => $results]), 200, ['Content-Type' => 'application/json']);
             default:
                 throw new Exception("Entity sync for '{$entity}' not implemented in FacebookOrganicDriver");
@@ -485,7 +524,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
             'ig_media' => [],
             'fb_posts' => [],
             'ig_insights' => [],
-            'ig_media_insights' => []
+            'ig_media_insights' => [],
+            'fb_post_insights' => [],
         ];
 
         $pageId = (string)$page['id'];
@@ -521,7 +561,92 @@ class FacebookOrganicDriver implements SyncDriverInterface
             }
         }
 
+        // 3. Facebook Post Insights
+        if ($page['post_metrics'] ?? false) {
+            $postEntities = $this->getPostEntitiesForSync($page, $config);
+            foreach ($postEntities as $post) {
+                try {
+                    $postId = $post->getPostId();
+                    $postInsights = $api->getFacebookPostInsights(postId: $postId);
+                    if (!empty($postInsights['data'])) {
+                        $data['fb_post_insights'][] = [
+                            'id' => $postId,
+                            'data' => $postInsights['data']
+                        ];
+                    }
+                } catch (Exception $e) {
+                    if ($this->logger) $this->logger->warning("Failed to fetch insights for Post " . $post->getPostId() . ": " . $e->getMessage());
+                }
+            }
+        }
+
+        // 4. Instagram Media Insights
+        if (!empty($page['ig_account']) && !empty($page['ig_account_media_insights'])) {
+            $mediaEntities = $this->getInstagramMediaEntitiesForSync($page, $config);
+            foreach ($mediaEntities as $media) {
+                try {
+                    $mediaId = $media->getPostId();
+                    // We try to infer type from data or use default
+                    $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::CAROUSEL_ALBUM;
+                    $extraData = $media->getData();
+                    if (!empty($extraData['media_type'])) {
+                        $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::tryFrom($extraData['media_type']) ?? $type;
+                    }
+                    
+                    $mediaInsights = $api->getInstagramMediaInsights(mediaId: $mediaId, mediaType: $type);
+                    if (!empty($mediaInsights['data'])) {
+                        $data['ig_media_insights'][] = [
+                            'id' => $mediaId,
+                            'data' => $mediaInsights['data']
+                        ];
+                    }
+                } catch (Exception $e) {
+                    if ($this->logger) $this->logger->warning("Failed to fetch insights for IG Media " . $media->getPostId() . ": " . $e->getMessage());
+                }
+            }
+        }
+
         return $data;
+    }
+
+    private function getPostEntitiesForSync(array $pageCfg, array $config): array
+    {
+        $manager = $config['manager'] ?? null;
+        $seeder = $config['seeder'] ?? null;
+        if (!$manager || !$seeder) return [];
+
+        try {
+            $fbPageClass = $seeder->getEntityClass('Page'); // Hub uses Page for FacebookPage
+            $postClass = $seeder->getEntityClass('Post');
+            
+            $page = $manager->getRepository($fbPageClass)->findOneBy(['platformId' => (string)$pageCfg['id']]);
+            if (!$page) return [];
+
+            return $manager->getRepository($postClass)->findBy(['page' => $page]);
+        } catch (\Exception $e) {
+            $this->logger?->error("Error fetching post entities for sync: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function getInstagramMediaEntitiesForSync(array $pageCfg, array $config): array
+    {
+        $manager = $config['manager'] ?? null;
+        $seeder = $config['seeder'] ?? null;
+        if (!$manager || !$seeder || empty($pageCfg['ig_account'])) return [];
+
+        try {
+            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
+            $postClass = $seeder->getEntityClass('Post');
+            
+            $igAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => (string)$pageCfg['ig_account']]);
+            if (!$igAccount) return [];
+
+            return $manager->getRepository($postClass)->findBy(['channeledAccount' => $igAccount]);
+        } catch (\Exception $e) {
+            $this->logger?->error("Error fetching IG media entities for sync: " . $e->getMessage());
+            return [];
+        }
     }
 
     /**
