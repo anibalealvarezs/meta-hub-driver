@@ -71,6 +71,8 @@ class MetaInitializerService
             $this->entityManager->flush();
         }
 
+        $processedPages = [];
+
         foreach ($pages as $page) {
             $platformId = (string)$page['id'];
             $title = $page['title'] ?? $page['name'] ?? "Page " . $platformId;
@@ -104,14 +106,20 @@ class MetaInitializerService
             $typeEnum = defined("$pageTypeClass::FACEBOOK_PAGE") ? constant("$pageTypeClass::FACEBOOK_PAGE") : 'facebook_page';
             $canonicalId = AssetRegistry::getCanonicalId($pageUrl, $platformId, $typeEnum, $hostname);
 
-            $pageEntity = $pageRepository->findOneBy(['canonicalId' => $canonicalId]);
-            $isNew = false;
-            if (!$pageEntity) {
-                $pageEntity = new $pageClass();
-                $pageEntity->addCanonicalId($canonicalId)
-                    ->addPlatformId($platformId)
-                    ->addAccount($pageSpecificAccountEntity);
-                $isNew = true;
+            if (isset($processedPages[$canonicalId])) {
+                $pageEntity = $processedPages[$canonicalId];
+                $isNew = false;
+            } else {
+                $pageEntity = $pageRepository->findOneBy(['canonicalId' => $canonicalId]);
+                $isNew = false;
+                if (!$pageEntity) {
+                    $pageEntity = new $pageClass();
+                    $pageEntity->addCanonicalId($canonicalId)
+                        ->addPlatformId($platformId)
+                        ->addAccount($pageSpecificAccountEntity);
+                    $isNew = true;
+                }
+                $processedPages[$canonicalId] = $pageEntity;
             }
 
             $pageEntity->addUrl($pageUrl)
@@ -154,13 +162,18 @@ class MetaInitializerService
                 $igTypeEnum = defined("$pageTypeClass::INSTAGRAM") ? constant("$pageTypeClass::INSTAGRAM") : 'instagram';
                 $igCanonicalId = AssetRegistry::getCanonicalId($igUrl, (string)$igId, $igTypeEnum, 'instagram.com');
 
-                $igPageEntity = $pageRepository->findOneBy(['canonicalId' => $igCanonicalId]);
-                if (!$igPageEntity) {
-                    $igPageEntity = new $pageClass();
-                    $igPageEntity->addCanonicalId($igCanonicalId)
-                        ->addPlatformId((string)$igId)
-                        ->addAccount($pageSpecificAccountEntity);
-                    $this->logger?->info("Initialized new IG Page: $igName");
+                if (isset($processedPages[$igCanonicalId])) {
+                    $igPageEntity = $processedPages[$igCanonicalId];
+                } else {
+                    $igPageEntity = $pageRepository->findOneBy(['canonicalId' => $igCanonicalId]);
+                    if (!$igPageEntity) {
+                        $igPageEntity = new $pageClass();
+                        $igPageEntity->addCanonicalId($igCanonicalId)
+                            ->addPlatformId((string)$igId)
+                            ->addAccount($pageSpecificAccountEntity);
+                        $this->logger?->info("Initialized new IG Page: $igName");
+                    }
+                    $processedPages[$igCanonicalId] = $igPageEntity;
                 }
 
                 $igPageEntity->addUrl($igUrl)
