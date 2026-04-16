@@ -647,7 +647,10 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
             $postClass = $seeder->getEntityClass('Post');
             
-            $igAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => (string)$pageCfg['ig_account']]);
+            $igAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
+                'platformId' => (string)$pageCfg['ig_account'],
+                'channel' => \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic->value
+            ]);
             if (!$igAccount) return [];
 
             return $manager->getRepository($postClass)->findBy(['channeledAccount' => $igAccount]);

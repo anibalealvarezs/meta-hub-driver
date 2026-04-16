@@ -425,10 +425,18 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
                 if ($hostManager && $hostSeeder) {
                     try {
+                        $channel = \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_marketing;
                         $caRepo = $hostManager->getRepository($hostSeeder->getEntityClass('ChanneledAccount'));
-                        $chanAccountEntity = $caRepo->findOneBy(['platformId' => $accountId, 'channel' => $this->getChannel()]);
+                        $chanAccountEntity = $caRepo->findOneBy([
+                            'platformId' => $accountId,
+                            'channel' => $channel->value
+                        ]);
                         if ($chanAccountEntity) {
-                            $accountEntity = $chanAccountEntity->getAccount();
+                            try {
+                                $accountEntity = $chanAccountEntity->getAccount();
+                            } catch (\Error $e) {
+                                // Account property might be uninitialized
+                            }
                         }
                     } catch (\Exception $e) {
                         $this->logger?->warning("Driver sync context resolution failed: " . $e->getMessage());

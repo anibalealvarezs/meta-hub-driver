@@ -652,7 +652,11 @@ class FacebookEntitySync
                         $page->addCanonicalId($canonicalId);
                         
                         if ($channeledAccount) {
-                            $page->addAccount($channeledAccount->getAccount());
+                            try {
+                                $page->addAccount($channeledAccount->getAccount());
+                            } catch (\Error $e) {
+                                // Account property might be uninitialized
+                            }
                             if (method_exists($channeledAccount, 'addPage')) {
                                 $channeledAccount->addPage($page);
                                 $manager->persist($channeledAccount);
@@ -819,7 +823,11 @@ class FacebookEntitySync
                                         $post = $manager->getRepository($postClass)->findOneBy(['postId' => $pData->platformId]) ?? new $postClass();
                                         $post->addPostId($pData->platformId);
                                         $post->addPage($page);
-                                        $post->addAccount($page->getAccount());
+                                        try {
+                                            $post->addAccount($page->getAccount());
+                                        } catch (\Error $e) {
+                                            $logger?->warning("Page {$page->getPlatformId()} has no account initialized. Skipping account assignment for post.");
+                                        }
                                         // Try to find the ChanneledAccount associated with this Page
                                         $ca = $manager->getRepository($channeledAccountClass)->findOneBy([
                                             'platformId' => $page->getPlatformId(),
@@ -942,10 +950,18 @@ class FacebookEntitySync
                                 }
 
                                 if (!empty($filteredMedia)) {
+                                    $accountId = null;
+                                    try {
+                                        if ($channeledAccount) {
+                                            $accountId = $channeledAccount->getAccount() ? $channeledAccount->getAccount()->getId() : null;
+                                        }
+                                    } catch (\Error $e) {
+                                        // Account property might be uninitialized
+                                    }
                                     $converted = FacebookOrganicConvert::media(
                                         $filteredMedia, 
                                         null, 
-                                        $channeledAccount->getAccount() ? $channeledAccount->getAccount()->getId() : null,
+                                        $accountId,
                                         $channeledAccount->getId()
                                     );
                                     
@@ -958,7 +974,11 @@ class FacebookEntitySync
                                         $post = $manager->getRepository($postClass)->findOneBy(['postId' => $mData->platformId]) ?? new $postClass();
                                         $post->addPostId($mData->platformId);
                                         $post->addChanneledAccount($channeledAccount);
-                                        $post->addAccount($channeledAccount->getAccount());
+                                        try {
+                                            $post->addAccount($channeledAccount->getAccount());
+                                        } catch (\Error $e) {
+                                            // ChanneledAccount account property might be uninitialized
+                                        }
                                         if ($igPage) {
                                             $post->addPage($igPage);
                                         }
