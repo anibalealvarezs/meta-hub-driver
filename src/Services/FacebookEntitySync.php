@@ -90,22 +90,14 @@ class FacebookEntitySync
                     $logger?->info("Skipping campaigns sync for ad account: $adAccountId (disabled in config)");
                     continue;
                 }
+                $channel = Channel::facebook_marketing;
                 $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
                     'platformId' => $adAccountId,
                     'channel' => $channel->value,
                 ]);
 
                 if (! $channeledAccount) {
-                    $logger?->warning("DEBUG: FacebookEntitySync::syncCampaigns - ChanneledAccount NOT FOUND for platformId: $adAccountId. Trying without 'act_' prefix...");
-                    $altId = str_replace('act_', '', $adAccountId);
-                    $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
-                        'platformId' => $altId,
-                        'channel' => $channel->value,
-                    ]);
-                }
-
-                if (! $channeledAccount) {
-                    $logger?->error("DEBUG: FacebookEntitySync::syncCampaigns - ChanneledAccount STILL NOT FOUND for platformId: $adAccountId or $altId");
+                    $logger?->error("DEBUG: FacebookEntitySync::syncCampaigns - ChanneledAccount NOT FOUND for platformId: $adAccountId");
                     continue;
                 }
 
@@ -256,16 +248,7 @@ class FacebookEntitySync
                 ]);
 
                 if (! $channeledAccount) {
-                    $logger?->warning("DEBUG: FacebookEntitySync::syncAdGroups - ChanneledAccount NOT FOUND for platformId: $adAccountId. Trying without 'act_' prefix...");
-                    $altId = str_replace('act_', '', $adAccountId);
-                    $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
-                        'platformId' => $altId,
-                        'channel' => $channel->value,
-                    ]);
-                }
-
-                if (! $channeledAccount) {
-                    $logger?->error("DEBUG: FacebookEntitySync::syncAdGroups - ChanneledAccount STILL NOT FOUND for platformId: $adAccountId or $altId");
+                    $logger?->error("DEBUG: FacebookEntitySync::syncAdGroups - ChanneledAccount NOT FOUND for platformId: $adAccountId");
                     continue;
                 }
 
@@ -419,16 +402,7 @@ class FacebookEntitySync
                 ]);
 
                 if (! $channeledAccount) {
-                    $logger?->warning("DEBUG: FacebookEntitySync::syncAds - ChanneledAccount NOT FOUND for platformId: $adAccountId. Trying without 'act_' prefix...");
-                    $altId = str_replace('act_', '', $adAccountId);
-                    $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
-                        'platformId' => $altId,
-                        'channel' => $channel->value,
-                    ]);
-                }
-
-                if (! $channeledAccount) {
-                    $logger?->error("DEBUG: FacebookEntitySync::syncAds - ChanneledAccount STILL NOT FOUND for platformId: $adAccountId or $altId");
+                    $logger?->error("DEBUG: FacebookEntitySync::syncAds - ChanneledAccount NOT FOUND for platformId: $adAccountId");
                     continue;
                 }
 
