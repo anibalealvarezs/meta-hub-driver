@@ -1132,7 +1132,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         $ui['fb_page_ids'] = [];
         foreach (($channelConfig['pages'] ?? []) as $p) {
-            $ui['fb_page_ids'][] = (string)$p['id'];
+            if (!empty($p['enabled'])) {
+                $ui['fb_page_ids'][] = (string)$p['id'];
+            }
         }
         $ui['fb_pages_full_config'] = $channelConfig['pages'] ?? [];
 

@@ -994,7 +994,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $ui['fb_cache_chunk_size'] = $channelConfig['cache_chunk_size'] ?? '1 week';
         $ui['fb_ad_account_ids'] = [];
         foreach (($channelConfig['ad_accounts'] ?? []) as $a) {
-            $ui['fb_ad_account_ids'][] = (string)$a['id'];
+            if (!empty($a['enabled'])) {
+                $ui['fb_ad_account_ids'][] = (string)$a['id'];
+            }
         }
 
         $features = ['ad_account_metrics', 'campaigns', 'campaign_metrics', 'adsets', 'adset_metrics', 'ads', 'ad_metrics', 'creatives', 'creative_metrics'];
