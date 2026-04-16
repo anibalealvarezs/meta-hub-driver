@@ -622,17 +622,23 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         $maxRetries = 3;
         $retryCount = 0;
+        $currentLimit = 100;
         
         while ($retryCount < $maxRetries) {
             try {
                 return $api->getAdAccountInsights(
                     adAccountId: $accountId,
+                    limit: $currentLimit,
                     metricBreakdown: $metricConfig['breakdowns'],
                     additionalParams: $params,
                     metricSet: $metricConfig['metricSet'],
                     customMetrics: $metricConfig['metrics']
                 );
             } catch (Exception $e) {
+                if (str_contains($e->getMessage(), 'reduce the amount of data')) {
+                    $currentLimit = max(10, (int) floor($currentLimit / 2));
+                    $this->logger?->warning("Data limit error for $accountId in fetchInsights: Reducing limit to $currentLimit");
+                }
                 $retryCount++;
                 if ($retryCount >= $maxRetries || $this->isFatal($e)) {
                     throw $e;

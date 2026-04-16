@@ -104,11 +104,12 @@ class FacebookEntitySync
                 $maxRetries = 3;
                 $retryCount = 0;
                 $fetched = false;
+                $currentLimit = 100;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
                     try {
                         $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Phase 1. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
-                        $campaigns = $api->getCampaigns(adAccountId: $adAccountId);
+                        $campaigns = $api->getCampaigns(adAccountId: $adAccountId, limit: $currentLimit);
                         $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Phase 2. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
                         if (! empty($campaigns['data'])) {
                             $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - API found " . count($campaigns['data']) . " campaigns for account: $adAccountId");
@@ -167,6 +168,10 @@ class FacebookEntitySync
                         }
                         $fetched = true;
                     } catch (\Exception $e) {
+                        if (str_contains($e->getMessage(), 'reduce the amount of data')) {
+                            $currentLimit = max(10, (int) floor($currentLimit / 2));
+                            $logger?->warning("Data limit error for $adAccountId in syncCampaigns: Reducing limit to $currentLimit");
+                        }
                         $logger?->error("CRITICAL ERROR in syncCampaigns loop: " . $e->getMessage(), [
                             'exception' => get_class($e),
                             'manager_open' => ($manager->isOpen() ? 'YES' : 'NO')
@@ -181,6 +186,7 @@ class FacebookEntitySync
                         }
                     }
                 }
+                $manager->clear();
             }
 
             if ($hasErrors) {
@@ -255,6 +261,7 @@ class FacebookEntitySync
                 $maxRetries = 3;
                 $retryCount = 0;
                 $fetched = false;
+                $currentLimit = 100;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
                     try {
@@ -267,7 +274,7 @@ class FacebookEntitySync
                             ]];
                         }
 
-                        $adsets = $api->getAdsets(adAccountId: $adAccountId, additionalParams: $additionalParams);
+                        $adsets = $api->getAdsets(adAccountId: $adAccountId, limit: $currentLimit, additionalParams: $additionalParams);
                         if (! empty($adsets['data'])) {
                             $includeFilter = self::getFacebookFilter($config, 'ADSET', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'ADSET', 'cache_exclude');
@@ -331,6 +338,10 @@ class FacebookEntitySync
                         }
                         $fetched = true;
                     } catch (\Exception $e) {
+                        if (str_contains($e->getMessage(), 'reduce the amount of data')) {
+                            $currentLimit = max(10, (int) floor($currentLimit / 2));
+                            $logger?->warning("Data limit error for $adAccountId in syncAdGroups (AdSets): Reducing limit to $currentLimit");
+                        }
                         $retryCount++;
                         if ($retryCount >= $maxRetries) {
                             $hasErrors = true;
@@ -340,6 +351,7 @@ class FacebookEntitySync
                         }
                     }
                 }
+                $manager->clear();
             }
 
             return new Response(json_encode([
@@ -409,6 +421,7 @@ class FacebookEntitySync
                 $maxRetries = 3;
                 $retryCount = 0;
                 $fetched = false;
+                $currentLimit = 100;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
                     try {
@@ -420,7 +433,7 @@ class FacebookEntitySync
                                 'value' => $parentIdsMap[$adAccountId],
                             ]];
                         }
-                        $ads = $api->getAds(adAccountId: $adAccountId, additionalParams: $additionalParams);
+                        $ads = $api->getAds(adAccountId: $adAccountId, limit: $currentLimit, additionalParams: $additionalParams);
                         if (! empty($ads['data'])) {
                             $includeFilter = self::getFacebookFilter($config, 'AD', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'AD', 'cache_exclude');
@@ -477,6 +490,10 @@ class FacebookEntitySync
                         }
                         $fetched = true;
                     } catch (\Exception $e) {
+                        if (str_contains($e->getMessage(), 'reduce the amount of data')) {
+                            $currentLimit = max(10, (int) floor($currentLimit / 2));
+                            $logger?->warning("Data limit error for $adAccountId in syncAds: Reducing limit to $currentLimit");
+                        }
                         $retryCount++;
                         if ($retryCount >= $maxRetries) {
                             $logger?->error("Error fetching ads for $adAccountId: " . $e->getMessage());
@@ -485,6 +502,7 @@ class FacebookEntitySync
                         }
                     }
                 }
+                $manager->clear();
             }
 
             return new Response(json_encode(['message' => 'Ads synchronized']), 200, ['Content-Type' => 'application/json']);
@@ -539,10 +557,11 @@ class FacebookEntitySync
                 $maxRetries = 3;
                 $retryCount = 0;
                 $fetched = false;
+                $currentLimit = 100;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
                     try {
-                        $creatives = $api->getCreatives(adAccountId: $adAccountId);
+                        $creatives = $api->getCreatives(adAccountId: $adAccountId, limit: $currentLimit);
                         if (! empty($creatives['data'])) {
                             $includeFilter = self::getFacebookFilter($config, 'CREATIVE', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'CREATIVE', 'cache_exclude');
@@ -572,6 +591,10 @@ class FacebookEntitySync
                         }
                         $fetched = true;
                     } catch (\Exception $e) {
+                        if (str_contains($e->getMessage(), 'reduce the amount of data')) {
+                            $currentLimit = max(10, (int) floor($currentLimit / 2));
+                            $logger?->warning("Data limit error for $adAccountId in syncCreatives: Reducing limit to $currentLimit");
+                        }
                         $retryCount++;
                         if ($retryCount >= $maxRetries) {
                             $logger?->error("Error fetching creatives for $adAccountId: " . $e->getMessage());
@@ -580,6 +603,7 @@ class FacebookEntitySync
                         }
                     }
                 }
+                $manager->clear();
             }
 
             return new Response(json_encode(['message' => 'Creatives synchronized']), 200, ['Content-Type' => 'application/json']);
