@@ -358,6 +358,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
             );
 
             foreach ($chunks as $chunk) {
+                $this->checkJobStatus($config);
+                
                 $pageData = $this->fetchPageData($api, $page, $chunk['start'], $chunk['end'], $config);
                 
                 $collection = new ArrayCollection();

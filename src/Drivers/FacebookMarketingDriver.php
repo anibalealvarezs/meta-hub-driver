@@ -444,6 +444,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 }
 
                 foreach ($levelsToFetch as $level) {
+                    $this->checkJobStatus($config);
+                    
                     $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
                     $rows = $this->fetchInsights($api, $accountId, $chunk['start'], $chunk['end'], $config, $level);
                     $rowCount = count($rows['data'] ?? []);
