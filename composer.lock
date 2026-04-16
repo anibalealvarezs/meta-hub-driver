@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "32c1791806159544d0aa42ff8aa1409d3cce0d3c"
+                "reference": "8652d7e23860e6f5e7fb8046ef242dec863cb4b3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-32c1791806159544d0aa42ff8aa1409d3cce0d3c-zip-7b2b1a.zip",
-                "reference": "32c1791806159544d0aa42ff8aa1409d3cce0d3c",
-                "shasum": "58ef2a9da37e87e867b4d7ba6a505a787736e354"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-8652d7e23860e6f5e7fb8046ef242dec863cb4b3-zip-bd4474.zip",
+                "reference": "8652d7e23860e6f5e7fb8046ef242dec863cb4b3",
+                "shasum": "1bedbae2ad16d14ad090a81fc475195236421878"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -111,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-16T01:41:42+00:00"
+            "time": "2026-04-16T14:16:08+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -2557,12 +2557,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-deepclone.git",
-                "reference": "0c05dbe5a1b00e77a403eb71209b626603c1e26a"
+                "reference": "d450529b9d44fb5ead8cb546cc6516764c3d0ed5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-deepclone/zipball/0c05dbe5a1b00e77a403eb71209b626603c1e26a",
-                "reference": "0c05dbe5a1b00e77a403eb71209b626603c1e26a",
+                "url": "https://api.github.com/repos/symfony/polyfill-deepclone/zipball/d450529b9d44fb5ead8cb546cc6516764c3d0ed5",
+                "reference": "d450529b9d44fb5ead8cb546cc6516764c3d0ed5",
                 "shasum": ""
             },
             "require": {
@@ -2637,7 +2637,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-15T18:12:32+00:00"
+            "time": "2026-04-16T13:00:20+00:00"
         },
         {
             "name": "symfony/polyfill-intl-grapheme",
@@ -3337,12 +3337,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/var-exporter.git",
-                "reference": "8539da9860661e2a894bcd74d49e3b8bb2d450f7"
+                "reference": "00e82341af7948f5f729e3005cc1d15ff547b07b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/8539da9860661e2a894bcd74d49e3b8bb2d450f7",
-                "reference": "8539da9860661e2a894bcd74d49e3b8bb2d450f7",
+                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/00e82341af7948f5f729e3005cc1d15ff547b07b",
+                "reference": "00e82341af7948f5f729e3005cc1d15ff547b07b",
                 "shasum": ""
             },
             "require": {
@@ -3412,7 +3412,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-15T17:17:29+00:00"
+            "time": "2026-04-16T11:02:55+00:00"
         },
         {
             "name": "symfony/yaml",
