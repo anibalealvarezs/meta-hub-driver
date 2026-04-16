@@ -7,6 +7,7 @@ use Anibalealvarezs\MetaHubDriver\Conversions\FacebookOrganicMetricConvert;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
+use Anibalealvarezs\ApiDriverCore\Traits\SyncDriverTrait;
 use Anibalealvarezs\ApiSkeleton\Enums\Period;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
@@ -277,6 +278,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
     }
     use HasUpdatableCredentials;
+    use SyncDriverTrait;
 
     public array $updatableCredentials = [
         'FACEBOOK_USER_TOKEN',

@@ -10,6 +10,7 @@ use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
+use Anibalealvarezs\ApiDriverCore\Traits\SyncDriverTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
@@ -320,6 +321,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
     }
     use HasUpdatableCredentials;
+    use SyncDriverTrait;
 
     public array $updatableCredentials = [
         'FACEBOOK_USER_TOKEN',
