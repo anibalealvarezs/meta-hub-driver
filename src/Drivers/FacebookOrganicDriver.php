@@ -227,7 +227,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 userId: $userId,
                 permissions: [], 
                 limit: 100, 
-                fields: 'id,name,instagram_business_account{id,name,username}'
+                fields: 'id,name,website,instagram_business_account{id,name,username}'
             );
 
             $assets = ['facebook_pages' => []];
@@ -237,6 +237,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     $assets['facebook_pages'][] = [
                         'id' => $page['id'],
                         'title' => $page['name'],
+                        'hostname' => $page['website'] ?? null,
                         'ig_account' => $page['instagram_business_account']['id'] ?? null,
                         'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
                     ];
@@ -343,10 +344,10 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $totalStats = ['metrics' => 0, 'rows' => 0, 'duplicates' => 0];
 
         foreach ($pagesToProcess as $page) {
-            $this->logger?->info("DEBUG: FacebookOrganicDriver::sync - Processing page data", ['page_data' => $page]);
             $pageId = (string)($page['id'] ?? $page);
-            $this->logger?->info("DEBUG: FacebookOrganicDriver::sync - Resolved Page ID", ['id' => $pageId]);
             if (!$pageId) continue;
+
+            $this->logger?->info(">>> INICIO: Sincronizando métricas orgánicas para FB Page: $pageId (Timeframe: {$startDate->format('Y-m-d')} a {$endDate->format('Y-m-d')})");
 
             $api->setPageId($pageId);
 
@@ -422,9 +423,15 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 if ($this->dataProcessor && $collection->count() > 0) {
                     $result = ($this->dataProcessor)($collection, $this->logger);
                     
-                    $totalStats['metrics'] += $result['metrics'] ?? $collection->count();
-                    $totalStats['rows'] += $result['rows'] ?? 0;
-                    $totalStats['duplicates'] += $result['duplicates'] ?? 0;
+                    $metricsCount = $result['metrics'] ?? $collection->count();
+                    $rowsCount = $result['rows'] ?? 0;
+                    $duplicatesCount = $result['duplicates'] ?? 0;
+
+                    $totalStats['metrics'] += $metricsCount;
+                    $totalStats['rows'] += $rowsCount;
+                    $totalStats['duplicates'] += $duplicatesCount;
+
+                    $this->logger?->info("<<< EXITO: Sincronización completada para FB Page: $pageId. Métricas: $metricsCount | Filas base: $rowsCount | Duplicados: $duplicatesCount");
                 }
             }
         }

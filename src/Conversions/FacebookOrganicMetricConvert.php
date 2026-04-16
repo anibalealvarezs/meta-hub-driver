@@ -16,9 +16,6 @@ use Psr\Log\LoggerInterface;
  */
 class FacebookOrganicMetricConvert
 {
-    /**
-     * Converts Facebook Page API rows into metrics.
-     */
     public static function pageMetrics(
         array $rows,
         string $pagePlatformId = '',
@@ -27,11 +24,13 @@ class FacebookOrganicMetricConvert
         object|string|null $page = null,
         object|string|null $post = null,
         object|string|null $period = 'daily',
+        object|string|null $channeledAccount = null,
     ): ArrayCollection {
         $platformId = $pagePlatformId ?: $postPlatformId;
         $pageUrl = is_object($page) && method_exists($page, 'getUrl') ? $page->getUrl() : (string) $page;
         $postId = is_object($post) && method_exists($post, 'getPostId') ? $post->getPostId() : (string) $post;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
+        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
 
         $collection = new ArrayCollection();
         foreach ($rows as $row) {
@@ -43,8 +42,10 @@ class FacebookOrganicMetricConvert
                 'nested_date_field' => 'end_time',
                 'metrics' => ['value' => $row['name'] ?? 'unknown'],
                 'context' => [
-                    'page' => $pageUrl,
-                    'post' => $postId,
+                    'page' => $page,
+                    'post' => $post,
+                    'channeledAccount' => $channeledAccount,
+                    'channeledAccountId' => $channeledAccountId,
                 ]
             ], $logger);
             
@@ -68,8 +69,7 @@ class FacebookOrganicMetricConvert
     ): ArrayCollection {
         $collection = new ArrayCollection();
         $accountName = is_object($account) && method_exists($account, 'getName') ? $account->getName() : (string) $account;
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount;
-        $pageUrl = is_object($page) && method_exists($page, 'getUrl') ? $page->getUrl() : (string) $page;
+        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
         foreach ($rows as $row) {
@@ -82,9 +82,10 @@ class FacebookOrganicMetricConvert
                 'fallback_platform_id' => $channeledAccountId,
                 'date_field' => 'date',
                 'context' => [
-                    'account' => $accountName,
-                    'channeledAccount' => $channeledAccountId,
-                    'page' => $pageUrl,
+                    'account' => $account,
+                    'channeledAccount' => $channeledAccount,
+                    'channeledAccountId' => $channeledAccountId,
+                    'page' => $page,
                 ],
                 'metrics' => ['total_value.value' => $row['name'] ?? 'unknown'],
                 'include_nulls' => true,
@@ -116,9 +117,10 @@ class FacebookOrganicMetricConvert
                             'metrics' => ['breakdown_value' => ($row['name'] ?? 'unknown')],
                             'dimensions' => $dimensions,
                             'context' => [
-                                'account' => $accountName,
-                                'channeledAccount' => $channeledAccountId,
-                                'page' => $pageUrl,
+                                'account' => $account,
+                                'channeledAccount' => $channeledAccount,
+                                'channeledAccountId' => $channeledAccountId,
+                                'page' => $page,
                             ],
                         ], $logger);
                         foreach ($rowMetrics as $m) $collection->add($m);
@@ -143,9 +145,7 @@ class FacebookOrganicMetricConvert
         ?LoggerInterface $logger = null,
     ): ArrayCollection {
         $collection = new ArrayCollection();
-        $accountName = is_object($account) && method_exists($account, 'getName') ? $account->getName() : (string) $account;
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount;
-        $pageUrl = is_object($page) && method_exists($page, 'getUrl') ? $page->getUrl() : (string) $page;
+        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
         $postId = is_object($post) && method_exists($post, 'getPostId') ? $post->getPostId() : (string) $post;
 
         foreach ($rows as $row) {
@@ -158,10 +158,11 @@ class FacebookOrganicMetricConvert
                 'metrics' => ['values' => $row['name'] ?? 'unknown'],
                 'include_nulls' => true,
                 'context' => [
-                    'account' => $accountName,
-                    'channeledAccount' => $channeledAccountId,
-                    'page' => $pageUrl,
-                    'post' => $postId,
+                    'account' => $account,
+                    'channeledAccount' => $channeledAccount,
+                    'channeledAccountId' => $channeledAccountId,
+                    'page' => $page,
+                    'post' => $post,
                 ]
             ], $logger);
             foreach ($rowMetrics as $m) $collection->add($m);

@@ -80,8 +80,26 @@ class MetaInitializerService
                 continue;
             }
 
+            // Resolve specific account for this page, fallback to global
+            $pageSpecificAccountName = $page['account'] ?? $config['accounts_group_name'] ?? 'Default Meta Group';
+            $pageSpecificAccountEntity = $accountRepository->findOneBy(['name' => $pageSpecificAccountName]);
+            if (!$pageSpecificAccountEntity) {
+                $pageSpecificAccountEntity = new $accountClass();
+                $pageSpecificAccountEntity->addName($pageSpecificAccountName);
+                $this->entityManager->persist($pageSpecificAccountEntity);
+                $this->entityManager->flush();
+            }
+
             $pageUrl = $page['url'] ?? "https://www.facebook.com/" . $platformId;
-            $hostname = $page['hostname'] ?? 'www.facebook.com';
+            $hostname = $page['website'] ?? $page['hostname'] ?? null;
+            if (!$hostname && $pageUrl) {
+                $parsed = parse_url($pageUrl);
+                $hostname = $parsed['host'] ?? null;
+            }
+            if ($hostname) {
+                $hostname = preg_replace('~^https?://(?:www\.)?~i', '', $hostname);
+                $hostname = strtolower(explode('/', $hostname)[0]);
+            }
 
             $typeEnum = defined("$pageTypeClass::FACEBOOK_PAGE") ? constant("$pageTypeClass::FACEBOOK_PAGE") : 'facebook_page';
             $canonicalId = AssetRegistry::getCanonicalId($pageUrl, $platformId, $typeEnum, $hostname);
@@ -92,13 +110,13 @@ class MetaInitializerService
                 $pageEntity = new $pageClass();
                 $pageEntity->addCanonicalId($canonicalId)
                     ->addPlatformId($platformId)
-                    ->addAccount($accountEntity);
+                    ->addAccount($pageSpecificAccountEntity);
                 $isNew = true;
             }
 
             $pageEntity->addUrl($pageUrl)
                 ->addTitle($title)
-                ->addHostname($hostname)
+                ->addHostname($hostname ?: 'facebook.com')
                 ->addData($page)
                 ->addUpdatedAt(new DateTime());
 
@@ -114,36 +132,65 @@ class MetaInitializerService
             if (!$fbChanneledAccount) {
                 $fbChanneledAccount = new $channeledAccountClass();
                 $fbChanneledAccount->addPlatformId($platformId)
-                    ->addAccount($accountEntity)
+                    ->addAccount($pageSpecificAccountEntity)
                     ->addType(defined("$accountEnumClass::FACEBOOK_PAGE") ? constant("$accountEnumClass::FACEBOOK_PAGE") : 'FACEBOOK_PAGE')
                     ->addChannel(Channel::facebook_organic->value)
                     ->addName($title)
                     ->addPlatformCreatedAt(new DateTime('2004-02-04'))
                     ->addData($page);
-                $this->entityManager->persist($fbChanneledAccount);
             }
+            if (method_exists($fbChanneledAccount, 'addPage')) {
+                $fbChanneledAccount->addPage($pageEntity);
+            }
+            $this->entityManager->persist($fbChanneledAccount);
 
-            // Initialize Instagram Account if present
+            // Initialize Instagram Account as Page if present
             $igId = $page['instagram_business_account']['id'] ?? $page['ig_account'] ?? null;
             if ($igId) {
+                $igData = $page['instagram_business_account'] ?? ['id' => $igId];
+                $igName = $igData['name'] ?? $igData['username'] ?? "IG " . $igId;
+                $igUrl = "https://www.instagram.com/" . ($igData['username'] ?? $igId);
+                
+                $igTypeEnum = defined("$pageTypeClass::INSTAGRAM") ? constant("$pageTypeClass::INSTAGRAM") : 'instagram';
+                $igCanonicalId = AssetRegistry::getCanonicalId($igUrl, (string)$igId, $igTypeEnum, 'instagram.com');
+
+                $igPageEntity = $pageRepository->findOneBy(['canonicalId' => $igCanonicalId]);
+                if (!$igPageEntity) {
+                    $igPageEntity = new $pageClass();
+                    $igPageEntity->addCanonicalId($igCanonicalId)
+                        ->addPlatformId((string)$igId)
+                        ->addAccount($pageSpecificAccountEntity);
+                    $this->logger?->info("Initialized new IG Page: $igName");
+                }
+
+                $igPageEntity->addUrl($igUrl)
+                    ->addTitle($igName)
+                    ->addHostname($hostname ?: 'instagram.com')
+                    ->addData($igData)
+                    ->addUpdatedAt(new DateTime());
+
+                $this->entityManager->persist($igPageEntity);
+
                 $igChanneledAccount = $channeledAccountRepository->findOneBy([
                     'platformId' => (string)$igId, 
                     'channel' => Channel::facebook_organic->value
                 ]);
-                $igData = $page['instagram_business_account'] ?? ['id' => $igId];
-                $igName = $igData['name'] ?? $igData['username'] ?? "IG " . $igId;
                 
                 if (!$igChanneledAccount) {
                     $igChanneledAccount = new $channeledAccountClass();
                     $igChanneledAccount->addPlatformId((string)$igId)
-                        ->addAccount($accountEntity)
+                        ->addAccount($pageSpecificAccountEntity)
                         ->addType(defined("$accountEnumClass::INSTAGRAM") ? constant("$accountEnumClass::INSTAGRAM") : 'INSTAGRAM')
                         ->addChannel(Channel::facebook_organic->value)
                         ->addName($igName)
                         ->addPlatformCreatedAt(new DateTime('2010-10-06'))
                         ->addData($igData);
-                    $this->entityManager->persist($igChanneledAccount);
                 }
+                
+                if (method_exists($igChanneledAccount, 'addPage')) {
+                    $igChanneledAccount->addPage($igPageEntity);
+                }
+                $this->entityManager->persist($igChanneledAccount);
             }
         }
 
@@ -181,6 +228,16 @@ class MetaInitializerService
                 $this->logger?->info("Skipping filtered FB Ad Account: $name");
                 continue;
             }
+
+            // Resolve specific account for this ad account, fallback to global
+            $accSpecificAccountName = $adAccount['account'] ?? $config['accounts_group_name'] ?? 'Default Meta Group';
+            $accSpecificAccountEntity = $accountRepository->findOneBy(['name' => $accSpecificAccountName]);
+            if (!$accSpecificAccountEntity) {
+                $accSpecificAccountEntity = new $accountClass();
+                $accSpecificAccountEntity->addName($accSpecificAccountName);
+                $this->entityManager->persist($accSpecificAccountEntity);
+                $this->entityManager->flush();
+            }
             
             $adAccEntity = $channeledAccountRepository->findOneBy([
                 'platformId' => $adAccountId,
@@ -190,7 +247,7 @@ class MetaInitializerService
             if (!$adAccEntity) {
                 $adAccEntity = new $channeledAccountClass();
                 $adAccEntity->addPlatformId($adAccountId)
-                    ->addAccount($accountEntity)
+                    ->addAccount($accSpecificAccountEntity)
                     ->addType(defined("$accountEnumClass::META_AD_ACCOUNT") ? constant("$accountEnumClass::META_AD_ACCOUNT") : 'META_AD_ACCOUNT')
                     ->addChannel(Channel::facebook_marketing->value)
                     ->addName($name)
@@ -199,7 +256,9 @@ class MetaInitializerService
                 $this->entityManager->persist($adAccEntity);
                 $stats['initialized']++;
             } else {
-                $adAccEntity->addName($name)->addData($adAccount);
+                $adAccEntity->addName($name)
+                    ->addAccount($accSpecificAccountEntity)
+                    ->addData($adAccount);
                 $this->entityManager->persist($adAccEntity);
                 $stats['skipped']++;
             }

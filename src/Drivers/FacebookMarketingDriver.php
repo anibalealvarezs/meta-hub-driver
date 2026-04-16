@@ -138,7 +138,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 userId: $userId,
                 permissions: [], 
                 limit: 100, 
-                fields: 'id,name,instagram_business_account{id,name,username}'
+                fields: 'id,name,website,instagram_business_account{id,name,username}'
             );
 
             $assets = [
@@ -151,6 +151,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     $assets['facebook_pages'][] = [
                         'id' => $page['id'],
                         'title' => $page['name'],
+                        'hostname' => $page['website'] ?? null,
                         'ig_account' => $page['instagram_business_account']['id'] ?? null,
                         'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
                     ];
@@ -275,11 +276,17 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     $schema = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_marketing', [
                         'id' => $accId,
                         'name' => $newAcc['name'] ?? ("Ad Account " . $accId),
+                        'hostname' => $newAcc['hostname'] ?? null,
                     ]);
                     $schema['lost_access'] = $isLostAccess;
                     $newAccsList[] = $schema;
                 } else {
-                    $newAccsList[] = ['id' => $accId, 'name' => $newAcc['name'] ?? ("Ad Account " . $accId), 'lost_access' => $isLostAccess];
+                    $newAccsList[] = [
+                        'id' => $accId, 
+                        'name' => $newAcc['name'] ?? ("Ad Account " . $accId), 
+                        'hostname' => $newAcc['hostname'] ?? null,
+                        'lost_access' => $isLostAccess
+                    ];
                 }
             }
         }
@@ -410,19 +417,52 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 // Default to account if nothing specified
                 if (empty($levelsToFetch)) $levelsToFetch = ['account'];
 
+                // Resolve host entities for context
+                $hostManager = $config['manager'] ?? null;
+                $hostSeeder = $config['seeder'] ?? null;
+                $chanAccountEntity = null;
+                $accountEntity = null;
+
+                if ($hostManager && $hostSeeder) {
+                    try {
+                        $caRepo = $hostManager->getRepository($hostSeeder->getEntityClass('ChanneledAccount'));
+                        $chanAccountEntity = $caRepo->findOneBy(['platformId' => $accountId, 'channel' => $this->getChannel()]);
+                        if ($chanAccountEntity) {
+                            $accountEntity = $chanAccountEntity->getAccount();
+                        }
+                    } catch (\Exception $e) {
+                        $this->logger?->warning("Driver sync context resolution failed: " . $e->getMessage());
+                    }
+                }
+
                 foreach ($levelsToFetch as $level) {
-                    $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Fetching $level insights for $accountId");
+                    $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
                     $rows = $this->fetchInsights($api, $accountId, $chunk['start'], $chunk['end'], $config, $level);
                     $rowCount = count($rows['data'] ?? []);
-                    $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Fetched $rowCount rows for $level");
+                    
                     if (!empty($rows['data'])) {
-                        $collection = FacebookMarketingMetricConvert::metrics($rows['data'], $accountId, $level, $this->logger);
+                        $collection = FacebookMarketingMetricConvert::metrics(
+                            rows: $rows['data'], 
+                            channeledAccount: $chanAccountEntity ?? $accountId, 
+                            level: $level, 
+                            logger: $this->logger,
+                            account: $accountEntity ?? ($config['accounts_group_name'] ?? 'Default')
+                        );
                         if ($this->dataProcessor && $collection->count() > 0) {
                             $result = ($this->dataProcessor)($collection, $this->logger);
-                            $totalStats['metrics'] += $result['metrics'] ?? $collection->count();
-                            $totalStats['rows'] += $result['rows'] ?? count($rows['data']);
-                            $totalStats['duplicates'] += $result['duplicates'] ?? 0;
+                            
+                            $metricsCount = $result['metrics'] ?? $collection->count();
+                            $processedRows = $result['rows'] ?? count($rows['data']);
+                            $duplicates = $result['duplicates'] ?? 0;
+
+                            $totalStats['metrics'] += $metricsCount;
+                            $totalStats['rows'] += $processedRows;
+                            $totalStats['duplicates'] += $duplicates;
+
+                            $this->logger?->info("<<< EXITO: Sincronización completada para Ad Account: $accountId (Level: $level). Métricas: $metricsCount | Filas: $processedRows | Duplicados: $duplicates");
                         }
+                    } else {
+                        $this->logger?->info("--- INFO: No se encontraron datos de Marketing para Ad Account: $accountId (Level: $level)");
                     }
                 }
             }

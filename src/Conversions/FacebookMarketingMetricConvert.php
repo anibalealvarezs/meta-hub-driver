@@ -35,11 +35,12 @@ class FacebookMarketingMetricConvert
         MetricSet $metricSet = MetricSet::KEY,
         array $metricsToProcess = [],
         ?string $customFields = null,
+        object|string|null $account = null,
     ): ArrayCollection {
         $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdPermission::DEFAULT->insightsFields($metricSet)));
         
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount;
-        $creativeId = is_object($creative) && method_exists($creative, 'getCreativeId') ? $creative->getCreativeId() : (string) $creative;
+        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
+        $creativePlatformId = is_object($creative) && method_exists($creative, 'getCreativeId') ? $creative->getCreativeId() : (string) $creative;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
         return UniversalMetricConverter::convert($rows, [
@@ -51,10 +52,12 @@ class FacebookMarketingMetricConvert
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
             'context' => [
-                'channeledAccount' => $channeledAccountId,
-                'creative' => $creativeId,
+                'account' => $account,
+                'channeledAccount' => $channeledAccount,
+                'channeledAccountId' => $channeledAccountId,
+                'creative' => $creative,
             ],
-            'fallback_platform_id' => $creativeId
+            'fallback_platform_id' => $creativePlatformId
         ], $logger);
     }
 
@@ -65,7 +68,7 @@ class FacebookMarketingMetricConvert
         array $rows,
         ?LoggerInterface $logger = null,
         object|string|null $account = null,
-        ?string $channeledAccountPlatformId = null,
+        object|string|null $channeledAccount = null,
         object|string|null $period = 'daily',
         MetricSet $metricSet = MetricSet::KEY,
         array $metricsToProcess = [],
@@ -73,6 +76,8 @@ class FacebookMarketingMetricConvert
     ): ArrayCollection {
         $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdAccountPermission::DEFAULT->insightsFields($metricSet)));
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
+        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
+        $channeledPlatformId = is_object($channeledAccount) && method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount;
 
         return UniversalMetricConverter::convert($rows, [
             'channel' => 'facebook_marketing',
@@ -84,9 +89,10 @@ class FacebookMarketingMetricConvert
             'metadata_fields' => self::METADATA_FIELDS,
             'context' => [
                 'account' => $account,
-                'channeledAccount' => $channeledAccountPlatformId,
+                'channeledAccount' => $channeledAccount,
+                'channeledAccountId' => $channeledAccountId,
             ],
-            'fallback_platform_id' => $channeledAccountPlatformId
+            'fallback_platform_id' => $channeledPlatformId
         ], $logger);
     }
 
@@ -103,11 +109,11 @@ class FacebookMarketingMetricConvert
         MetricSet $metricSet = MetricSet::KEY,
         array $metricsToProcess = [],
         ?string $customFields = null,
+        object|string|null $account = null,
     ): ArrayCollection {
         $metricsList = $customFields ? explode(',', $customFields) : explode(',', CampaignPermission::DEFAULT->insightsFields($metricSet));
         
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount;
-        $campaignId = is_object($campaign) && method_exists($campaign, 'getCampaignId') ? $campaign->getCampaignId() : (string) $campaign;
+        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
         $channeledCampaignId = is_object($channeledCampaign) && method_exists($channeledCampaign, 'getPlatformId') ? $channeledCampaign->getPlatformId() : (string) $channeledCampaign;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
@@ -120,9 +126,11 @@ class FacebookMarketingMetricConvert
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
             'context' => [
-                'channeledAccount' => $channeledAccountId,
-                'campaign' => $campaignId,
-                'channeledCampaign' => $channeledCampaignId,
+                'account' => $account,
+                'channeledAccount' => $channeledAccount,
+                'channeledAccountId' => $channeledAccountId,
+                'campaign' => $campaign,
+                'channeledCampaign' => $channeledCampaign,
             ],
             'fallback_platform_id' => $channeledCampaignId
         ], $logger);
@@ -142,12 +150,11 @@ class FacebookMarketingMetricConvert
         MetricSet $metricSet = MetricSet::KEY,
         array $metricsToProcess = [],
         ?string $customFields = null,
+        object|string|null $account = null,
     ): ArrayCollection {
         $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdsetPermission::DEFAULT->insightsFields($metricSet)));
 
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount;
-        $campaignId = is_object($campaign) && method_exists($campaign, 'getCampaignId') ? $campaign->getCampaignId() : (string) $campaign;
-        $channeledCampaignId = is_object($channeledCampaign) && method_exists($channeledCampaign, 'getPlatformId') ? $channeledCampaign->getPlatformId() : (string) $channeledCampaign;
+        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
         $channeledAdGroupId = is_object($channeledAdGroup) && method_exists($channeledAdGroup, 'getPlatformId') ? $channeledAdGroup->getPlatformId() : (string) $channeledAdGroup;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
@@ -160,10 +167,12 @@ class FacebookMarketingMetricConvert
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
             'context' => [
-                'channeledAccount' => $channeledAccountId,
-                'campaign' => $campaignId,
-                'channeledCampaign' => $channeledCampaignId,
-                'channeledAdGroup' => $channeledAdGroupId,
+                'account' => $account,
+                'channeledAccount' => $channeledAccount,
+                'channeledAccountId' => $channeledAccountId,
+                'campaign' => $campaign,
+                'channeledCampaign' => $channeledCampaign,
+                'channeledAdGroup' => $channeledAdGroup,
             ],
             'fallback_platform_id' => $channeledAdGroupId
         ], $logger);
@@ -184,13 +193,11 @@ class FacebookMarketingMetricConvert
         MetricSet $metricSet = MetricSet::KEY,
         array $metricsToProcess = [],
         ?string $customFields = null,
+        object|string|null $account = null,
     ): ArrayCollection {
         $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdPermission::DEFAULT->insightsFields($metricSet)));
 
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount;
-        $campaignId = is_object($campaign) && method_exists($campaign, 'getCampaignId') ? $campaign->getCampaignId() : (string) $campaign;
-        $channeledCampaignId = is_object($channeledCampaign) && method_exists($channeledCampaign, 'getPlatformId') ? $channeledCampaign->getPlatformId() : (string) $channeledCampaign;
-        $channeledAdGroupId = is_object($channeledAdGroup) && method_exists($channeledAdGroup, 'getPlatformId') ? $channeledAdGroup->getPlatformId() : (string) $channeledAdGroup;
+        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
         $channeledAdId = is_object($channeledAd) && method_exists($channeledAd, 'getPlatformId') ? $channeledAd->getPlatformId() : (string) $channeledAd;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
@@ -203,11 +210,13 @@ class FacebookMarketingMetricConvert
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
             'context' => [
-                'channeledAccount' => $channeledAccountId,
-                'campaign' => $campaignId,
-                'channeledCampaign' => $channeledCampaignId,
-                'channeledAdGroup' => $channeledAdGroupId,
-                'channeledAd' => $channeledAdId,
+                'account' => $account,
+                'channeledAccount' => $channeledAccount,
+                'channeledAccountId' => $channeledAccountId,
+                'campaign' => $campaign,
+                'channeledCampaign' => $channeledCampaign,
+                'channeledAdGroup' => $channeledAdGroup,
+                'channeledAd' => $channeledAd,
             ],
             'fallback_platform_id' => $channeledAdId
         ], $logger);
@@ -218,15 +227,16 @@ class FacebookMarketingMetricConvert
      */
     public static function metrics(
         array $rows,
-        string $accountId,
+        object|string $channeledAccount,
         string $level = 'account',
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        object|string|null $account = null,
     ): ArrayCollection {
         return match ($level) {
-            'campaign' => self::campaignMetrics(rows: $rows, logger: $logger, channeledAccount: $accountId),
-            'adset' => self::adsetMetrics(rows: $rows, logger: $logger, channeledAccount: $accountId),
-            'ad' => self::adMetrics(rows: $rows, logger: $logger, channeledAccount: $accountId),
-            default => self::adAccountMetrics(rows: $rows, logger: $logger, channeledAccountPlatformId: $accountId),
+            'campaign' => self::campaignMetrics(rows: $rows, logger: $logger, channeledAccount: $channeledAccount, account: $account),
+            'adset' => self::adsetMetrics(rows: $rows, logger: $logger, channeledAccount: $channeledAccount, account: $account),
+            'ad' => self::adMetrics(rows: $rows, logger: $logger, channeledAccount: $channeledAccount, account: $account),
+            default => self::adAccountMetrics(rows: $rows, logger: $logger, channeledAccount: $channeledAccount, account: $account),
         };
     }
 }

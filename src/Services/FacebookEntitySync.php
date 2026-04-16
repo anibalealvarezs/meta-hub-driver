@@ -636,7 +636,14 @@ class FacebookEntitySync
                         $page->addTitle($pageTitle);
                         $page->addHostname($pageHostname);
                         $page->addCanonicalId($canonicalId);
-                        if ($channeledAccount) $page->addAccount($channeledAccount->getAccount());
+                        
+                        if ($channeledAccount) {
+                            $page->addAccount($channeledAccount->getAccount());
+                            if (method_exists($channeledAccount, 'addPage')) {
+                                $channeledAccount->addPage($page);
+                                $manager->persist($channeledAccount);
+                            }
+                        }
 
                         $manager->persist($page);
                         $manager->flush();
@@ -765,7 +772,7 @@ class FacebookEntitySync
 
             foreach ($pagesToProcess as $page) {
                 Helpers::checkJobStatus($jobId);
-                $logger?->info("DEBUG: FacebookEntitySync::syncPosts - START processing page " . $page->getPlatformId());
+                $logger?->info(">>> INICIO: Sincronizando posts para FB Page: {$page->getPlatformId()} (Timeframe: $startDate a $endDate)");
                 $fetched = false;
                 $postLimits = [100, 50, 25, 10];
 
@@ -777,7 +784,6 @@ class FacebookEntitySync
                     while ($retryCount < $maxRetries && ! $fetched) {
                         try {
                             $api->setPageId($page->getPlatformId());
-                            $logger?->info("DEBUG: FacebookEntitySync::syncPosts - Trying limit=$limit for page " . $page->getPlatformId());
                             $posts = $api->getFacebookPosts(pageId: $page->getPlatformId(), limit: $limit);
                             if (! empty($posts['data'])) {
                                 $includeFilter = self::getFacebookFilter($config, 'POST', 'cache_include');
@@ -789,21 +795,32 @@ class FacebookEntitySync
                                     $pId = (string)$p['id'];
                                     if (self::matchesFilter($pName, $includeFilter, $excludeFilter) || self::matchesFilter($pId, $includeFilter, $excludeFilter)) {
                                         $filteredPosts[] = $p;
-                                    } else {
-                                        $logger?->info("Skipping post $pId ($pName) - filtered out by extraction patterns");
                                     }
                                 }
 
                                 if (! empty($filteredPosts)) {
                                     $converted = FacebookOrganicConvert::posts($filteredPosts, $page->getId());
+                                    $saveCount = 0;
                                     foreach ($converted as $pData) {
                                         $post = $manager->getRepository($postClass)->findOneBy(['postId' => $pData->platformId]) ?? new $postClass();
                                         $post->addPostId($pData->platformId);
                                         $post->addPage($page);
                                         $post->addAccount($page->getAccount());
+                                        // Try to find the ChanneledAccount associated with this Page
+                                        $ca = $manager->getRepository($channeledAccountClass)->findOneBy([
+                                            'platformId' => $page->getPlatformId(),
+                                            'channel' => Channel::facebook_organic->value
+                                        ]);
+                                        if ($ca) {
+                                            $post->addChanneledAccount($ca);
+                                        }
                                         $manager->persist($post);
+                                        $saveCount++;
                                     }
                                     $manager->flush();
+                                    $logger?->info("<<< EXITO: Se sincronizaron $saveCount posts para FB Page: {$page->getPlatformId()}");
+                                } else {
+                                    $logger?->info("--- INFO: No se encontraron posts que coincidan con los filtros para FB Page: {$page->getPlatformId()}");
                                 }
                             }
                             $fetched = true;
@@ -882,6 +899,8 @@ class FacebookEntitySync
                 $fetched = false;
                 $mediaLimits = [100, 50, 25, 10];
 
+                $logger?->info(">>> INICIO: Sincronizando media para IG Account: $igId (Timeframe: $startDate a $endDate)");
+                
                 foreach ($mediaLimits as $limit) {
                     if ($fetched) break;
                     $maxRetries = 3;
@@ -893,7 +912,6 @@ class FacebookEntitySync
                                 $api->setPageId((string)$pageCfg['id']);
                             }
                             
-                            $logger?->info("DEBUG: FacebookEntitySync::syncInstagramMedia - Trying limit=$limit for IG account " . $igId);
                             $media = $api->getInstagramMedia(igUserId: $igId, limit: $limit);
                             
                             if (!empty($media['data'])) {
@@ -916,14 +934,27 @@ class FacebookEntitySync
                                         $channeledAccount->getAccount() ? $channeledAccount->getAccount()->getId() : null,
                                         $channeledAccount->getId()
                                     );
+                                    
+                                    // Resolve IG Page entity for the post
+                                    $igPage = $manager->getRepository($seeder->getEntityClass('Page'))->findOneBy(['platformId' => $igId])
+                                              ?? $manager->getRepository($seeder->getEntityClass('Page'))->findOneBy(['canonicalId' => 'ig:' . $igId]);
+
+                                    $saveCount = 0;
                                     foreach ($converted as $mData) {
                                         $post = $manager->getRepository($postClass)->findOneBy(['postId' => $mData->platformId]) ?? new $postClass();
                                         $post->addPostId($mData->platformId);
                                         $post->addChanneledAccount($channeledAccount);
                                         $post->addAccount($channeledAccount->getAccount());
+                                        if ($igPage) {
+                                            $post->addPage($igPage);
+                                        }
                                         $manager->persist($post);
+                                        $saveCount++;
                                     }
                                     $manager->flush();
+                                    $logger?->info("<<< EXITO: Se sincronizaron $saveCount items de media para IG Account: $igId");
+                                } else {
+                                    $logger?->info("--- INFO: No se encontró media que coincida con los filtros para IG Account: $igId");
                                 }
                             }
                             $fetched = true;
