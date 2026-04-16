@@ -245,7 +245,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 }
             }
             return $assets;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             if ($this->logger) $this->logger->error("FacebookOrganicDriver: Error fetching available assets: " . $e->getMessage());
             if ($throwOnError) {
                 throw $e;
@@ -269,7 +269,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     'user_id' => $api->getUserId()
                 ]
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -566,7 +566,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         if (!empty($page['ig_account']) && !empty($page['ig_account_metrics'])) {
             // Meta only provides IG insights for the last 2 years (approx 730 days)
             // We use -2 years + 1 day to be safe and avoid edge-of-window errors
-            $igTwoYearsAgo = (new \DateTime())->modify('-2 years + 1 day')->format('Y-m-d');
+            $igTwoYearsAgo = (new DateTime())->modify('-2 years + 1 day')->format('Y-m-d');
             $igSince = $start < $igTwoYearsAgo ? $igTwoYearsAgo : $start;
 
             foreach ([1, 2, 3, 4, 5] as $option) {
@@ -647,7 +647,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             if (!$page) return [];
 
             return $manager->getRepository($postClass)->findBy(['page' => $page]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logger?->error("Error fetching post entities for sync: " . $e->getMessage());
             return [];
         }
@@ -670,7 +670,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             if (!$igAccount) return [];
 
             return $manager->getRepository($postClass)->findBy(['channeledAccount' => $igAccount]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logger?->error("Error fetching IG media entities for sync: " . $e->getMessage());
             return [];
         }
