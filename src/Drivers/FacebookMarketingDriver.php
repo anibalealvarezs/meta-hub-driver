@@ -914,7 +914,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                                     deviceId: $device->getId(),
                                     data: json_encode(['raw' => $val]),
                                     setHash: $dimSet->getHash(),
-                                    channeledAccountPlatformId: $ca->getPlatformId(),
+                                    caPId: $ca->getPlatformId(),
                                     countryPId: $code,
                                     devicePId: $type
                                 );
