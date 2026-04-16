@@ -57,10 +57,10 @@ class FacebookMarketingMetricConvert
                 'channeledAccountId' => $channeledAccountId,
                 'creative' => $creative,
             ],
-            'row_entity_fields' => [
-                'account_id' => 'channeledAccountPlatformId',
-                'ad_id' => 'channeledAdPlatformId',
-                'creative_id' => 'creativePlatformId',
+            'row_key_fields' => [
+                'account_id' => ['account', 'channeledAccount'],
+                'ad_id'      => 'channeledAd',
+                'creative_id'=> 'creative',
             ],
             'fallback_platform_id' => $creativePlatformId
         ], $logger);
@@ -97,8 +97,8 @@ class FacebookMarketingMetricConvert
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
             ],
-            'row_entity_fields' => [
-                'account_id' => 'channeledAccountPlatformId',
+            'row_key_fields' => [
+                'account_id' => ['account', 'channeledAccount'],
             ],
             'fallback_platform_id' => $channeledPlatformId
         ], $logger);
@@ -140,9 +140,9 @@ class FacebookMarketingMetricConvert
                 'campaign' => $campaign,
                 'channeledCampaign' => $channeledCampaign,
             ],
-            'row_entity_fields' => [
-                'account_id' => 'channeledAccountPlatformId',
-                'campaign_id' => 'channeledCampaignPlatformId',
+            'row_key_fields' => [
+                'account_id'  => ['account', 'channeledAccount'],
+                'campaign_id' => ['campaign', 'channeledCampaign'],
             ],
             'fallback_platform_id' => $channeledCampaignId
         ], $logger);
@@ -186,10 +186,10 @@ class FacebookMarketingMetricConvert
                 'channeledCampaign' => $channeledCampaign,
                 'channeledAdGroup' => $channeledAdGroup,
             ],
-            'row_entity_fields' => [
-                'account_id' => 'channeledAccountPlatformId',
-                'campaign_id' => 'channeledCampaignPlatformId',
-                'adset_id' => 'channeledAdGroupPlatformId',
+            'row_key_fields' => [
+                'account_id'  => ['account', 'channeledAccount'],
+                'campaign_id' => ['campaign', 'channeledCampaign'],
+                'adset_id'    => 'channeledAdGroup',
             ],
             'fallback_platform_id' => $channeledAdGroupId
         ], $logger);
@@ -235,11 +235,11 @@ class FacebookMarketingMetricConvert
                 'channeledAdGroup' => $channeledAdGroup,
                 'channeledAd' => $channeledAd,
             ],
-            'row_entity_fields' => [
-                'account_id' => 'channeledAccountPlatformId',
-                'campaign_id' => 'channeledCampaignPlatformId',
-                'adset_id' => 'channeledAdGroupPlatformId',
-                'ad_id' => 'channeledAdPlatformId',
+            'row_key_fields' => [
+                'account_id'  => ['account', 'channeledAccount'],
+                'campaign_id' => ['campaign', 'channeledCampaign'],
+                'adset_id'    => 'channeledAdGroup',
+                'ad_id'       => 'channeledAd',
             ],
             'fallback_platform_id' => $channeledAdId
         ], $logger);
