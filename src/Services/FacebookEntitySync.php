@@ -107,6 +107,7 @@ class FacebookEntitySync
                 $currentLimit = 100;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
+                    Helpers::reconnectIfNeeded($manager);
                     try {
                         $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Phase 1. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
                         $campaigns = $api->getCampaigns(adAccountId: $adAccountId, limit: $currentLimit);
@@ -264,6 +265,7 @@ class FacebookEntitySync
                 $currentLimit = 100;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
+                    Helpers::reconnectIfNeeded($manager);
                     try {
                         $additionalParams = [];
                         if ($parentIdsMap && isset($parentIdsMap[$adAccountId])) {
@@ -424,6 +426,7 @@ class FacebookEntitySync
                 $currentLimit = 100;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
+                    Helpers::reconnectIfNeeded($manager);
                     try {
                         $additionalParams = [];
                         if ($parentIdsMap && isset($parentIdsMap[$adAccountId])) {
@@ -560,6 +563,7 @@ class FacebookEntitySync
                 $currentLimit = 100;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
+                    Helpers::reconnectIfNeeded($manager);
                     try {
                         $creatives = $api->getCreatives(adAccountId: $adAccountId, limit: $currentLimit);
                         if (! empty($creatives['data'])) {
@@ -713,6 +717,7 @@ class FacebookEntitySync
                 $fetched = false;
 
                 while ($retryCount < $maxRetries && ! $fetched) {
+                    Helpers::reconnectIfNeeded($manager);
                     try {
                         $pages = $api->getPages(userId: $adAccountId);
                         if (! empty($pages['data'])) {
@@ -824,6 +829,7 @@ class FacebookEntitySync
                     $retryCount = 0;
 
                     while ($retryCount < $maxRetries && ! $fetched) {
+                        Helpers::reconnectIfNeeded($manager);
                         try {
                             $api->setPageId($page->getPlatformId());
                             $posts = $api->getFacebookPosts(pageId: $page->getPlatformId(), limit: $limit);
@@ -886,6 +892,7 @@ class FacebookEntitySync
                         }
                     } // end while
                 } // end foreach postLimits
+                $manager->clear();
                 $logger?->info("DEBUG: FacebookEntitySync::syncPosts - END processing page " . $page->getPlatformId());
             } // end foreach pagesToProcess
 
@@ -953,6 +960,7 @@ class FacebookEntitySync
                     $retryCount = 0;
 
                     while ($retryCount < $maxRetries && !$fetched) {
+                        Helpers::reconnectIfNeeded($manager);
                         try {
                             if (!empty($pageCfg['id'])) {
                                 $api->setPageId((string)$pageCfg['id']);
@@ -1031,6 +1039,7 @@ class FacebookEntitySync
                         }
                     }
                 }
+                $manager->clear();
                 $logger?->info("DEBUG: FacebookEntitySync::syncInstagramMedia - END processing IG account " . $igId);
             }
 
