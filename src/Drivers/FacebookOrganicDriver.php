@@ -493,9 +493,21 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 throw new Exception("FacebookEntitySync service not found in host.");
             case 'entities':
                 $results = [];
+                $pageCfg = $config['PAGE'] ?? [];
+
+                // 1. Pages
                 $results['pages'] = json_decode($this->syncEntities('pages', $startDate, $endDate, $config, $api)->getContent(), true);
-                $results['posts'] = json_decode($this->syncEntities('posts', $startDate, $endDate, $config, $api)->getContent(), true);
-                $results['instagram'] = json_decode($this->syncEntities('instagram', $startDate, $endDate, $config, $api)->getContent(), true);
+
+                // 2. Posts
+                if (!empty($pageCfg['posts'])) {
+                    $results['posts'] = json_decode($this->syncEntities('posts', $startDate, $endDate, $config, $api)->getContent(), true);
+                }
+
+                // 3. Instagram
+                if (!empty($pageCfg['ig_account_media'])) {
+                    $results['instagram'] = json_decode($this->syncEntities('instagram', $startDate, $endDate, $config, $api)->getContent(), true);
+                }
+
                 return new Response(json_encode(['status' => 'success', 'results' => $results]), 200, ['Content-Type' => 'application/json']);
             default:
                 throw new Exception("Entity sync for '{$entity}' not implemented in FacebookOrganicDriver");

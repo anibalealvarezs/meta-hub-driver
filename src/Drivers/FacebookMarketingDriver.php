@@ -553,27 +553,37 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 throw new Exception("FacebookEntitySync service not found in host.");
             case 'entities':
                 $results = [];
+                $accCfg = $config['AD_ACCOUNT'] ?? [];
+
                 // 1. Campaigns
-                $campResponse = $this->syncEntities('campaigns', $startDate, $endDate, $config, $api);
-                $results['campaigns'] = json_decode($campResponse->getContent(), true);
+                if (!empty($accCfg['campaigns'])) {
+                    $campResponse = $this->syncEntities('campaigns', $startDate, $endDate, $config, $api);
+                    $results['campaigns'] = json_decode($campResponse->getContent(), true);
+                }
                 $campaignMap = $results['campaigns']['authorized_ids_map'] ?? null;
 
                 // 2. Ad Groups
-                if ($campaignMap) {
-                    $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $campaignMap]);
+                if (!empty($accCfg['adsets'])) {
+                    if ($campaignMap) {
+                        $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $campaignMap]);
+                    }
+                    $agResponse = $this->syncEntities('ad_groups', $startDate, $endDate, $config, $api);
+                    $results['ad_groups'] = json_decode($agResponse->getContent(), true);
                 }
-                $agResponse = $this->syncEntities('ad_groups', $startDate, $endDate, $config, $api);
-                $results['ad_groups'] = json_decode($agResponse->getContent(), true);
                 $adSetMap = $results['ad_groups']['authorized_ids_map'] ?? null;
 
-                // 3. Creatives
-                $results['creatives'] = json_decode($this->syncEntities('creatives', $startDate, $endDate, $config, $api)->getContent(), true);
-
-                // 4. Ads
-                if ($adSetMap) {
-                    $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $adSetMap]);
+                // 3. Ads
+                if (!empty($accCfg['ads'])) {
+                    if ($adSetMap) {
+                        $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $adSetMap]);
+                    }
+                    $results['ads'] = json_decode($this->syncEntities('ads', $startDate, $endDate, $config, $api)->getContent(), true);
                 }
-                $results['ads'] = json_decode($this->syncEntities('ads', $startDate, $endDate, $config, $api)->getContent(), true);
+
+                // 4. Creatives
+                if (!empty($accCfg['creatives'])) {
+                    $results['creatives'] = json_decode($this->syncEntities('creatives', $startDate, $endDate, $config, $api)->getContent(), true);
+                }
 
                 return new Response(json_encode(['status' => 'success', 'results' => $results]), 200, ['Content-Type' => 'application/json']);
             default:

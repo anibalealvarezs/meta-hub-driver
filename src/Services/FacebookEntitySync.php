@@ -484,6 +484,10 @@ class FacebookEntitySync
                                         if ($creative) {
                                             $channeledAd->addCreative($creative);
                                         }
+                                        // Store for retrospective linking
+                                        $adData = $channeledAd->getData() ?? [];
+                                        $adData["facebook_creative_id"] = $data->channeledCreativeId;
+                                        $channeledAd->addData($adData);
                                     }
 
                                     $manager->persist($channeledAd);
@@ -583,12 +587,25 @@ class FacebookEntitySync
 
                             if (! empty($filteredCreatives)) {
                                 $converted = FacebookMarketingConvert::creatives($filteredCreatives, $channeledAccount->getId());
+                                
+                                // Fetch all ads for this account once to perform retrospective linking
+                                $channeledAdClass = $seeder->getEntityClass("ChanneledAd");
+                                $allAds = $manager->getRepository($channeledAdClass)->findBy(["channeledAccount" => $channeledAccount]);
                                 foreach ($converted as $data) {
                                     $creative = $manager->getRepository($creativeClass)->findOneBy(['creativeId' => $data->platformId]) ?? new $creativeClass();
                                     $creative->addName($data->name);
                                     $creative->addCreativeId($data->platformId);
                                     $creative->addData($data->data ?? []);
                                     $manager->persist($creative);
+
+                                    // Retrospective linking for Ads
+                                    foreach ($allAds as $ad) {
+                                        $adData = $ad->getData();
+                                        if (($adData["facebook_creative_id"] ?? null) === $data->platformId) {
+                                            $ad->addCreative($creative);
+                                            $manager->persist($ad);
+                                        }
+                                    }
                                 }
                                 $manager->flush();
                             }
