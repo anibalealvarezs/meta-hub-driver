@@ -110,7 +110,13 @@ class FacebookEntitySync
                     Helpers::reconnectIfNeeded($manager);
                     try {
                         $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Phase 1. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
-                        $campaigns = $api->getCampaigns(adAccountId: $adAccountId, limit: $currentLimit);
+                        $campaigns = $api->getCampaigns(
+                            adAccountId: $adAccountId,
+                            limit: $currentLimit,
+                            additionalParams: [
+                                'effective_status' => '["ACTIVE","PAUSED","ARCHIVED","DELETED","IN_PROCESS","WITH_ISSUES"]'
+                            ]
+                        );
                         $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Phase 2. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
                         if (! empty($campaigns['data'])) {
                             $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - API found " . count($campaigns['data']) . " campaigns for account: $adAccountId");
@@ -276,7 +282,14 @@ class FacebookEntitySync
                             ]];
                         }
 
-                        $adsets = $api->getAdsets(adAccountId: $adAccountId, limit: $currentLimit, additionalParams: $additionalParams);
+                        $adsets = $api->getAdsets(
+                            adAccountId: $adAccountId, 
+                            limit: $currentLimit, 
+                            additionalParams: array_merge(
+                                $additionalParams, 
+                                ['effective_status' => '["ACTIVE","PAUSED","ARCHIVED","DELETED","IN_PROCESS","WITH_ISSUES"]']
+                            )
+                        );
                         if (! empty($adsets['data'])) {
                             $includeFilter = self::getFacebookFilter($config, 'ADSET', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'ADSET', 'cache_exclude');
@@ -436,7 +449,14 @@ class FacebookEntitySync
                                 'value' => $parentIdsMap[$adAccountId],
                             ]];
                         }
-                        $ads = $api->getAds(adAccountId: $adAccountId, limit: $currentLimit, additionalParams: $additionalParams);
+                        $ads = $api->getAds(
+                            adAccountId: $adAccountId, 
+                            limit: $currentLimit, 
+                            additionalParams: array_merge(
+                                $additionalParams, 
+                                ['effective_status' => '["ACTIVE","PAUSED","ARCHIVED","DELETED","IN_PROCESS","WITH_ISSUES"]']
+                            )
+                        );
                         if (! empty($ads['data'])) {
                             $includeFilter = self::getFacebookFilter($config, 'AD', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'AD', 'cache_exclude');

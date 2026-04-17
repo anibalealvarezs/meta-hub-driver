@@ -484,10 +484,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
                             $totalStats['rows'] += $processedRows;
                             $totalStats['duplicates'] += $duplicates;
 
-                            $this->logger?->info("<<< EXITO: Sincronización completada para Ad Account: $accountId (Level: $level). Métricas: $metricsCount | Filas: $processedRows | Duplicados: $duplicates");
+                            $this->logger?->info("<<< EXITO: Sincronización completada para Ad Account: $accountPlatformId (Level: $level). Métricas: $metricsCount | Filas: $processedRows | Duplicados: $duplicates");
                         }
                     } else {
-                        $this->logger?->info("--- INFO: No se encontraron datos de Marketing para Ad Account: $accountId (Level: $level)");
+                        $this->logger?->info("--- INFO: No se encontraron datos de Marketing para Ad Account: $accountPlatformId (Level: $level)");
                     }
                 }
             }
