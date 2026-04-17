@@ -407,7 +407,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             if (!$accountPlatformId) continue;
 
             // Resolve Internal Ad Account Identity from pre-loaded map
-            $caId = $caMap[$accountPlatformId]['id'] ?? $accountPlatformId;
+            $caId = (count($caMap) && isset($caMap[$accountPlatformId])) ? $caMap[$accountPlatformId]->getId() : $accountPlatformId;
 
             $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
             foreach ($chunks as $chunk) {
@@ -484,66 +484,74 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         $syncService = \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::class;
 
+        $channeledAccounts = [];
+        if ($identityMapper && !empty($config['ad_accounts'])) {
+            $aIds = [];
+            foreach ($config['ad_accounts'] as $account) {
+                $id = (string)($account['id'] ?? $account);
+                if ($id) $aIds[] = $id;
+            }
+            if (!empty($aIds)) {
+                $channeledAccounts = array_values($identityMapper('channeled_accounts', ['platform_ids' => $aIds]) ?? []);
+            }
+        }
+
         switch ($entity) {
             case 'campaigns':
                 if (class_exists($syncService)) {
                     return $syncService::syncCampaigns(
-                        seeder: $config['seeder'],
-                        manager: $config['manager'],
                         api: $api,
                         config: $config,
                         startDate: $startDateStr,
                         endDate: $endDateStr,
                         logger: $this->logger,
                         jobId: $jobId,
-                        adAccountIds: $filters->adAccountIds ?? null
+                        channeledAccounts: $channeledAccounts,
+                        entityProcessor: $this->dataProcessor
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
             case 'ad_groups':
                 if (class_exists($syncService)) {
                     return $syncService::syncAdGroups(
-                        seeder: $config['seeder'],
-                        manager: $config['manager'],
                         api: $api,
                         config: $config,
                         startDate: $startDateStr,
                         endDate: $endDateStr,
                         logger: $this->logger,
                         jobId: $jobId,
-                        adAccountIds: $filters->adAccountIds ?? null,
-                        parentIdsMap: $filters->parentIdsMap ?? null
+                        channeledAccounts: $channeledAccounts,
+                        parentIdsMap: $filters->parentIdsMap ?? null,
+                        entityProcessor: $this->dataProcessor
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
             case 'ads':
                 if (class_exists($syncService)) {
                     return $syncService::syncAds(
-                        seeder: $config['seeder'],
-                        manager: $config['manager'],
                         api: $api,
                         config: $config,
                         startDate: $startDateStr,
                         endDate: $endDateStr,
                         logger: $this->logger,
                         jobId: $jobId,
-                        adAccountIds: $filters->adAccountIds ?? null,
-                        parentIdsMap: $filters->parentIdsMap ?? null
+                        channeledAccounts: $channeledAccounts,
+                        parentIdsMap: $filters->parentIdsMap ?? null,
+                        entityProcessor: $this->dataProcessor
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
             case 'creatives':
                 if (class_exists($syncService)) {
                     return $syncService::syncCreatives(
-                        seeder: $config['seeder'],
-                        manager: $config['manager'],
                         api: $api,
                         config: $config,
                         startDate: $startDateStr,
                         endDate: $endDateStr,
                         logger: $this->logger,
                         jobId: $jobId,
-                        adAccountIds: $filters->adAccountIds ?? null
+                        channeledAccounts: $channeledAccounts,
+                        entityProcessor: $this->dataProcessor
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");

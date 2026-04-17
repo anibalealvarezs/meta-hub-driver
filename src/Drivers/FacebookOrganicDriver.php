@@ -384,9 +384,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $this->logger?->info(">>> INICIO: Sincronizando métricas Orgánicas para FB Page: $pagePlatformId" . ($igPlatformId ? " e Instagram: $igPlatformId" : ""));
             
             // Resolve Internal Identities from pre-loaded maps
-            $pageId = $pageMap[$pagePlatformId]['id'] ?? $pagePlatformId;
-            $caId = $caMap[$pagePlatformId]['id'] ?? $pagePlatformId;
-            $igCaId = $igPlatformId ? ($caMap[$igPlatformId]['id'] ?? $igPlatformId) : null;
+            $pageId = (count($pageMap) && isset($pageMap[$pagePlatformId])) ? $pageMap[$pagePlatformId]->getId() : $pagePlatformId;
+            $caId = (count($caMap) && isset($caMap[$pagePlatformId])) ? $caMap[$pagePlatformId]->getId() : $pagePlatformId;
+            $igCaId = $igPlatformId ? ((count($caMap) && isset($caMap[$igPlatformId])) ? $caMap[$igPlatformId]->getId() : $igPlatformId) : null;
 
             $api->setAccessToken($page['access_token'] ?? $config['access_token'] ?? null);
 
@@ -478,7 +478,15 @@ class FacebookOrganicDriver implements SyncDriverInterface
         return new Response(json_encode(['status' => 'success', 'data' => $totalStats]));
     }
 
-    private function syncEntities(string $entity, DateTime $startDate, DateTime $endDate, array $config, FacebookGraphApi $api): Response
+    private function syncEntities(
+        string $entity, 
+        DateTime $startDate, 
+        DateTime $endDate, 
+        array $config, 
+        FacebookGraphApi $api,
+        ?callable $shouldContinue = null,
+        ?callable $identityMapper = null
+    ): Response
     {
         $startDateStr = $startDate->format('Y-m-d');
         $endDateStr = $endDate->format('Y-m-d');
@@ -487,46 +495,71 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         $syncService = \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::class;
 
+        $pagesToProcess = $config['pages'] ?? [];
+        $resolvedPages = [];
+        $resolvedChanneledAccounts = [];
+        
+        if ($identityMapper && !empty($pagesToProcess)) {
+            $fbPIds = [];
+            $igPIds = [];
+            foreach ($pagesToProcess as $page) {
+                if ($pId = (string)($page['id'] ?? $page)) $fbPIds[] = $pId;
+                if ($igId = (string)($page['ig_account'] ?? null)) $igPIds[] = $igId;
+            }
+            $resolvedPages = array_values($identityMapper('pages', ['platform_ids' => $fbPIds]) ?? []);
+            $resolvedChanneledAccounts = $identityMapper('channeled_accounts', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
+        }
+
         switch ($entity) {
             case 'pages':
                 if (class_exists($syncService)) {
+                    // Discovery for marketing accounts
+                    $adAccounts = [];
+                    if ($identityMapper && !empty($config['ad_accounts'])) {
+                         $aIds = array_map(fn($a) => (string)($a['id'] ?? $a), $config['ad_accounts']);
+                         $adAccounts = array_values($identityMapper('channeled_accounts', ['platform_ids' => $aIds]) ?? []);
+                    }
                     return $syncService::syncPages(
-                        seeder: $config['seeder'],
-                        manager: $config['manager'],
                         api: $api,
                         config: $config,
                         startDate: $startDateStr,
                         endDate: $endDateStr,
                         logger: $this->logger,
-                        jobId: $jobId
+                        jobId: $jobId,
+                        channeledAccounts: $adAccounts,
+                        entityProcessor: $this->dataProcessor
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
             case 'posts':
                 if (class_exists($syncService)) {
                     return $syncService::syncPosts(
-                        seeder: $config['seeder'],
-                        manager: $config['manager'],
                         api: $api,
                         config: $config,
                         startDate: $startDateStr,
                         endDate: $endDateStr,
                         logger: $this->logger,
-                        jobId: $jobId
+                        jobId: $jobId,
+                        channeledPages: $resolvedPages,
+                        entityProcessor: $this->dataProcessor
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
             case 'instagram':
                 if (class_exists($syncService)) {
+                    // Filter resolved accounts to only include IG ones from config
+                    $igPIds = array_filter(array_map(fn($p) => (string)($p['ig_account'] ?? null), $pagesToProcess));
+                    $igAccounts = array_filter($resolvedChanneledAccounts, fn($ca, $pId) => in_array((string)$pId, $igPIds), ARRAY_FILTER_USE_BOTH);
+                    
                     return $syncService::syncInstagramMedia(
-                        seeder: $config['seeder'],
-                        manager: $config['manager'],
                         api: $api,
                         config: $config,
                         startDate: $startDateStr,
                         endDate: $endDateStr,
                         logger: $this->logger,
-                        jobId: $jobId
+                        jobId: $jobId,
+                        channeledAccounts: array_values($igAccounts),
+                        entityProcessor: $this->dataProcessor
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
@@ -535,16 +568,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 $pageCfg = $config['PAGE'] ?? [];
 
                 // 1. Pages
-                $results['pages'] = json_decode($this->syncEntities('pages', $startDate, $endDate, $config, $api)->getContent(), true);
+                $results['pages'] = json_decode($this->syncEntities('pages', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
 
                 // 2. Posts
                 if (!empty($pageCfg['posts'])) {
-                    $results['posts'] = json_decode($this->syncEntities('posts', $startDate, $endDate, $config, $api)->getContent(), true);
+                    $results['posts'] = json_decode($this->syncEntities('posts', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
                 }
 
                 // 3. Instagram
                 if (!empty($pageCfg['ig_account_media'])) {
-                    $results['instagram'] = json_decode($this->syncEntities('instagram', $startDate, $endDate, $config, $api)->getContent(), true);
+                    $results['instagram'] = json_decode($this->syncEntities('instagram', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
                 }
 
                 return new Response(json_encode(['status' => 'success', 'results' => $results]), 200, ['Content-Type' => 'application/json']);
