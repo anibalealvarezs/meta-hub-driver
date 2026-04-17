@@ -946,22 +946,33 @@ class FacebookEntitySync
                                 }
 
                                 if (! empty($filteredPosts)) {
+                                    // Try to find the ChanneledAccount associated with this Page
+                                    $ca = $manager->getRepository($channeledAccountClass)->findOneBy([
+                                        'platformId' => $page->getPlatformId(),
+                                        'channel' => Channel::facebook_organic->value
+                                    ]);
+
                                     $converted = FacebookOrganicConvert::posts($filteredPosts, $page->getId());
                                     $saveCount = 0;
                                     foreach ($converted as $pData) {
-                                        $post = $manager->getRepository($postClass)->findOneBy(['postId' => $pData->platformId]) ?? new $postClass();
+                                        // Build search criteria matching the unique constraint
+                                        $criteria = ['postId' => $pData->platformId, 'page' => $page];
+                                        try {
+                                            $account = $page->getAccount();
+                                            if ($account) {
+                                                $criteria['account'] = $account;
+                                            }
+                                        } catch (\Error $e) {}
+                                        if ($ca) {
+                                            $criteria['channeledAccount'] = $ca;
+                                        }
+
+                                        $post = $manager->getRepository($postClass)->findOneBy($criteria) ?? new $postClass();
                                         $post->addPostId($pData->platformId);
                                         $post->addPage($page);
-                                        try {
-                                            $post->addAccount($page->getAccount());
-                                        } catch (\Error $e) {
-                                            $logger?->warning("Page {$page->getPlatformId()} has no account initialized. Skipping account assignment for post.");
+                                        if (isset($criteria['account'])) {
+                                            $post->addAccount($criteria['account']);
                                         }
-                                        // Try to find the ChanneledAccount associated with this Page
-                                        $ca = $manager->getRepository($channeledAccountClass)->findOneBy([
-                                            'platformId' => $page->getPlatformId(),
-                                            'channel' => Channel::facebook_organic->value
-                                        ]);
                                         if ($ca) {
                                             $post->addChanneledAccount($ca);
                                         }
@@ -1110,14 +1121,23 @@ class FacebookEntitySync
                                               ?? $manager->getRepository($seeder->getEntityClass('Page'))->findOneBy(['canonicalId' => 'ig:' . $igId]);
 
                                     $saveCount = 0;
+                                    $account = null;
+                                    try {
+                                        $account = $channeledAccount->getAccount();
+                                    } catch (\Error $e) {}
+
                                     foreach ($converted as $mData) {
-                                        $post = $manager->getRepository($postClass)->findOneBy(['postId' => $mData->platformId]) ?? new $postClass();
+                                        // Build search criteria matching the unique constraint
+                                        $criteria = ['postId' => $mData->platformId];
+                                        if ($channeledAccount) $criteria['channeledAccount'] = $channeledAccount;
+                                        if ($account) $criteria['account'] = $account;
+                                        if ($igPage) $criteria['page'] = $igPage;
+
+                                        $post = $manager->getRepository($postClass)->findOneBy($criteria) ?? new $postClass();
                                         $post->addPostId($mData->platformId);
                                         $post->addChanneledAccount($channeledAccount);
-                                        try {
-                                            $post->addAccount($channeledAccount->getAccount());
-                                        } catch (\Error $e) {
-                                            // ChanneledAccount account property might be uninitialized
+                                        if ($account) {
+                                            $post->addAccount($account);
                                         }
                                         if ($igPage) {
                                             $post->addPage($igPage);
