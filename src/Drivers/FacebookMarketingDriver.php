@@ -421,49 +421,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountPlatformId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
                     $response = $this->fetchInsights($api, $accountPlatformId, $chunk['start'], $chunk['end'], $config, $level, $shouldContinue);
                     $rows = $response['data'] ?? [];
-                    
+
                     if (!empty($rows)) {
-                        // 2. Batch Resolve Hierarchical Identities for this block of rows
-                        if ($identityMapper) {
-                            $campaignPlatformIds = array_unique(array_filter(array_column($rows, 'campaign_id')));
-                            $adsetPlatformIds = array_unique(array_filter(array_column($rows, 'adset_id')));
-                            $adPlatformIds = array_unique(array_filter(array_column($rows, 'ad_id')));
-                            
-                            $cMap = !empty($campaignPlatformIds) ? $identityMapper('channeled_campaigns', ['platform_ids' => $campaignPlatformIds]) : [];
-                            $agMap = !empty($adsetPlatformIds) ? $identityMapper('channeled_ad_groups', ['platform_ids' => $adsetPlatformIds]) : [];
-                            $aMap = !empty($adPlatformIds) ? $identityMapper('channeled_ads', ['platform_ids' => $adPlatformIds]) : [];
-
-                            foreach ($rows as &$row) {
-                                if (isset($row['campaign_id'])) {
-                                    $pId = (string) $row['campaign_id'];
-                                    if (isset($cMap[$pId])) {
-                                        $row['campaign_id'] = (string)$cMap[$pId]['id'];
-                                    } else {
-                                        $this->logger?->warning("Oráculo: No se encontró la campaña con Platform ID: $pId");
-                                        unset($row['campaign_id']); // Ensure converter doesn't use platform ID as internal ID
-                                    }
-                                }
-                                if (isset($row['adset_id'])) {
-                                    $pId = (string) $row['adset_id'];
-                                    if (isset($agMap[$pId])) {
-                                        $row['adset_id'] = (string)$agMap[$pId]['id'];
-                                    } else {
-                                        $this->logger?->warning("Oráculo: No se encontró el Ad Set con Platform ID: $pId");
-                                        unset($row['adset_id']);
-                                    }
-                                }
-                                if (isset($row['ad_id'])) {
-                                    $pId = (string) $row['ad_id'];
-                                    if (isset($aMap[$pId])) {
-                                        $row['ad_id'] = (string)$aMap[$pId]['id'];
-                                    } else {
-                                        $this->logger?->warning("Oráculo: No se encontró el Ad con Platform ID: $pId");
-                                        unset($row['ad_id']);
-                                    }
-                                }
-                            }
-                        }
-
                         $collection = FacebookMarketingMetricConvert::metrics(
                             rows: $rows, 
                             channeledAccount: $caId, 
@@ -477,7 +436,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                             $result = ($this->dataProcessor)($collection, $this->logger);
                             
                             $metricsCount = $result['metrics'] ?? $collection->count();
-                            $processedRows = $result['rows'] ?? count($rows['data']);
+                            $processedRows = $result['rows'] ?? count($rows);
                             $duplicates = $result['duplicates'] ?? 0;
 
                             $totalStats['metrics'] += $metricsCount;
