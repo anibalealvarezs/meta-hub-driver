@@ -954,7 +954,11 @@ class FacebookEntitySync
 
                                     $converted = FacebookOrganicConvert::posts($filteredPosts, $page->getId());
                                     $saveCount = 0;
+                                    $seenPostIds = [];
                                     foreach ($converted as $pData) {
+                                        if (isset($seenPostIds[$pData->platformId])) continue;
+                                        $seenPostIds[$pData->platformId] = true;
+
                                         // Build search criteria matching the unique constraint
                                         $criteria = ['postId' => $pData->platformId, 'page' => $page];
                                         try {
@@ -1126,7 +1130,11 @@ class FacebookEntitySync
                                         $account = $channeledAccount->getAccount();
                                     } catch (\Error $e) {}
 
+                                    $seenMediaIds = [];
                                     foreach ($converted as $mData) {
+                                        if (isset($seenMediaIds[$mData->platformId])) continue;
+                                        $seenMediaIds[$mData->platformId] = true;
+
                                         // Build search criteria matching the unique constraint
                                         $criteria = ['postId' => $mData->platformId];
                                         if ($channeledAccount) $criteria['channeledAccount'] = $channeledAccount;
