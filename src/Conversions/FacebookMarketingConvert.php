@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Anibalealvarezs\MetaHubDriver\Conversions;
 
 use Anibalealvarezs\ApiDriverCore\Conversions\UniversalEntityConverter;
+use Carbon\Carbon;
 use Doctrine\Common\Collections\ArrayCollection;
 
 /**
@@ -23,8 +24,8 @@ class FacebookMarketingConvert
             'date_field' => 'start_time',
             'mapping' => [
                 'name' => 'name',
-                'startDate' => 'start_time',
-                'endDate' => 'stop_time',
+                'startDate' => fn($r) => !empty($r['start_time']) ? Carbon::parse($r['start_time']) : null,
+                'endDate' => fn($r) => !empty($r['stop_time']) ? Carbon::parse($r['stop_time']) : null,
                 'objective' => 'objective',
                 'buyingType' => 'buying_type',
                 'status' => 'status',
@@ -45,8 +46,8 @@ class FacebookMarketingConvert
             'date_field' => 'created_time',
             'mapping' => [
                 'name' => 'name',
-                'startDate' => 'start_time',
-                'endDate' => 'stop_time',
+                'startDate' => fn($r) => !empty($r['start_time']) ? Carbon::parse($r['start_time']) : null,
+                'endDate' => fn($r) => !empty($r['stop_time']) ? Carbon::parse($r['stop_time']) : null,
                 'status' => 'status',
                 'optimizationGoal' => 'optimization_goal',
                 'billingEvent' => 'billing_event',
