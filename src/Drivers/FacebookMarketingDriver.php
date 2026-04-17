@@ -561,7 +561,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
                 // 1. Campaigns
                 if (!empty($accCfg['campaigns'])) {
-                    $campResponse = $this->syncEntities('campaigns', $startDate, $endDate, $config, $api);
+                    $campResponse = $this->syncEntities('campaigns', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
                     $results['campaigns'] = json_decode($campResponse->getContent(), true);
                 }
                 $campaignMap = $results['campaigns']['authorized_ids_map'] ?? null;
@@ -571,7 +571,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     if ($campaignMap) {
                         $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $campaignMap]);
                     }
-                    $agResponse = $this->syncEntities('ad_groups', $startDate, $endDate, $config, $api);
+                    $agResponse = $this->syncEntities('ad_groups', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
                     $results['ad_groups'] = json_decode($agResponse->getContent(), true);
                 }
                 $adSetMap = $results['ad_groups']['authorized_ids_map'] ?? null;
@@ -581,12 +581,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     if ($adSetMap) {
                         $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $adSetMap]);
                     }
-                    $results['ads'] = json_decode($this->syncEntities('ads', $startDate, $endDate, $config, $api)->getContent(), true);
+                    $results['ads'] = json_decode($this->syncEntities('ads', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
                 }
 
                 // 4. Creatives
                 if (!empty($accCfg['creatives'])) {
-                    $results['creatives'] = json_decode($this->syncEntities('creatives', $startDate, $endDate, $config, $api)->getContent(), true);
+                    $results['creatives'] = json_decode($this->syncEntities('creatives', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
                 }
 
                 return new Response(json_encode(['status' => 'success', 'results' => $results]), 200, ['Content-Type' => 'application/json']);
