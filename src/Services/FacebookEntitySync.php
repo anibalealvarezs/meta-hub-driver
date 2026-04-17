@@ -160,6 +160,10 @@ class FacebookEntitySync
                                     // Handle Budget (daily_budget or lifetime_budget)
                                     $budget = (float)($data->budget ?? $data->lifetimeBudget ?? 0.0);
                                     $channeledCampaign->addBudget($budget);
+                                     
+                                     if (!empty($data->platformCreatedAt)) {
+                                         $channeledCampaign->addPlatformCreatedAt($data->platformCreatedAt);
+                                     }
                                     
                                     // Handle Enums with tryFrom for safety
                                     if (!empty($data->objective)) {
@@ -366,6 +370,10 @@ class FacebookEntitySync
                                      
                                      $channeledAdGroup->addData($data->data ?? []);
                                      
+                                     if (!empty($data->platformCreatedAt)) {
+                                         $channeledAdGroup->addPlatformCreatedAt($data->platformCreatedAt);
+                                     }
+                                     
                                      $manager->persist($channeledAdGroup);
                                 }
                                 $manager->flush();
@@ -543,7 +551,11 @@ class FacebookEntitySync
                                     }
                                     $channeledAd->addData($adData);
 
-                                    $manager->persist($channeledAd);
+                                    if (!empty($data->platformCreatedAt)) {
+                                         $channeledAd->addPlatformCreatedAt($data->platformCreatedAt);
+                                     }
+
+                                     $manager->persist($channeledAd);
                                 }
                                 $manager->flush();
                             }

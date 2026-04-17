@@ -42,7 +42,7 @@ class FacebookMarketingConvert
         return UniversalEntityConverter::convert($adsets, [
             'channel' => 'facebook_marketing',
             'platform_id_field' => 'id',
-            'date_field' => 'start_time',
+            'date_field' => 'created_time',
             'mapping' => [
                 'name' => 'name',
                 'startDate' => 'start_time',
