@@ -1092,6 +1092,4 @@ class FacebookMarketingDriver implements SyncDriverInterface
             'recent_cron_minute' => 30,
         ];
     }
-
-    }
 }
