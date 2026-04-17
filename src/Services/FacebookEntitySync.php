@@ -172,6 +172,8 @@ class FacebookEntitySync
                                         $channeledCampaign->addBuyingType(CampaignBuyingType::tryFrom($data->buyingType));
                                     }
                                     
+                                    $channeledCampaign->addData($data->data ?? []);
+                                    
                                     $manager->persist($channeledCampaign);
                                 }
                                 $manager->flush();
@@ -362,6 +364,8 @@ class FacebookEntitySync
                                          $channeledAdGroup->addBillingEvent(BillingEvent::tryFrom($data->billingEvent));
                                      }
                                      
+                                     $channeledAdGroup->addData($data->data ?? []);
+                                     
                                      $manager->persist($channeledAdGroup);
                                 }
                                 $manager->flush();
@@ -525,16 +529,19 @@ class FacebookEntitySync
                                          $channeledAd->addStatus(CampaignStatus::tryFrom($data->status));
                                      }
                                     
+                                     // Preserve raw data
+                                     $adData = $channeledAd->getData() ?? [];
+                                     $adData = array_merge($adData, $data->data ?? []);
+                                     
                                      if (!empty($data->channeledCreativeId)) {
                                          $creative = $manager->getRepository($creativeClass)->findOneBy(['creativeId' => $data->channeledCreativeId]);
                                         if ($creative) {
                                             $channeledAd->addCreative($creative);
                                         }
                                         // Store for retrospective linking
-                                        $adData = $channeledAd->getData() ?? [];
                                         $adData["facebook_creative_id"] = $data->channeledCreativeId;
-                                        $channeledAd->addData($adData);
                                     }
+                                    $channeledAd->addData($adData);
 
                                     $manager->persist($channeledAd);
                                 }
@@ -805,6 +812,7 @@ class FacebookEntitySync
                                     $page->addTitle($data->name);
                                     $page->addPlatformId($data->platformId);
                                     $page->addAccount($channeledAccount->getAccount());
+                                    $page->addData($data->data ?? []);
                                     $manager->persist($page);
                                 }
                                 $manager->flush();
