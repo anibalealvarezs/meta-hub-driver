@@ -425,7 +425,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     if (!empty($rows)) {
                         $collection = FacebookMarketingMetricConvert::metrics(
                             rows: $rows, 
-                            channeledAccount: $caId, 
+                            channeledAccount: $accountPlatformId, 
                             level: $level, 
                             logger: $this->logger,
                             account: $config['accounts_group_name'] ?? 'Default'
