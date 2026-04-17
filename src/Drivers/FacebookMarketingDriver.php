@@ -1047,8 +1047,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
-    public function initializeEntities(mixed $entityManager, array $config = []): array
+    public function initializeEntities(array $config = []): array
     {
+        $entityManager = $config['manager'] ?? null;
         if (!$entityManager instanceof EntityManagerInterface) {
             throw new Exception("EntityManagerInterface required for FacebookMarketingDriver entity initialization.");
         }
@@ -1062,8 +1063,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
     /**
      * @inheritdoc
      */
-    public function reset(mixed $entityManager, string $mode = 'all', array $config = []): array
+    public function reset(string $mode = 'all', array $config = []): array
     {
+        $entityManager = $config['manager'] ?? null;
         if (!$entityManager instanceof EntityManagerInterface) {
             throw new Exception("EntityManagerInterface required for FacebookMarketingDriver reset.");
         }
