@@ -728,7 +728,10 @@ class FacebookEntitySync
             $pagesFromConfig = $config['pages'] ?? [];
 
             if (empty($adAccounts) && !empty($pagesFromConfig)) {
-                $channeledAccount = $manager->getRepository($channeledAccountClass)->findOneBy(['platformId' => $config['user_id'] ?? 'system']);
+                $globalChanneledAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
+                    'platformId' => $config['user_id'] ?? 'system',
+                    'channel' => Channel::facebook_organic->value
+                ]);
                 
                 foreach ($pagesFromConfig as $pageCfg) {
                     if (empty($pageCfg['enabled'])) continue;
@@ -761,15 +764,21 @@ class FacebookEntitySync
                         $page->addHostname($pageHostname);
                         $page->addCanonicalId($canonicalId);
                         
-                        if ($channeledAccount) {
+                        // Try to find the channeled account specific to this page if it's organic
+                        $ca = $manager->getRepository($channeledAccountClass)->findOneBy([
+                            'platformId' => $pId,
+                            'channel' => Channel::facebook_organic->value
+                        ]) ?? $globalChanneledAccount;
+
+                        if ($ca) {
                             try {
-                                $page->addAccount($channeledAccount->getAccount());
+                                $page->addAccount($ca->getAccount());
                             } catch (\Error $e) {
-                                // Account property might be uninitialized
+                                $logger?->warning("Could not assign account to page $pId from channeled account: " . $e->getMessage());
                             }
-                            if (method_exists($channeledAccount, 'addPage')) {
-                                $channeledAccount->addPage($page);
-                                $manager->persist($channeledAccount);
+                            if (method_exists($ca, 'addPage')) {
+                                $ca->addPage($page);
+                                $manager->persist($ca);
                             }
                         }
 
@@ -914,6 +923,13 @@ class FacebookEntitySync
                     while ($retryCount < $maxRetries && ! $fetched) {
                         Helpers::reconnectIfNeeded($manager);
                         try {
+                             if (!$manager->contains($page)) {
+                                 $page = $manager->find($facebookPageClass, $page->getId());
+                             }
+                             if (!$page) {
+                                 $logger?->error("Page entity lost after reconnection. Skipping sync for this page.");
+                                 break;
+                             }
                             $api->setPageId($page->getPlatformId());
                             $posts = $api->getFacebookPosts(pageId: $page->getPlatformId(), limit: $limit);
                             if (! empty($posts['data'])) {
@@ -1047,6 +1063,13 @@ class FacebookEntitySync
                     while ($retryCount < $maxRetries && !$fetched) {
                         Helpers::reconnectIfNeeded($manager);
                         try {
+                             if ($channeledAccount && !$manager->contains($channeledAccount)) {
+                                 $channeledAccount = $manager->find(get_class($channeledAccount), $channeledAccount->getId());
+                             }
+                             if (!$channeledAccount) {
+                                 $logger?->error("ChanneledAccount entity lost after reconnection for IG ID $igId. Skipping sync.");
+                                 break;
+                             }
                             if (!empty($pageCfg['id'])) {
                                 $api->setPageId((string)$pageCfg['id']);
                             }
