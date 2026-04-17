@@ -17,9 +17,13 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
+use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
+use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 
 class FacebookOrganicDriver implements SyncDriverInterface
 {
+    use \Anibalealvarezs\ApiDriverCore\Traits\HasHierarchicalValidationTrait;
+    use SyncDriverTrait;
 
     public static function getCommonConfigKey(): ?string
     {
@@ -278,6 +282,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
     }
     use HasUpdatableCredentials;
+    use \Anibalealvarezs\ApiDriverCore\Traits\HasHierarchicalValidationTrait;
     use SyncDriverTrait;
 
     public array $updatableCredentials = [
@@ -319,8 +324,13 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $this->dataProcessor = $processor;
     }
 
-    public function sync(DateTime $startDate, DateTime $endDate, array $config = []): Response
-    {
+    public function sync(
+        DateTime $startDate,
+        DateTime $endDate,
+        array $config = [],
+        ?callable $shouldContinue = null,
+        ?callable $identityMapper = null
+    ): Response {
         if (!$this->authProvider) {
             throw new Exception("AuthProvider not set for FacebookOrganicDriver");
         }
@@ -329,50 +339,73 @@ class FacebookOrganicDriver implements SyncDriverInterface
             throw new Exception("DataProcessor not set for FacebookOrganicDriver.");
         }
 
-        if ($this->logger) {
-            $this->logger->info("Starting FacebookOrganicDriver sync (Modular)...");
-        }
-
         $api = $this->initializeApi($config);
         $entity = $config['entity'] ?? 'metrics';
 
         if ($entity !== 'metrics' && $entity !== 'metric') {
-            return $this->syncEntities($entity, $startDate, $endDate, $config, $api);
+            return $this->syncEntities($entity, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
         }
 
+        return $this->syncMetrics($startDate, $endDate, $config, $shouldContinue, $identityMapper);
+    }
+
+    public function syncMetrics(
+        DateTime $startDate,
+        DateTime $endDate,
+        array $config = [],
+        ?callable $shouldContinue = null,
+        ?callable $identityMapper = null
+    ): Response {
         $pagesToProcess = $config['pages'] ?? [];
+        $api = $this->initializeApi($config);
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
         
+        // 1. Batch Resolve Identities via Oracle (Facebook Pages & Instagram Accounts)
+        $pageMap = [];
+        $caMap = [];
+        if ($identityMapper && !empty($pagesToProcess)) {
+            $fbPIds = [];
+            $igPIds = [];
+            foreach ($pagesToProcess as $page) {
+                if ($pId = (string)($page['id'] ?? $page)) $fbPIds[] = $pId;
+                if ($igId = (string)($page['ig_account'] ?? null)) $igPIds[] = $igId;
+            }
+            $pageMap = $identityMapper('pages', ['platform_ids' => $fbPIds]) ?? [];
+            // We resolve BOTH FB and IG accounts under 'channeled_accounts'
+            $caMap = $identityMapper('channeled_accounts', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
+        }
+
         $totalStats = ['metrics' => 0, 'rows' => 0, 'duplicates' => 0];
 
         foreach ($pagesToProcess as $page) {
-            $pageId = (string)($page['id'] ?? $page);
-            if (!$pageId) continue;
+            $pagePlatformId = (string)($page['id'] ?? $page);
+            $igPlatformId = (string)($page['ig_account'] ?? null);
 
-            $this->logger?->info(">>> INICIO: Sincronizando métricas orgánicas para FB Page: $pageId (Timeframe: {$startDate->format('Y-m-d')} a {$endDate->format('Y-m-d')})");
+            $this->logger?->info(">>> INICIO: Sincronizando métricas Orgánicas para FB Page: $pagePlatformId" . ($igPlatformId ? " e Instagram: $igPlatformId" : ""));
+            
+            // Resolve Internal Identities from pre-loaded maps
+            $pageId = $pageMap[$pagePlatformId]['id'] ?? $pagePlatformId;
+            $caId = $caMap[$pagePlatformId]['id'] ?? $pagePlatformId;
+            $igCaId = $igPlatformId ? ($caMap[$igPlatformId]['id'] ?? $igPlatformId) : null;
 
-            $api->setPageId($pageId);
+            $api->setAccessToken($page['access_token'] ?? $config['access_token'] ?? null);
 
-            $chunks = \Anibalealvarezs\ApiDriverCore\Helpers\DateHelper::getDateChunks(
-                $startDate->format('Y-m-d'),
-                $endDate->format('Y-m-d'),
-                $chunkSize
-            );
-
+            $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
             foreach ($chunks as $chunk) {
-                $this->checkJobStatus($config);
-                
-                $pageData = $this->fetchPageData($api, $page, $chunk['start'], $chunk['end'], $config);
-                
+                if ($shouldContinue && !$shouldContinue()) {
+                    throw new Exception("Sync aborted by the orchestrator.");
+                }
+                $pageData = $this->fetchPageData($api, $page, $chunk['start'], $chunk['end'], $config, $shouldContinue, $identityMapper, $pageId, $igCaId);
+
                 $collection = new ArrayCollection();
 
                 // 1. Process Page Insights
                 if (!empty($pageData['insights'])) {
                     $pageCollection = FacebookOrganicMetricConvert::pageMetrics(
                         rows: $pageData['insights'],
-                        pagePlatformId: $pageId,
+                        pagePlatformId: (string)$pageId,
                         logger: $this->logger,
-                        page: $pageId // Pass string ID; host resolves entity
+                        page: $pageId
                     );
                     foreach ($pageCollection as $m) $collection->add($m);
                 }
@@ -423,8 +456,10 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     }
                 }
 
-                // Persist converted collection in the host
+                // Persist converted collection 
                 if ($this->dataProcessor && $collection->count() > 0) {
+                    $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::POST);
+
                     $result = ($this->dataProcessor)($collection, $this->logger);
                     
                     $metricsCount = $result['metrics'] ?? $collection->count();
@@ -540,8 +575,19 @@ class FacebookOrganicDriver implements SyncDriverInterface
         );
     }
 
-    private function fetchPageData(FacebookGraphApi $api, array $page, string $start, string $end, array $config): array
-    {
+    private function fetchPageData(
+        FacebookGraphApi $api,
+        array $page,
+        string $start,
+        string $end,
+        array $config,
+        ?callable $shouldContinue = null,
+        ?callable $identityMapper = null,
+        $internalPageId = null,
+        $igCaId = null
+    ): array {
+        $pagePlatformId = (string)($page['id'] ?? $page);
+        
         $data = [
             'insights' => [],
             'ig_media' => [],
@@ -551,12 +597,13 @@ class FacebookOrganicDriver implements SyncDriverInterface
             'fb_post_insights' => [],
         ];
 
-        $pageId = (string)$page['id'];
-
         // 1. Page Insights
         if ($page['page_metrics'] ?? false) {
+            if ($shouldContinue && !$shouldContinue()) {
+                throw new Exception("Sync aborted by the orchestrator.");
+            }
             $data['insights'] = $api->getFacebookPageInsights(
-                pageId: $pageId,
+                pageId: $pagePlatformId,
                 since: $start,
                 until: $end
             );
@@ -564,12 +611,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         // 2. Instagram Account Insights
         if (!empty($page['ig_account']) && !empty($page['ig_account_metrics'])) {
-            // Meta only provides IG insights for the last 2 years (approx 730 days)
-            // We use -2 years + 1 day to be safe and avoid edge-of-window errors
+            if ($shouldContinue && !$shouldContinue()) {
+                throw new Exception("Sync aborted by the orchestrator.");
+            }
             $igTwoYearsAgo = (new DateTime())->modify('-2 years + 1 day')->format('Y-m-d');
             $igSince = $start < $igTwoYearsAgo ? $igTwoYearsAgo : $start;
 
             foreach ([1, 2, 3, 4, 5] as $option) {
+                if ($shouldContinue && !$shouldContinue()) {
+                    throw new Exception("Sync aborted by the orchestrator.");
+                }
                 try {
                     $insights = $api->getDailyInstagramAccountTotalValueInsights(
                         instagramAccountId: (string)$page['ig_account'],
@@ -585,95 +636,63 @@ class FacebookOrganicDriver implements SyncDriverInterface
             }
         }
 
-        // 3. Facebook Post Insights
-        if ($page['post_metrics'] ?? false) {
-            $postEntities = $this->getPostEntitiesForSync($page, $config);
-            foreach ($postEntities as $post) {
-                try {
-                    $postId = $post->getPostId();
-                    $postInsights = $api->getFacebookPostInsights(postId: $postId);
-                    if (!empty($postInsights['data'])) {
-                        $data['fb_post_insights'][] = [
-                            'id' => $postId,
-                            'data' => $postInsights['data']
-                        ];
+        // 3. Facebook Post Insights (Dynamic Discovery via Mapper)
+        if (($page['post_metrics'] ?? false) && $identityMapper && $internalPageId) {
+            $postsMap = $identityMapper('posts', ['page_id' => $internalPageId]);
+            if ($postsMap) {
+                foreach ($postsMap as $postId => $postInfo) {
+                    if ($shouldContinue && !$shouldContinue()) {
+                        throw new Exception("Sync aborted by the orchestrator.");
                     }
-                } catch (Exception $e) {
-                    if ($this->logger) $this->logger->warning("Failed to fetch insights for Post " . $post->getPostId() . ": " . $e->getMessage());
+                    try {
+                        $postInsights = $api->getFacebookPostInsights(postId: (string)$postId);
+                        if (!empty($postInsights['data'])) {
+                            $data['fb_post_insights'][] = [
+                                'id' => $postId,
+                                'data' => $postInsights['data']
+                            ];
+                        }
+                    } catch (Exception $e) {
+                        if ($this->logger) $this->logger->warning("Failed to fetch insights for Post $postId: " . $e->getMessage());
+                    }
                 }
             }
         }
 
-        // 4. Instagram Media Insights
-        if (!empty($page['ig_account']) && !empty($page['ig_account_media_insights'])) {
-            $mediaEntities = $this->getInstagramMediaEntitiesForSync($page, $config);
-            foreach ($mediaEntities as $media) {
-                try {
-                    $mediaId = $media->getPostId();
-                    // We try to infer type from data or use default
-                    $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::CAROUSEL_ALBUM;
-                    $extraData = $media->getData();
-                    if (!empty($extraData['media_type'])) {
-                        $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::tryFrom($extraData['media_type']) ?? $type;
+        // 4. Instagram Media Insights (Dynamic Discovery via Mapper)
+        if (!empty($page['ig_account']) && !empty($page['ig_account_media_insights']) && $identityMapper && $igCaId) {
+            // Instagram media are often synced under ChanneledAccount context
+            $mediaMap = $identityMapper('posts', ['channeled_account_id' => $igCaId]);
+            if ($mediaMap) {
+                foreach ($mediaMap as $mediaId => $mediaInfo) {
+                    if ($shouldContinue && !$shouldContinue()) {
+                        throw new Exception("Sync aborted by the orchestrator.");
                     }
-                    
-                    $mediaInsights = $api->getInstagramMediaInsights(mediaId: $mediaId, mediaType: $type);
-                    if (!empty($mediaInsights['data'])) {
-                        $data['ig_media_insights'][] = [
-                            'id' => $mediaId,
-                            'data' => $mediaInsights['data']
-                        ];
+                    try {
+                        // Resolve IG media type/product from Hub data
+                        $mType = $mediaInfo['data']['media_type'] ?? null;
+                        $pType = $mediaInfo['data']['media_product_type'] ?? null;
+
+                        // Prioritize MediaProductType for more accurate metrics (Story/Reel/Feed)
+                        $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaProductType::tryFrom($pType)
+                                ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::tryFrom($mType)
+                                ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::CAROUSEL_ALBUM;
+                        
+                        $mediaInsights = $api->getInstagramMediaInsights(mediaId: (string)$mediaId, mediaType: $type);
+                        if (!empty($mediaInsights['data'])) {
+                            $data['ig_media_insights'][] = [
+                                'id' => $mediaId,
+                                'data' => $mediaInsights['data']
+                            ];
+                        }
+                    } catch (Exception $e) {
+                        if ($this->logger) $this->logger->warning("Failed to fetch insights for IG Media $mediaId: " . $e->getMessage());
                     }
-                } catch (Exception $e) {
-                    if ($this->logger) $this->logger->warning("Failed to fetch insights for IG Media " . $media->getPostId() . ": " . $e->getMessage());
                 }
             }
         }
 
         return $data;
-    }
-
-    private function getPostEntitiesForSync(array $pageCfg, array $config): array
-    {
-        $manager = $config['manager'] ?? null;
-        $seeder = $config['seeder'] ?? null;
-        if (!$manager || !$seeder) return [];
-
-        try {
-            $fbPageClass = $seeder->getEntityClass('Page'); // Hub uses Page for FacebookPage
-            $postClass = $seeder->getEntityClass('Post');
-            
-            $page = $manager->getRepository($fbPageClass)->findOneBy(['platformId' => (string)$pageCfg['id']]);
-            if (!$page) return [];
-
-            return $manager->getRepository($postClass)->findBy(['page' => $page]);
-        } catch (Exception $e) {
-            $this->logger?->error("Error fetching post entities for sync: " . $e->getMessage());
-            return [];
-        }
-    }
-
-    private function getInstagramMediaEntitiesForSync(array $pageCfg, array $config): array
-    {
-        $manager = $config['manager'] ?? null;
-        $seeder = $config['seeder'] ?? null;
-        if (!$manager || !$seeder || empty($pageCfg['ig_account'])) return [];
-
-        try {
-            $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
-            $postClass = $seeder->getEntityClass('Post');
-            
-            $igAccount = $manager->getRepository($channeledAccountClass)->findOneBy([
-                'platformId' => (string)$pageCfg['ig_account'],
-                'channel' => \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic->value
-            ]);
-            if (!$igAccount) return [];
-
-            return $manager->getRepository($postClass)->findBy(['channeledAccount' => $igAccount]);
-        } catch (Exception $e) {
-            $this->logger?->error("Error fetching IG media entities for sync: " . $e->getMessage());
-            return [];
-        }
     }
 
     /**

@@ -18,9 +18,12 @@ use Exception;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
+use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 
 class FacebookMarketingDriver implements SyncDriverInterface
 {
+    use \Anibalealvarezs\ApiDriverCore\Traits\HasHierarchicalValidationTrait;
+    use SyncDriverTrait;
 
     public static function getCommonConfigKey(): ?string
     {
@@ -362,8 +365,13 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $this->dataProcessor = $processor;
     }
 
-    public function sync(DateTime $startDate, DateTime $endDate, array $config = []): Response
-    {
+    public function sync(
+        DateTime $startDate,
+        DateTime $endDate,
+        array $config = [],
+        ?callable $shouldContinue = null,
+        ?callable $identityMapper = null
+    ): Response {
         if (!$this->authProvider) {
             throw new Exception("AuthProvider not set for FacebookMarketingDriver");
         }
@@ -372,94 +380,82 @@ class FacebookMarketingDriver implements SyncDriverInterface
             throw new Exception("DataProcessor not set for FacebookMarketingDriver.");
         }
 
-        if ($this->logger) {
-            $this->logger->info("Starting FacebookMarketingDriver sync (Modular)...");
-            $this->logger->info("DEBUG: FacebookMarketingDriver::sync - START");
-        }
-
-        $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - BEFORE initializeApi");
         $api = $this->initializeApi($config);
-        $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - AFTER initializeApi");
         $entity = $config['entity'] ?? 'metrics';
 
         if ($entity !== 'metrics' && $entity !== 'metric') {
-            return $this->syncEntities($entity, $startDate, $endDate, $config, $api);
+            return $this->syncEntities($entity, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
         }
 
         $accountsToProcess = $config['ad_accounts'] ?? [];
-        $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Ad accounts found: " . count($accountsToProcess));
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
         
+        // 1. Batch Resolve Ad Accounts via Oracle
+        $caMap = [];
+        if ($identityMapper && !empty($accountsToProcess)) {
+            $aIds = [];
+            foreach ($accountsToProcess as $account) {
+                $aIds[] = (string)($account['id'] ?? $account);
+            }
+            $caMap = $identityMapper('channeled_accounts', ['platform_ids' => $aIds]) ?? [];
+        }
+
         $totalStats = ['metrics' => 0, 'rows' => 0, 'duplicates' => 0];
 
         foreach ($accountsToProcess as $account) {
-            $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Processing account data", ['account_data' => $account]);
-            $accountId = (string)($account['id'] ?? $account);
-            $this->logger?->info("DEBUG: FacebookMarketingDriver::sync - Resolved Account ID", ['id' => $accountId]);
-            if (!$accountId) continue;
+            $accountPlatformId = (string)($account['id'] ?? $account);
+            if (!$accountPlatformId) continue;
 
-            $chunks = DateHelper::getDateChunks(
-                $startDate->format('Y-m-d'),
-                $endDate->format('Y-m-d'),
-                $chunkSize
-            );
+            // Resolve Internal Ad Account Identity from pre-loaded map
+            $caId = $caMap[$accountPlatformId]['id'] ?? $accountPlatformId;
 
+            $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
             foreach ($chunks as $chunk) {
-                // Determine which levels to fetch based on current account config or global config
                 $accCfg = $account['account_data'] ?? $account;
-                
-                if (!empty($accCfg['ad_metrics']) || !empty($config['AD_ACCOUNT']['ad_metrics'])) {
-                    $levelsToFetch = ['ad'];
-                } elseif (!empty($accCfg['adset_metrics']) || !empty($config['AD_ACCOUNT']['adset_metrics'])) {
-                    $levelsToFetch = ['adset'];
-                } elseif (!empty($accCfg['campaign_metrics']) || !empty($config['AD_ACCOUNT']['campaign_metrics'])) {
-                    $levelsToFetch = ['campaign'];
-                } else {
-                    $levelsToFetch = ['account'];
-                }
-
-                // Resolve host entities for context
-                $hostManager = $config['manager'] ?? null;
-                $hostSeeder = $config['seeder'] ?? null;
-                $chanAccountEntity = null;
-                $accountEntity = null;
-
-                if ($hostManager && $hostSeeder) {
-                    try {
-                        $channel = \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_marketing;
-                        $caRepo = $hostManager->getRepository($hostSeeder->getEntityClass('ChanneledAccount'));
-                        $chanAccountEntity = $caRepo->findOneBy([
-                            'platformId' => $accountId,
-                            'channel' => $channel->value
-                        ]);
-                        if ($chanAccountEntity) {
-                            try {
-                                $accountEntity = $chanAccountEntity->getAccount();
-                            } catch (\Error $e) {
-                                // Account property might be uninitialized
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        $this->logger?->warning("Driver sync context resolution failed: " . $e->getMessage());
-                    }
-                }
+                $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
 
                 foreach ($levelsToFetch as $level) {
-                    $this->checkJobStatus($config);
+                    if ($shouldContinue && !$shouldContinue()) {
+                        throw new Exception("Sync aborted by the orchestrator.");
+                    }
+                    $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountPlatformId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
+                    $response = $this->fetchInsights($api, $accountPlatformId, $chunk['start'], $chunk['end'], $config, $level, $shouldContinue);
+                    $rows = $response['data'] ?? [];
                     
-                    $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
-                    $rows = $this->fetchInsights($api, $accountId, $chunk['start'], $chunk['end'], $config, $level);
-                    $rowCount = count($rows['data'] ?? []);
-                    
-                    if (!empty($rows['data'])) {
+                    if (!empty($rows)) {
+                        // 2. Batch Resolve Hierarchical Identities for this block of rows
+                        if ($identityMapper) {
+                            $campaignPlatformIds = array_unique(array_filter(array_column($rows, 'campaign_id')));
+                            $adsetPlatformIds = array_unique(array_filter(array_column($rows, 'adset_id')));
+                            $adPlatformIds = array_unique(array_filter(array_column($rows, 'ad_id')));
+                            
+                            $cMap = !empty($campaignPlatformIds) ? $identityMapper('channeled_campaigns', ['platform_ids' => $campaignPlatformIds]) : [];
+                            $agMap = !empty($adsetPlatformIds) ? $identityMapper('channeled_ad_groups', ['platform_ids' => $adsetPlatformIds]) : [];
+                            $aMap = !empty($adPlatformIds) ? $identityMapper('channeled_ads', ['platform_ids' => $adPlatformIds]) : [];
+
+                            foreach ($rows as &$row) {
+                                if (isset($row['campaign_id'], $cMap[$row['campaign_id']])) {
+                                    $row['campaign_id'] = (string)$cMap[$row['campaign_id']]['id'];
+                                }
+                                if (isset($row['adset_id'], $agMap[$row['adset_id']])) {
+                                    $row['adset_id'] = (string)$agMap[$row['adset_id']]['id'];
+                                }
+                                if (isset($row['ad_id'], $aMap[$row['ad_id']])) {
+                                    $row['ad_id'] = (string)$aMap[$row['ad_id']]['id'];
+                                }
+                            }
+                        }
+
                         $collection = FacebookMarketingMetricConvert::metrics(
-                            rows: $rows['data'], 
-                            channeledAccount: $chanAccountEntity ?? $accountId, 
+                            rows: $rows, 
+                            channeledAccount: $caId, 
                             level: $level, 
                             logger: $this->logger,
-                            account: $accountEntity ?? ($config['accounts_group_name'] ?? 'Default')
+                            account: $config['accounts_group_name'] ?? 'Default'
                         );
                         if ($this->dataProcessor && $collection->count() > 0) {
+                            $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::MARKETING);
+
                             $result = ($this->dataProcessor)($collection, $this->logger);
                             
                             $metricsCount = $result['metrics'] ?? $collection->count();
@@ -482,12 +478,32 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return new Response(json_encode(['status' => 'success', 'data' => $totalStats]));
     }
 
-    private function syncEntities(string $entity, DateTime $startDate, DateTime $endDate, array $config, FacebookGraphApi $api): Response
+    private function resolveLevelsToFetch(array $accCfg, array $config): array
     {
+        if (!empty($accCfg['ad_metrics']) || !empty($config['AD_ACCOUNT']['ad_metrics'])) {
+            return ['ad'];
+        } elseif (!empty($accCfg['adset_metrics']) || !empty($config['AD_ACCOUNT']['adset_metrics'])) {
+            return ['adset'];
+        } elseif (!empty($accCfg['campaign_metrics']) || !empty($config['AD_ACCOUNT']['campaign_metrics'])) {
+            return ['campaign'];
+        }
+        return ['account'];
+    }
+
+    protected function syncEntities(
+        string $entity,
+        DateTime $startDate,
+        DateTime $endDate,
+        array $config = [],
+        ?FacebookGraphApi $api = null,
+        ?callable $shouldContinue = null,
+        ?callable $identityMapper = null
+    ): Response {
+        $api = $api ?? $this->initializeApi($config);
         $startDateStr = $startDate->format('Y-m-d');
         $endDateStr = $endDate->format('Y-m-d');
         $jobId = $config['jobId'] ?? null;
-        $filters = $config['filters'] ?? null;
+        $filters = $config['filters'] ?? (object)[];
 
         $syncService = \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::class;
 
@@ -615,7 +631,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         );
     }
 
-    protected function fetchInsights(FacebookGraphApi $api, string $accountId, string $startDate, string $endDate, array $config, string $level = 'account'): array
+    protected function fetchInsights(FacebookGraphApi $api, string $accountId, string $startDate, string $endDate, array $config, string $level = 'account', ?callable $shouldContinue = null): array
     {
         $this->logger?->info("DEBUG: FacebookMarketingDriver::fetchInsights - Requesting level '$level' for '$accountId' from $startDate to $endDate");
         $metricConfig = $this->getMetricsConfig($config);
@@ -625,19 +641,15 @@ class FacebookMarketingDriver implements SyncDriverInterface
             'level' => $level,
             'fields' => $metricConfig['fields']
         ];
-        $this->logger?->info("DEBUG: FacebookMarketingDriver::fetchInsights - Request details", [
-            'level' => $level,
-            'metricBreakdown' => $metricConfig['breakdowns'],
-            'additionalParams' => $params,
-            'metricSet' => $metricConfig['metricSet'],
-            'customMetrics' => $metricConfig['metrics']
-        ]);
 
         $maxRetries = 3;
         $retryCount = 0;
         $currentLimit = 100;
         
         while ($retryCount < $maxRetries) {
+            if ($shouldContinue && !$shouldContinue()) {
+                throw new Exception("Sync aborted by the orchestrator.");
+            }
             try {
                 return $api->getAdAccountInsights(
                     adAccountId: $accountId,
@@ -1081,4 +1093,5 @@ class FacebookMarketingDriver implements SyncDriverInterface
         ];
     }
 
+    }
 }

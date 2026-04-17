@@ -883,7 +883,9 @@ class FacebookEntitySync
                                         if ($ca) {
                                             $post->addChanneledAccount($ca);
                                         }
+                                        $post->addData($pData->data ?? []);
                                         $manager->persist($post);
+
                                         $saveCount++;
                                     }
                                     $manager->flush();
@@ -1031,7 +1033,9 @@ class FacebookEntitySync
                                         if ($igPage) {
                                             $post->addPage($igPage);
                                         }
+                                        $post->addData($mData->data ?? []);
                                         $manager->persist($post);
+
                                         $saveCount++;
                                     }
                                     $manager->flush();
