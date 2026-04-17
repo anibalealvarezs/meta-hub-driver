@@ -114,7 +114,11 @@ class FacebookEntitySync
                             adAccountId: $adAccountId,
                             limit: $currentLimit,
                             additionalParams: [
-                                'effective_status' => '["ACTIVE","PAUSED","ARCHIVED","DELETED","IN_PROCESS","WITH_ISSUES"]'
+                                'filtering' => json_encode([[
+                                    'field' => 'effective_status',
+                                    'operator' => 'IN',
+                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]
+                                ]])
                             ]
                         );
                         $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Phase 2. Manager ID: " . spl_object_id($manager) . " | Open: " . ($manager->isOpen() ? 'YES' : 'NO'));
@@ -237,9 +241,11 @@ class FacebookEntitySync
         $channeledAccountClass = $seeder->getEntityClass('ChanneledAccount');
         $channeledAdGroupClass = $seeder->getEntityClass('ChanneledAdGroup');
         $campaignClass = $seeder->getEntityClass('Campaign');
+        $channeledCampaignClass = $seeder->getEntityClass('ChanneledCampaign');
 
         try {
             $authorizedIdsMap = [];
+            $hasErrors = false;
             $adAccounts = $config['ad_accounts'] ?? [];
             if ($adAccountIds) {
                 $adAccounts = array_filter($adAccounts, fn ($acc) => in_array($acc['id'], $adAccountIds));
@@ -275,20 +281,30 @@ class FacebookEntitySync
                     try {
                         $additionalParams = [];
                         if ($parentIdsMap && isset($parentIdsMap[$adAccountId])) {
-                            $additionalParams['filtering'] = [[
-                                'field' => 'campaign.id',
+                            $additionalParams['filtering'] = json_encode([
+                                [
+                                    'field' => 'campaign.id',
+                                    'operator' => 'IN',
+                                    'value' => $parentIdsMap[$adAccountId],
+                                ],
+                                [
+                                    'field' => 'effective_status',
+                                    'operator' => 'IN',
+                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]
+                                ]
+                            ]);
+                        } else {
+                            $additionalParams['filtering'] = json_encode([[
+                                'field' => 'effective_status',
                                 'operator' => 'IN',
-                                'value' => $parentIdsMap[$adAccountId],
-                            ]];
+                                'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]
+                            ]]);
                         }
 
                         $adsets = $api->getAdsets(
                             adAccountId: $adAccountId, 
                             limit: $currentLimit, 
-                            additionalParams: array_merge(
-                                $additionalParams, 
-                                ['effective_status' => '["ACTIVE","PAUSED","ARCHIVED","DELETED","IN_PROCESS","WITH_ISSUES"]']
-                            )
+                            additionalParams: $additionalParams
                         );
                         if (! empty($adsets['data'])) {
                             $includeFilter = self::getFacebookFilter($config, 'ADSET', 'cache_include');
@@ -323,7 +339,7 @@ class FacebookEntitySync
                                      $channeledAdGroup->addChannel($channeledAccount->getChannel());
                                      
                                      // Set relationships and fields
-                                     $channeledCampaign = $manager->getRepository($seeder->getEntityClass('ChanneledCampaign'))->findOneBy([
+                                     $channeledCampaign = $manager->getRepository($channeledCampaignClass)->findOneBy([
                                          'platformId' => $data->channeledCampaignId,
                                          'channeledAccount' => $channeledAccount
                                      ]);
@@ -443,19 +459,29 @@ class FacebookEntitySync
                     try {
                         $additionalParams = [];
                         if ($parentIdsMap && isset($parentIdsMap[$adAccountId])) {
-                            $additionalParams['filtering'] = [[
-                                'field' => 'adset.id',
+                            $additionalParams['filtering'] = json_encode([
+                                [
+                                    'field' => 'adset.id',
+                                    'operator' => 'IN',
+                                    'value' => $parentIdsMap[$adAccountId],
+                                ],
+                                [
+                                    'field' => 'effective_status',
+                                    'operator' => 'IN',
+                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
+                                ]
+                            ]);
+                        } else {
+                            $additionalParams['filtering'] = json_encode([[
+                                'field' => 'effective_status',
                                 'operator' => 'IN',
-                                'value' => $parentIdsMap[$adAccountId],
-                            ]];
+                                'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
+                            ]]);
                         }
                         $ads = $api->getAds(
                             adAccountId: $adAccountId, 
                             limit: $currentLimit, 
-                            additionalParams: array_merge(
-                                $additionalParams, 
-                                ['effective_status' => '["ACTIVE","PAUSED","ARCHIVED","DELETED","IN_PROCESS","WITH_ISSUES"]']
-                            )
+                            additionalParams: $additionalParams
                         );
                         if (! empty($ads['data'])) {
                             $includeFilter = self::getFacebookFilter($config, 'AD', 'cache_include');
