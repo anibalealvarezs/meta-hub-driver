@@ -434,14 +434,32 @@ class FacebookMarketingDriver implements SyncDriverInterface
                             $aMap = !empty($adPlatformIds) ? $identityMapper('channeled_ads', ['platform_ids' => $adPlatformIds]) : [];
 
                             foreach ($rows as &$row) {
-                                if (isset($row['campaign_id'], $cMap[$row['campaign_id']])) {
-                                    $row['campaign_id'] = (string)$cMap[$row['campaign_id']]['id'];
+                                if (isset($row['campaign_id'])) {
+                                    $pId = (string) $row['campaign_id'];
+                                    if (isset($cMap[$pId])) {
+                                        $row['campaign_id'] = (string)$cMap[$pId]['id'];
+                                    } else {
+                                        $this->logger?->warning("Oráculo: No se encontró la campaña con Platform ID: $pId");
+                                        unset($row['campaign_id']); // Ensure converter doesn't use platform ID as internal ID
+                                    }
                                 }
-                                if (isset($row['adset_id'], $agMap[$row['adset_id']])) {
-                                    $row['adset_id'] = (string)$agMap[$row['adset_id']]['id'];
+                                if (isset($row['adset_id'])) {
+                                    $pId = (string) $row['adset_id'];
+                                    if (isset($agMap[$pId])) {
+                                        $row['adset_id'] = (string)$agMap[$pId]['id'];
+                                    } else {
+                                        $this->logger?->warning("Oráculo: No se encontró el Ad Set con Platform ID: $pId");
+                                        unset($row['adset_id']);
+                                    }
                                 }
-                                if (isset($row['ad_id'], $aMap[$row['ad_id']])) {
-                                    $row['ad_id'] = (string)$aMap[$row['ad_id']]['id'];
+                                if (isset($row['ad_id'])) {
+                                    $pId = (string) $row['ad_id'];
+                                    if (isset($aMap[$pId])) {
+                                        $row['ad_id'] = (string)$aMap[$pId]['id'];
+                                    } else {
+                                        $this->logger?->warning("Oráculo: No se encontró el Ad con Platform ID: $pId");
+                                        unset($row['ad_id']);
+                                    }
                                 }
                             }
                         }
