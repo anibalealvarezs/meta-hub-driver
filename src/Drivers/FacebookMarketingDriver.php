@@ -443,8 +443,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 continue;
             }
 
-            // Resolve Internal Ad Account Identity from pre-loaded map
-            $caId = (count($caMap) && isset($caMap[$accountPlatformId])) ? $caMap[$accountPlatformId]->getId() : $accountPlatformId;
+            // Resolve Internal Ad Account Entity object from pre-loaded map
+            $caObject = (count($caMap) && isset($caMap[$accountPlatformId])) ? $caMap[$accountPlatformId] : null;
+            $caId = $caObject ? $caObject->getId() : $accountPlatformId;
 
             $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
             $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
@@ -465,10 +466,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     if (!empty($rows)) {
                         $collection = FacebookMarketingMetricConvert::metrics(
                             rows: $rows, 
-                            channeledAccount: $accountPlatformId, 
+                            channeledAccount: $caObject ?? $accountPlatformId, 
                             level: $level, 
                             logger: $this->logger,
-                            account: $config['accounts_group_name'] ?? 'Default'
+                            account: ($caObject && method_exists($caObject, 'getAccount')) ? $caObject->getAccount() : ($config['accounts_group_name'] ?? 'Default')
                         );
                         if ($this->dataProcessor && $collection->count() > 0) {
                             $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::MARKETING);

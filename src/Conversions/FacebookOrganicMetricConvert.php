@@ -25,6 +25,7 @@ class FacebookOrganicMetricConvert
         object|string|null $post = null,
         object|string|null $period = 'daily',
         object|string|null $channeledAccount = null,
+        object|string|null $account = null,
     ): ArrayCollection {
         $platformId = $pagePlatformId ?: $postPlatformId;
         $pageUrl = is_object($page) && method_exists($page, 'getUrl') ? $page->getUrl() : (string) $page;
@@ -44,6 +45,7 @@ class FacebookOrganicMetricConvert
                 'context' => [
                     'page' => $page,
                     'post' => $post,
+                    'account' => $account,
                     'channeledAccount' => $channeledAccount,
                     'channeledAccountId' => $channeledAccountId,
                 ]

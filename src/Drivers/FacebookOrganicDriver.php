@@ -396,9 +396,13 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $this->logger?->info(">>> INICIO: Sincronizando métricas Orgánicas para FB Page: $pagePlatformId" . ($igPlatformId ? " e Instagram: $igPlatformId" : ""));
             
             // Resolve Internal Identities from pre-loaded maps
-            $pageId = (count($pageMap) && isset($pageMap[$pagePlatformId])) ? $pageMap[$pagePlatformId]->getId() : $pagePlatformId;
-            $caId = (count($caMap) && isset($caMap[$pagePlatformId])) ? $caMap[$pagePlatformId]->getId() : $pagePlatformId;
-            $igCaId = $igPlatformId ? ((count($caMap) && isset($caMap[$igPlatformId])) ? $caMap[$igPlatformId]->getId() : $igPlatformId) : null;
+            $pageObj = (count($pageMap) && isset($pageMap[$pagePlatformId])) ? $pageMap[$pagePlatformId] : null;
+            $caObj = (count($caMap) && isset($caMap[$pagePlatformId])) ? $caMap[$pagePlatformId] : null;
+            $igCaObj = $igPlatformId ? ((count($caMap) && isset($caMap[$igPlatformId])) ? $caMap[$igPlatformId] : null) : null;
+
+            $pageId = $pageObj ? $pageObj->getId() : $pagePlatformId;
+            $caId = $caObj ? $caObj->getId() : $pagePlatformId;
+            $igCaId = $igCaObj ? $igCaObj->getId() : $igPlatformId;
 
             $api->setAccessToken($page['access_token'] ?? $config['access_token'] ?? null);
             $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
@@ -409,7 +413,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 if ($shouldContinue && !$shouldContinue()) {
                     throw new Exception("Sync aborted by the orchestrator.");
                 }
-                $pageData = $this->fetchPageData($api, $page, $chunk['start'], $chunk['end'], $config, $shouldContinue, $identityMapper, $pageId, $igCaId);
+                $pageData = $this->fetchPageData($api, $page, $chunk['start'], $chunk['end'], $config, $shouldContinue, $identityMapper, $pageObj ?? $pageId, $igCaObj ?? $igCaId);
 
                 $collection = new ArrayCollection();
 
@@ -419,7 +423,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         rows: $pageData['insights'],
                         pagePlatformId: (string)$pageId,
                         logger: $this->logger,
-                        page: $pageId
+                        page: $pageObj ?? $pageId,
+                        channeledAccount: $caObj ?? $pagePlatformId,
+                        account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')
                     );
                     foreach ($pageCollection as $m) $collection->add($m);
                 }
@@ -430,9 +436,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         $igCollection = FacebookOrganicMetricConvert::igAccountMetrics(
                             rows: $insight['data'],
                             date: $chunk['start'],
-                            page: $pageId,
-                            account: $config['accounts_group_name'] ?? 'Default',
-                            channeledAccount: $page['ig_account'] ?? null,
+                            page: $pageObj ?? $pageId,
+                            account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
+                            channeledAccount: $igCaObj ?? $igPlatformId,
                             logger: $this->logger,
                             period: Period::Daily
                         );
@@ -447,8 +453,11 @@ class FacebookOrganicDriver implements SyncDriverInterface
                             rows: $postInsight['data'],
                             postPlatformId: $postInsight['id'],
                             logger: $this->logger,
+                            page: $pageObj ?? $pageId,
                             post: $postInsight['id'],
-                            period: 'lifetime'
+                            period: 'lifetime',
+                            channeledAccount: $caObj ?? $pagePlatformId,
+                            account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')
                         );
                         foreach ($postCollection as $m) $collection->add($m);
                     }
@@ -460,10 +469,10 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         $igMediaCollection = FacebookOrganicMetricConvert::igMediaMetrics(
                             rows: $mediaInsight['data'],
                             date: $chunk['start'],
-                            page: $pageId,
+                            page: $pageObj ?? $pageId,
                             post: $mediaInsight['id'],
-                            account: $config['accounts_group_name'] ?? 'Default',
-                            channeledAccount: $page['ig_account'] ?? null,
+                            account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
+                            channeledAccount: $igCaObj ?? $igPlatformId,
                             logger: $this->logger
                         );
                         foreach ($igMediaCollection as $m) $collection->add($m);
