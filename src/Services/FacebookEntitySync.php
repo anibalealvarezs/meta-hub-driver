@@ -546,7 +546,7 @@ class FacebookEntitySync
                     $logger?->info("DEBUG: FacebookEntitySync::syncPages - Processing discovery for Ad Account $adAccountId");
 
                     // Check if discovery is enabled for this account in config
-                    $adAccountCfg = array_values(array_filter($config['ad_accounts'] ?? [], fn ($acc) => (string)$acc['id'] === $adAccountId))[0] ?? [];
+                    $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? [];
                     if (empty($adAccountCfg['enabled']) || empty($adAccountCfg['pages'])) {
                         continue;
                     }
@@ -638,7 +638,7 @@ class FacebookEntitySync
                 Helpers::checkJobStatus($jobId);
                 $pageId = (string)$channeledPage->getPlatformId();
  
-                $pageCfg = array_values(array_filter($config['pages'] ?? [], fn ($p) => (string)$p['id'] === $pageId))[0] ?? [];
+                $pageCfg = $config['pages'][$pageId] ?? [];
                 if ((isset($pageCfg['enabled']) && !$pageCfg['enabled']) || (isset($pageCfg[MetaFeature::POSTS->value]) && !$pageCfg[MetaFeature::POSTS->value])) {
                     $logger?->info("Skipping Post sync for page $pageId (disabled in config)");
                     continue;

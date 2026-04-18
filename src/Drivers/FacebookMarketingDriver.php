@@ -784,9 +784,17 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         if (isset($config['AD_ACCOUNT'])) {
             $globalAdAccountDefaults = $config['AD_ACCOUNT'];
-            $config['ad_accounts'] = array_map(function ($adAccount) use ($globalAdAccountDefaults) {
-                return array_merge($globalAdAccountDefaults, $adAccount);
-            }, $config['ad_accounts'] ?? []);
+            $newAdAccounts = [];
+            foreach ($config['ad_accounts'] ?? [] as $adAccount) {
+                $merged = array_merge($globalAdAccountDefaults, $adAccount);
+                $id = (string)($merged['id'] ?? '');
+                if ($id) {
+                    $newAdAccounts[$id] = $merged;
+                } else {
+                    $newAdAccounts[] = $merged;
+                }
+            }
+            $config['ad_accounts'] = $newAdAccounts;
         }
         return $config;
     }

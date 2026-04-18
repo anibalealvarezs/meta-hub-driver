@@ -833,13 +833,20 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         if (isset($config['PAGE'])) {
             $globalPageDefaults = $config['PAGE'];
-            $config['pages'] = array_map(function ($page) use ($globalPageDefaults, $globalExclude) {
+            $newPages = [];
+            foreach ($config['pages'] ?? [] as $page) {
                 $merged = array_merge($globalPageDefaults, $page);
-                if (in_array((string)($merged['id'] ?? ''), array_map('strval', $globalExclude))) {
+                $id = (string)($merged['id'] ?? '');
+                if (in_array($id, array_map('strval', $globalExclude))) {
                     $merged['exclude_from_caching'] = true;
                 }
-                return $merged;
-            }, $config['pages'] ?? []);
+                if ($id) {
+                    $newPages[$id] = $merged;
+                } else {
+                    $newPages[] = $merged;
+                }
+            }
+            $config['pages'] = $newPages;
         }
         return $config;
     }
