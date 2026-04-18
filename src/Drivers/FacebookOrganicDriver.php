@@ -356,7 +356,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         ?callable $shouldContinue = null,
         ?callable $identityMapper = null
     ): Response {
-        $pagesToProcess = $config['pages'] ?? [];
+        $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
         $api = $this->initializeApi($config);
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
         
@@ -497,7 +497,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         $syncService = \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::class;
 
-        $pagesToProcess = $config['pages'] ?? [];
+        $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
         $resolvedPages = [];
         $resolvedChanneledAccounts = [];
         

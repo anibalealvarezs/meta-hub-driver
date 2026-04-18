@@ -645,6 +645,13 @@ class FacebookEntitySync
             foreach ($channeledPages as $channeledPage) {
                 Helpers::checkJobStatus($jobId);
                 $pageId = (string)$channeledPage->getPlatformId();
+                $pageCfg = array_values(array_filter($config['pages'] ?? [], fn ($p) => (string)($p['id'] ?? '') === $pageId))[0] ?? [];
+
+                if ((isset($pageCfg['enabled']) && !$pageCfg['enabled']) || (isset($pageCfg['posts']) && !$pageCfg['posts'])) {
+                    $logger?->info("Skipping posts sync for page $pageId (disabled in config)");
+                    continue;
+                }
+
                 $logger?->info(">>> INICIO: Sincronizando posts para FB Page: $pageId (Timeframe: $startDate a $endDate)");
                 
                 $fetched = false;
@@ -752,6 +759,13 @@ class FacebookEntitySync
 
             foreach ($channeledAccounts as $channeledAccount) {
                 $igId = (string)$channeledAccount->getPlatformId();
+
+                $pageCfg = array_values(array_filter($config['pages'] ?? [], fn ($p) => (string)($p['ig_account'] ?? '') === $igId))[0] ?? [];
+                if ((isset($pageCfg['enabled']) && !$pageCfg['enabled']) || (isset($pageCfg['ig_account_media']) && !$pageCfg['ig_account_media'])) {
+                    $logger?->info("Skipping Instagram media sync for IG account $igId (disabled in config)");
+                    continue;
+                }
+
                 $logger?->info("DEBUG: FacebookEntitySync::syncInstagramMedia - START processing IG account " . $igId);
                 
                 Helpers::checkJobStatus($jobId);
@@ -769,7 +783,6 @@ class FacebookEntitySync
                     while ($retryCount < $maxRetries && !$fetched) {
                         try {
                             // Find page ID from config if possible (some IG API calls need the page ID)
-                            $pageCfg = array_values(array_filter($config['pages'] ?? [], fn ($p) => (string)($p['ig_account'] ?? '') === $igId))[0] ?? [];
                             if (!empty($pageCfg['id'])) {
                                 $api->setPageId((string)$pageCfg['id']);
                                 $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
