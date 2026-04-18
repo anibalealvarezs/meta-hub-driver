@@ -630,7 +630,9 @@ class FacebookEntitySync
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
         ?array $channeledPages = null,
-        ?callable $entityProcessor = null
+        ?callable $entityProcessor = null,
+        int|string|null $channeledAccountId = null,
+        int|string|null $accountId = null
     ): Response {
         try {
             if (empty($channeledPages)) {
@@ -668,7 +670,13 @@ class FacebookEntitySync
                                 }
 
                                 if (! empty($filteredPosts)) {
-                                    $converted = FacebookOrganicConvert::posts($filteredPosts, $channeledPage->getId());
+                                    $pageAccountId = $accountId ?: ((method_exists($channeledPage, 'getAccount') && $channeledPage->getAccount()) ? $channeledPage->getAccount()->getId() : null);
+                                    $converted = FacebookOrganicConvert::posts(
+                                        posts: $filteredPosts, 
+                                        pageId: $channeledPage->getId(),
+                                        accountId: $pageAccountId,
+                                        channeledAccountId: $channeledAccountId
+                                    );
                                     $saveCount = 0;
                                     foreach ($converted as $item) {
                                         if ($entityProcessor) {

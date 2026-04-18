@@ -543,7 +543,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         logger: $this->logger,
                         jobId: $jobId,
                         channeledPages: $resolvedPages,
-                        entityProcessor: $this->dataProcessor
+                        entityProcessor: $this->dataProcessor,
+                        channeledAccountId: $this->authProvider instanceof \Entities\Analytics\Channeled\ChanneledAccount ? $this->authProvider->getId() : null,
+                        accountId: $this->authProvider instanceof \Entities\Analytics\Channeled\ChanneledAccount ? $this->authProvider->getAccount()->getId() : null
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
