@@ -11,7 +11,6 @@ use Anibalealvarezs\MetaHubDriver\Enums\MetaFeature;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
-use Helpers\Helpers;
 
 class FacebookEntitySync
 {
@@ -26,9 +25,47 @@ class FacebookEntitySync
         return $config[$entityKey][$filterType] ?? null;
     }
 
-    private static function matchesFilter(string $value, ?string $include, ?string $exclude): bool
+    public static function matchesFilter(string $value, ?string $include, ?string $exclude): bool
     {
-        return Helpers::matchesFilter($value, $include, $exclude);
+        if (empty($include) && empty($exclude)) {
+            return true;
+        }
+
+        if ($include) {
+            $matchedInclude = false;
+            $includes = array_map('trim', explode(',', $include));
+            foreach ($includes as $pattern) {
+                if (empty($pattern)) continue;
+                if (str_starts_with($pattern, '/') && str_ends_with($pattern, '/')) {
+                    if (preg_match($pattern, $value)) {
+                        $matchedInclude = true;
+                        break;
+                    }
+                } elseif (stripos($value, $pattern) !== false) {
+                    $matchedInclude = true;
+                    break;
+                }
+            }
+            if (!$matchedInclude) {
+                return false;
+            }
+        }
+
+        if ($exclude) {
+            $excludes = array_map('trim', explode(',', $exclude));
+            foreach ($excludes as $pattern) {
+                if (empty($pattern)) continue;
+                if (str_starts_with($pattern, '/') && str_ends_with($pattern, '/')) {
+                    if (preg_match($pattern, $value)) {
+                        return false;
+                    }
+                } elseif (stripos($value, $pattern) !== false) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -50,7 +87,8 @@ class FacebookEntitySync
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
         ?array $channeledAccounts = null,
-        ?callable $entityProcessor = null
+        ?callable $entityProcessor = null,
+        ?callable $jobStatusChecker = null
     ): Response {
         try {
             $authorizedIdsMap = [];
@@ -61,6 +99,9 @@ class FacebookEntitySync
             }
 
             foreach ($channeledAccounts as $adAccount) {
+                if ($jobStatusChecker && ($jobStatusChecker)($jobId) === false) {
+                    throw new \Exception("Job cancelled or should not continue.");
+                }
                 $accId = (string)$adAccount->getPlatformId();
                 $adAccountCfg = $config['ad_accounts'][$accId] ?? [];
                 
@@ -159,7 +200,8 @@ class FacebookEntitySync
         ?int $jobId = null,
         ?array $channeledAccounts = null,
         ?array $parentIdsMap = null,
-        ?callable $entityProcessor = null
+        ?callable $entityProcessor = null,
+        ?callable $jobStatusChecker = null
     ): Response {
         try {
             $authorizedIdsMap = [];
@@ -169,6 +211,9 @@ class FacebookEntitySync
             }
 
             foreach ($channeledAccounts as $adAccount) {
+                if ($jobStatusChecker && ($jobStatusChecker)($jobId) === false) {
+                    throw new \Exception("Job cancelled or should not continue.");
+                }
                 $accId = (string)$adAccount->getPlatformId();
                 $adAccountCfg = $config['ad_accounts'][$accId] ?? [];
 
@@ -286,7 +331,8 @@ class FacebookEntitySync
         ?int $jobId = null,
         ?array $channeledAccounts = null,
         ?array $parentIdsMap = null,
-        ?callable $entityProcessor = null
+        ?callable $entityProcessor = null,
+        ?callable $jobStatusChecker = null
     ): Response {
         try {
             $authorizedIdsMap = [];
@@ -296,6 +342,9 @@ class FacebookEntitySync
             }
 
             foreach ($channeledAccounts as $channeledAccountItem) {
+                if ($jobStatusChecker && ($jobStatusChecker)($jobId) === false) {
+                    throw new \Exception("Job cancelled or should not continue.");
+                }
                 $adAccountId = (string)$channeledAccountItem->getPlatformId();
                 $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? [];
                 
@@ -408,7 +457,8 @@ class FacebookEntitySync
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
         ?array $channeledAccounts = null,
-        ?callable $entityProcessor = null
+        ?callable $entityProcessor = null,
+        ?callable $jobStatusChecker = null
     ): Response {
         try {
             if (empty($channeledAccounts)) {
@@ -416,6 +466,9 @@ class FacebookEntitySync
             }
 
             foreach ($channeledAccounts as $channeledAccount) {
+                if ($jobStatusChecker && ($jobStatusChecker)($jobId) === false) {
+                    throw new \Exception("Job cancelled or should not continue.");
+                }
                 $adAccountId = (string)$channeledAccount->getPlatformId();
                 $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? [];
                 
@@ -502,7 +555,8 @@ class FacebookEntitySync
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
         ?array $channeledAccounts = null,
-        ?callable $entityProcessor = null
+        ?callable $entityProcessor = null,
+        ?callable $jobStatusChecker = null
     ): Response {
         try {
             $pagesFromConfig = $config['pages'] ?? [];
@@ -513,7 +567,9 @@ class FacebookEntitySync
                     if (empty($pageCfg['enabled'])) continue;
                     $pId = (string)($pageCfg['id'] ?? '');
                     if (!$pId) continue;
-                    Helpers::checkJobStatus($jobId);
+                if ($jobStatusChecker && ($jobStatusChecker)($jobId) === false) {
+                    throw new \Exception("Job cancelled or should not continue.");
+                }
 
                     $logger?->info("DEBUG: FacebookEntitySync::syncPages - Syncing Page $pId from config");
                     
@@ -542,7 +598,9 @@ class FacebookEntitySync
             // Case 2: Marketing pages discovery via Ad Accounts
             if (!empty($channeledAccounts)) {
                 foreach ($channeledAccounts as $channeledAccount) {
-                    Helpers::checkJobStatus($jobId);
+                if ($jobStatusChecker && ($jobStatusChecker)($jobId) === false) {
+                    throw new \Exception("Job cancelled or should not continue.");
+                }
                     $adAccountId = (string)$channeledAccount->getPlatformId();
                     $logger?->info("DEBUG: FacebookEntitySync::syncPages - Processing discovery for Ad Account $adAccountId");
 
@@ -629,7 +687,8 @@ class FacebookEntitySync
         ?array $channeledPages = null,
         ?callable $entityProcessor = null,
         array|int|string|null $channeledAccountId = null,
-        int|string|null $accountId = null
+        int|string|null $accountId = null,
+        ?callable $jobStatusChecker = null
     ): Response {
         try {
             $logger?->info("DEBUG: FacebookEntitySync::syncPosts - IDs received: Account: $accountId | ChanneledAccount: $channeledAccountId");
@@ -638,7 +697,9 @@ class FacebookEntitySync
             }
 
             foreach ($channeledPages as $channeledPage) {
-                Helpers::checkJobStatus($jobId);
+                if ($jobStatusChecker && ($jobStatusChecker)($jobId) === false) {
+                    throw new \Exception("Job cancelled or should not continue.");
+                }
                 $pageId = (string)$channeledPage->getPlatformId();
  
                 $pageCfg = $config['pages'][$pageId] ?? [];
@@ -750,7 +811,8 @@ class FacebookEntitySync
         ?int $jobId = null,
         ?array $channeledAccounts = null,
         ?callable $entityProcessor = null,
-        ?array $channeledPages = null
+        ?array $channeledPages = null,
+        ?callable $jobStatusChecker = null
     ): Response {
         try {
             if (empty($channeledAccounts)) {
@@ -768,7 +830,9 @@ class FacebookEntitySync
 
                 $logger?->info("DEBUG: FacebookEntitySync::syncInstagramMedia - START processing IG account " . $igId);
                 
-                Helpers::checkJobStatus($jobId);
+                if ($jobStatusChecker && ($jobStatusChecker)($jobId) === false) {
+                    throw new \Exception("Job cancelled or should not continue.");
+                }
                 
                 $fetched = false;
                 $mediaLimits = [100, 50, 25, 10];

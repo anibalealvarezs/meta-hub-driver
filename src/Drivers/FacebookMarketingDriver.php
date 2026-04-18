@@ -8,6 +8,7 @@ use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricBreakdown;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
+use Anibalealvarezs\FacebookGraphApi\Enums\AdAccountPermission;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingMetricConvert;
 use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
@@ -23,7 +24,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
-use Helpers\Helpers;
 
 class FacebookMarketingDriver implements SyncDriverInterface
 {
@@ -548,7 +548,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                         logger: $this->logger,
                         jobId: $jobId,
                         channeledAccounts: $channeledAccounts,
-                        entityProcessor: $this->dataProcessor
+                        entityProcessor: $this->dataProcessor,
+                        jobStatusChecker: $shouldContinue
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
@@ -563,7 +564,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                         jobId: $jobId,
                         channeledAccounts: $channeledAccounts,
                         parentIdsMap: $filters->parentIdsMap ?? null,
-                        entityProcessor: $this->dataProcessor
+                        entityProcessor: $this->dataProcessor,
+                        jobStatusChecker: $shouldContinue
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
@@ -578,7 +580,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                         jobId: $jobId,
                         channeledAccounts: $channeledAccounts,
                         parentIdsMap: $filters->parentIdsMap ?? null,
-                        entityProcessor: $this->dataProcessor
+                        entityProcessor: $this->dataProcessor,
+                        jobStatusChecker: $shouldContinue
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
@@ -592,7 +595,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                         logger: $this->logger,
                         jobId: $jobId,
                         channeledAccounts: $channeledAccounts,
-                        entityProcessor: $this->dataProcessor
+                        entityProcessor: $this->dataProcessor,
+                        jobStatusChecker: $shouldContinue
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
@@ -703,11 +707,22 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     private function getMetricsConfig(array $config): array
     {
+        $customMetrics = $config['metrics'] ?? [];
+        $metricSet = isset($config['metric_set']) ? (MetricSet::tryFrom($config['metric_set']) ?: MetricSet::BASIC) : (!empty($customMetrics) ? MetricSet::CUSTOM : MetricSet::BASIC);
+
+        $baseFields = 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name';
+        
+        if ($metricSet === MetricSet::CUSTOM && !empty($customMetrics)) {
+            $fields = $baseFields . ',' . (is_array($customMetrics) ? implode(',', $customMetrics) : $customMetrics);
+        } else {
+            $fields = $baseFields . ',' . AdAccountPermission::DEFAULT->insightsFields($metricSet) . ',cpm,action_values';
+        }
+
         return [
-            'metricSet' => MetricSet::BASIC,
-            'breakdowns' => [MetricBreakdown::AGE, MetricBreakdown::GENDER],
-            'fields' => 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,actions,action_values',
-            'metrics' => []
+            'metricSet' => $metricSet,
+            'breakdowns' => $config['breakdowns'] ?? [MetricBreakdown::AGE, MetricBreakdown::GENDER],
+            'fields' => $fields,
+            'metrics' => is_array($customMetrics) ? $customMetrics : explode(',', (string)$customMetrics)
         ];
     }
 
@@ -745,7 +760,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             if (!empty($row['campaign_id']) && ($campaignInclude || $campaignExclude)) {
                 $cId = (string)$row['campaign_id'];
                 $cName = (string)($row['campaign_name'] ?? '');
-                if (!Helpers::matchesFilter($cId, $campaignInclude, $campaignExclude) && !Helpers::matchesFilter($cName, $campaignInclude, $campaignExclude)) {
+                if (!FacebookEntitySync::matchesFilter($cId, $campaignInclude, $campaignExclude) && !FacebookEntitySync::matchesFilter($cName, $campaignInclude, $campaignExclude)) {
                     return false;
                 }
             }
@@ -754,7 +769,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             if (!empty($row['adset_id']) && ($adsetInclude || $adsetExclude)) {
                 $asId = (string)$row['adset_id'];
                 $asName = (string)($row['adset_name'] ?? '');
-                if (!Helpers::matchesFilter($asId, $adsetInclude, $adsetExclude) && !Helpers::matchesFilter($asName, $adsetInclude, $adsetExclude)) {
+                if (!FacebookEntitySync::matchesFilter($asId, $adsetInclude, $adsetExclude) && !FacebookEntitySync::matchesFilter($asName, $adsetInclude, $adsetExclude)) {
                     return false;
                 }
             }
@@ -763,7 +778,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             if (!empty($row['ad_id']) && ($adInclude || $adExclude)) {
                 $adId = (string)$row['ad_id'];
                 $adName = (string)($row['ad_name'] ?? '');
-                if (!Helpers::matchesFilter($adId, $adInclude, $adExclude) && !Helpers::matchesFilter($adName, $adInclude, $adExclude)) {
+                if (!FacebookEntitySync::matchesFilter($adId, $adInclude, $adExclude) && !FacebookEntitySync::matchesFilter($adName, $adInclude, $adExclude)) {
                     return false;
                 }
             }
@@ -771,7 +786,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             // D. Check Creative level
             if (!empty($row['creative_id']) && ($creativeInclude || $creativeExclude)) {
                 $crId = (string)$row['creative_id'];
-                if (!Helpers::matchesFilter($crId, $creativeInclude, $creativeExclude)) {
+                if (!FacebookEntitySync::matchesFilter($crId, $creativeInclude, $creativeExclude)) {
                     return false;
                 }
             }

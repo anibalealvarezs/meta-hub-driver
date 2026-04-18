@@ -3,6 +3,7 @@
 namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
+use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookOrganicMetricConvert;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
@@ -549,7 +550,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         logger: $this->logger,
                         jobId: $jobId,
                         channeledAccounts: $adAccounts,
-                        entityProcessor: $this->dataProcessor
+                        entityProcessor: $this->dataProcessor,
+                        jobStatusChecker: $shouldContinue
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
@@ -565,7 +567,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         channeledPages: $resolvedPages,
                         entityProcessor: $this->dataProcessor,
                         channeledAccountId: $resolvedChanneledAccounts,
-                        accountId: (is_object($this->authProvider) && method_exists($this->authProvider, 'getAccount') && $this->authProvider->getAccount()) ? $this->authProvider->getAccount()->getId() : null
+                        accountId: (is_object($this->authProvider) && method_exists($this->authProvider, 'getAccount') && $this->authProvider->getAccount()) ? $this->authProvider->getAccount()->getId() : null,
+                        jobStatusChecker: $shouldContinue
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
@@ -584,7 +587,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         jobId: $jobId,
                         channeledAccounts: array_values($igAccounts),
                         entityProcessor: $this->dataProcessor,
-                        channeledPages: $resolvedPages
+                        channeledPages: $resolvedPages,
+                        jobStatusChecker: $shouldContinue
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
@@ -660,10 +664,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
             if ($shouldContinue && !$shouldContinue()) {
                 throw new Exception("Sync aborted by the orchestrator.");
             }
+            $metricSet = isset($config['metric_set']) ? (MetricSet::tryFrom($config['metric_set']) ?: MetricSet::BASIC) : MetricSet::BASIC;
+            $customMetrics = $config['metrics'] ?? [];
+            if (!is_array($customMetrics)) $customMetrics = explode(',', (string)$customMetrics);
+
             $data['insights'] = $api->getFacebookPageInsights(
                 pageId: $pagePlatformId,
                 since: $start,
-                until: $end
+                until: $end,
+                metricSet: $metricSet,
+                customMetrics: $customMetrics
             );
         }
 
@@ -703,7 +713,15 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         throw new Exception("Sync aborted by the orchestrator.");
                     }
                     try {
-                        $postInsights = $api->getFacebookPostInsights(postId: (string)$postId);
+                        $metricSet = isset($config['metric_set']) ? (MetricSet::tryFrom($config['metric_set']) ?: MetricSet::BASIC) : MetricSet::BASIC;
+                        $customMetrics = $config['metrics'] ?? [];
+                        if (!is_array($customMetrics)) $customMetrics = explode(',', (string)$customMetrics);
+
+                        $postInsights = $api->getFacebookPostInsights(
+                            postId: (string)$postId,
+                            metricSet: $metricSet,
+                            customMetrics: $customMetrics
+                        );
                         if (!empty($postInsights['data'])) {
                             $data['fb_post_insights'][] = [
                                 'id' => $postId,
