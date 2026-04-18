@@ -672,11 +672,17 @@ class FacebookEntitySync
 
                                 if (! empty($filteredPosts)) {
                                     $pageAccountId = $accountId ?: ((method_exists($channeledPage, 'getAccount') && $channeledPage->getAccount()) ? $channeledPage->getAccount()->getId() : null);
+
+                                    // Resolve specific ChanneledAccount ID for this page if a map is provided
+                                    $specificChanneledAccountId = is_array($channeledAccountId)
+                                        ? ($channeledAccountId[$pageId]?->getId() ?? null)
+                                        : $channeledAccountId;
+
                                     $converted = FacebookOrganicConvert::posts(
                                         posts: $filteredPosts, 
                                         pageId: $channeledPage->getId(),
                                         accountId: $pageAccountId,
-                                        channeledAccountId: $channeledAccountId
+                                        channeledAccountId: $specificChanneledAccountId
                                     );
                                     $saveCount = 0;
                                     foreach ($converted as $item) {

@@ -544,7 +544,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         jobId: $jobId,
                         channeledPages: $resolvedPages,
                         entityProcessor: $this->dataProcessor,
-                        channeledAccountId: (is_object($this->authProvider) && method_exists($this->authProvider, 'getId')) ? $this->authProvider->getId() : null,
+                        channeledAccountId: $resolvedChanneledAccounts,
                         accountId: (is_object($this->authProvider) && method_exists($this->authProvider, 'getAccount') && $this->authProvider->getAccount()) ? $this->authProvider->getAccount()->getId() : null
                     );
                 }
