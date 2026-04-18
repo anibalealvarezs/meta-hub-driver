@@ -2,6 +2,9 @@
 
 namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
+use Anibalealvarezs\MetaHubDriver\Enums\MetaFeature;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricBreakdown;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
@@ -244,7 +247,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             }
         }
 
-        $fbMarketingFeatures = ['ad_account_metrics', 'campaigns', 'campaign_metrics', 'adsets', 'adset_metrics', 'ads', 'ad_metrics', 'creatives', 'creative_metrics'];
+        $fbMarketingFeatures = array_map(fn($f) => $f->value, MetaFeature::marketing());
         foreach ($fbMarketingFeatures as $f) {
             if (isset($featureToggles[$f])) {
                 $chanCfg['AD_ACCOUNT'][$f] = (bool)$featureToggles[$f];
@@ -381,12 +384,29 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
 
         $api = $this->initializeApi($config);
-        $entity = $config['entity'] ?? 'metrics';
+        $rawEntity = $config['entity'] ?? MetaSyncScope::METRICS->value;
+        $scope = MetaSyncScope::tryFrom($rawEntity);
 
-        if ($entity !== 'metrics' && $entity !== 'metric') {
-            return $this->syncEntities($entity, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
+        if ($scope === MetaSyncScope::ENTITIES) {
+            return $this->syncEntities(MetaSyncScope::ENTITIES, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
         }
 
+        $specificEntity = MetaEntityType::tryFrom($rawEntity);
+        if ($specificEntity) {
+            return $this->syncEntities($specificEntity, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
+        }
+
+        return $this->syncMetrics($startDate, $endDate, $config, $shouldContinue, $identityMapper);
+    }
+
+    private function syncMetrics(
+        DateTime $startDate,
+        DateTime $endDate,
+        array $config = [],
+        ?callable $shouldContinue = null,
+        ?callable $identityMapper = null
+    ): Response {
+        $api = $this->initializeApi($config);
         $accountsToProcess = $config['ad_accounts'] ?? [];
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
         
@@ -457,18 +477,18 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     private function resolveLevelsToFetch(array $accCfg, array $config): array
     {
-        if (!empty($accCfg['ad_metrics']) || !empty($config['AD_ACCOUNT']['ad_metrics'])) {
+        if (!empty($accCfg[MetaFeature::AD_METRICS->value]) || !empty($config['AD_ACCOUNT'][MetaFeature::AD_METRICS->value])) {
             return ['ad'];
-        } elseif (!empty($accCfg['adset_metrics']) || !empty($config['AD_ACCOUNT']['adset_metrics'])) {
+        } elseif (!empty($accCfg[MetaFeature::ADSET_METRICS->value]) || !empty($config['AD_ACCOUNT'][MetaFeature::ADSET_METRICS->value])) {
             return ['adset'];
-        } elseif (!empty($accCfg['campaign_metrics']) || !empty($config['AD_ACCOUNT']['campaign_metrics'])) {
+        } elseif (!empty($accCfg[MetaFeature::CAMPAIGN_METRICS->value]) || !empty($config['AD_ACCOUNT'][MetaFeature::CAMPAIGN_METRICS->value])) {
             return ['campaign'];
         }
         return ['account'];
     }
 
     protected function syncEntities(
-        string $entity,
+        MetaSyncScope|MetaEntityType $entity,
         DateTime $startDate,
         DateTime $endDate,
         array $config = [],
@@ -497,7 +517,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
 
         switch ($entity) {
-            case 'campaigns':
+            case MetaEntityType::CAMPAIGN:
                 if (class_exists($syncService)) {
                     return $syncService::syncCampaigns(
                         api: $api,
@@ -511,7 +531,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
-            case 'ad_groups':
+            case MetaEntityType::AD_GROUP:
                 if (class_exists($syncService)) {
                     return $syncService::syncAdGroups(
                         api: $api,
@@ -526,7 +546,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
-            case 'ads':
+            case MetaEntityType::AD:
                 if (class_exists($syncService)) {
                     return $syncService::syncAds(
                         api: $api,
@@ -541,7 +561,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
-            case 'creatives':
+            case MetaEntityType::CREATIVE:
                 if (class_exists($syncService)) {
                     return $syncService::syncCreatives(
                         api: $api,
@@ -555,38 +575,38 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
-            case 'entities':
+            case MetaSyncScope::ENTITIES:
                 $results = [];
                 $accCfg = $config['AD_ACCOUNT'] ?? [];
 
                 // 1. Campaigns
-                if (!empty($accCfg['campaigns'])) {
-                    $campResponse = $this->syncEntities('campaigns', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
+                if (!empty($accCfg[MetaFeature::CAMPAIGNS->value])) {
+                    $campResponse = $this->syncEntities(MetaEntityType::CAMPAIGN, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
                     $results['campaigns'] = json_decode($campResponse->getContent(), true);
                 }
                 $campaignMap = $results['campaigns']['authorized_ids_map'] ?? null;
 
                 // 2. Ad Groups
-                if (!empty($accCfg['adsets'])) {
+                if (!empty($accCfg[MetaFeature::ADSETS->value])) {
                     if ($campaignMap) {
                         $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $campaignMap]);
                     }
-                    $agResponse = $this->syncEntities('ad_groups', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
+                    $agResponse = $this->syncEntities(MetaEntityType::AD_GROUP, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
                     $results['ad_groups'] = json_decode($agResponse->getContent(), true);
                 }
                 $adSetMap = $results['ad_groups']['authorized_ids_map'] ?? null;
 
                 // 3. Ads
-                if (!empty($accCfg['ads'])) {
+                if (!empty($accCfg[MetaFeature::ADS->value])) {
                     if ($adSetMap) {
                         $config['filters'] = (object) array_merge((array)($config['filters'] ?? []), ['parentIdsMap' => $adSetMap]);
                     }
-                    $results['ads'] = json_decode($this->syncEntities('ads', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
+                    $results['ads'] = json_decode($this->syncEntities(MetaEntityType::AD, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
                 }
 
                 // 4. Creatives
-                if (!empty($accCfg['creatives'])) {
-                    $results['creatives'] = json_decode($this->syncEntities('creatives', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
+                if (!empty($accCfg[MetaFeature::CREATIVES->value])) {
+                    $results['creatives'] = json_decode($this->syncEntities(MetaEntityType::CREATIVE, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
                 }
 
                 return new Response(json_encode(['status' => 'success', 'results' => $results]), 200, ['Content-Type' => 'application/json']);

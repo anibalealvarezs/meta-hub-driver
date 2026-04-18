@@ -19,6 +19,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
 use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaFeature;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
 
 class FacebookOrganicDriver implements SyncDriverInterface
 {
@@ -173,7 +176,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             }
         }
 
-        $fbOrganicFeatures = ['page_metrics', 'posts', 'post_metrics', 'ig_accounts', 'ig_account_metrics', 'ig_account_media', 'ig_account_media_metrics'];
+        $fbOrganicFeatures = array_map(fn($f) => $f->value, MetaFeature::organic());
         foreach ($fbOrganicFeatures as $f) {
             if (isset($featureToggles[$f])) {
                 $chanCfg['PAGE'][$f] = (bool)$featureToggles[$f];
@@ -194,13 +197,13 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 'ig_account' => $pData['ig_account'] ?? null,
                 'ig_account_name' => $pData['ig_account_name'] ?? null,
                 // Granularity Flags
-                'page_metrics' => filter_var($pData['page_metrics'] ?? true, FILTER_VALIDATE_BOOLEAN),
-                'posts' => filter_var($pData['posts'] ?? true, FILTER_VALIDATE_BOOLEAN),
-                'post_metrics' => filter_var($pData['post_metrics'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'ig_accounts' => filter_var($pData['ig_accounts'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'ig_account_metrics' => filter_var($pData['ig_account_metrics'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'ig_account_media' => filter_var($pData['ig_account_media'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'ig_account_media_metrics' => filter_var($pData['ig_account_media_metrics'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                MetaFeature::PAGE_METRICS->value => filter_var($pData[MetaFeature::PAGE_METRICS->value] ?? true, FILTER_VALIDATE_BOOLEAN),
+                MetaFeature::POSTS->value => filter_var($pData[MetaFeature::POSTS->value] ?? true, FILTER_VALIDATE_BOOLEAN),
+                MetaFeature::POST_METRICS->value => filter_var($pData[MetaFeature::POST_METRICS->value] ?? false, FILTER_VALIDATE_BOOLEAN),
+                MetaFeature::IG_ACCOUNTS->value => filter_var($pData[MetaFeature::IG_ACCOUNTS->value] ?? false, FILTER_VALIDATE_BOOLEAN),
+                MetaFeature::IG_ACCOUNT_METRICS->value => filter_var($pData[MetaFeature::IG_ACCOUNT_METRICS->value] ?? false, FILTER_VALIDATE_BOOLEAN),
+                MetaFeature::IG_ACCOUNT_MEDIA->value => filter_var($pData[MetaFeature::IG_ACCOUNT_MEDIA->value] ?? false, FILTER_VALIDATE_BOOLEAN),
+                MetaFeature::IG_ACCOUNT_MEDIA_METRICS->value => filter_var($pData[MetaFeature::IG_ACCOUNT_MEDIA_METRICS->value] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'lost_access' => filter_var($pData['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN),
             ];
             
@@ -340,10 +343,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
 
         $api = $this->initializeApi($config);
-        $entity = $config['entity'] ?? 'metrics';
+        $rawEntity = $config['entity'] ?? MetaSyncScope::METRICS->value;
+        $scope = MetaSyncScope::tryFrom($rawEntity);
 
-        if ($entity !== 'metrics' && $entity !== 'metric') {
-            return $this->syncEntities($entity, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
+        if ($scope === MetaSyncScope::ENTITIES) {
+            return $this->syncEntities(MetaSyncScope::ENTITIES, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
+        }
+
+        $specificEntity = MetaEntityType::tryFrom($rawEntity);
+        if ($specificEntity) {
+            return $this->syncEntities($specificEntity, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper);
         }
 
         return $this->syncMetrics($startDate, $endDate, $config, $shouldContinue, $identityMapper);
@@ -481,15 +490,14 @@ class FacebookOrganicDriver implements SyncDriverInterface
     }
 
     private function syncEntities(
-        string $entity, 
-        DateTime $startDate, 
-        DateTime $endDate, 
-        array $config, 
-        FacebookGraphApi $api,
+        MetaSyncScope|MetaEntityType $entity,
+        DateTime $startDate,
+        DateTime $endDate,
+        array $config = [],
+        ?FacebookGraphApi $api = null,
         ?callable $shouldContinue = null,
         ?callable $identityMapper = null
-    ): Response
-    {
+    ): Response {
         $startDateStr = $startDate->format('Y-m-d');
         $endDateStr = $endDate->format('Y-m-d');
         $jobId = $config['jobId'] ?? null;
@@ -513,7 +521,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
 
         switch ($entity) {
-            case 'pages':
+            case MetaEntityType::PAGE:
                 if (class_exists($syncService)) {
                     // Discovery for marketing accounts
                     $adAccounts = [];
@@ -533,7 +541,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
-            case 'posts':
+            case MetaEntityType::POST:
                 if (class_exists($syncService)) {
                     return $syncService::syncPosts(
                         api: $api,
@@ -549,7 +557,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
-            case 'instagram':
+            case MetaEntityType::IG_MEDIA:
                 if (class_exists($syncService)) {
                     // Filter resolved accounts to only include IG ones from config
                     $igPIds = array_filter(array_map(fn($p) => (string)($p['ig_account'] ?? null), $pagesToProcess));
@@ -568,26 +576,26 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     );
                 }
                 throw new Exception("FacebookEntitySync service not found in host.");
-            case 'entities':
+            case MetaSyncScope::ENTITIES:
                 $results = [];
                 $pageCfg = $config['PAGE'] ?? [];
 
                 // 1. Pages
-                $results['pages'] = json_decode($this->syncEntities('pages', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
+                $results['pages'] = json_decode($this->syncEntities(MetaEntityType::PAGE, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
 
                 // 2. Posts
-                if (!empty($pageCfg['posts'])) {
-                    $results['posts'] = json_decode($this->syncEntities('posts', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
+                if (!empty($pageCfg[MetaFeature::POSTS->value])) {
+                    $results['posts'] = json_decode($this->syncEntities(MetaEntityType::POST, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
                 }
 
                 // 3. Instagram
-                if (!empty($pageCfg['ig_account_media'])) {
-                    $results['instagram'] = json_decode($this->syncEntities('instagram', $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
+                if (!empty($pageCfg[MetaFeature::IG_ACCOUNT_MEDIA->value])) {
+                    $results['instagram'] = json_decode($this->syncEntities(MetaEntityType::IG_MEDIA, $startDate, $endDate, $config, $api, $shouldContinue, $identityMapper)->getContent(), true);
                 }
 
                 return new Response(json_encode(['status' => 'success', 'results' => $results]), 200, ['Content-Type' => 'application/json']);
             default:
-                throw new Exception("Entity sync for '{$entity}' not implemented in FacebookOrganicDriver");
+                throw new Exception("Entity sync for '{$entity->value}' not implemented in FacebookOrganicDriver");
         }
     }
 
@@ -636,7 +644,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         ];
 
         // 1. Page Insights
-        if ($page['page_metrics'] ?? false) {
+        if ($page[MetaFeature::PAGE_METRICS->value] ?? false) {
             if ($shouldContinue && !$shouldContinue()) {
                 throw new Exception("Sync aborted by the orchestrator.");
             }
@@ -648,7 +656,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
 
         // 2. Instagram Account Insights
-        if (!empty($page['ig_account']) && !empty($page['ig_account_metrics'])) {
+        if (!empty($page['ig_account']) && !empty($page[MetaFeature::IG_ACCOUNT_METRICS->value])) {
             if ($shouldContinue && !$shouldContinue()) {
                 throw new Exception("Sync aborted by the orchestrator.");
             }
@@ -675,7 +683,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
 
         // 3. Facebook Post Insights (Dynamic Discovery via Mapper)
-        if (($page['post_metrics'] ?? false) && $identityMapper && $internalPageId) {
+        if (($page[MetaFeature::POST_METRICS->value] ?? false) && $identityMapper && $internalPageId) {
             $postsMap = $identityMapper('posts', ['page_id' => $internalPageId]);
             if ($postsMap) {
                 foreach ($postsMap as $postId => $postInfo) {
@@ -698,7 +706,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
 
         // 4. Instagram Media Insights (Dynamic Discovery via Mapper)
-        if (!empty($page['ig_account']) && !empty($page['ig_account_media_insights']) && $identityMapper && $igCaId) {
+        if (!empty($page['ig_account']) && !empty($page[MetaFeature::IG_ACCOUNT_MEDIA_METRICS->value]) && $identityMapper && $igCaId) {
             // Instagram media are often synced under ChanneledAccount context
             $mediaMap = $identityMapper('posts', ['channeled_account_id' => $igCaId]);
             if ($mediaMap) {
@@ -754,12 +762,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 'ig_account' => null,
                 'ig_account_name' => null,
                 'ig_accounts' => false,
-                'page_metrics' => true,
-                'posts' => true,
-                'post_metrics' => false,
-                'ig_account_metrics' => false,
-                'ig_account_media' => false,
-                'ig_account_media_insights' => false,
+                MetaFeature::PAGE_METRICS->value => true,
+                MetaFeature::POSTS->value => true,
+                MetaFeature::POST_METRICS->value => false,
+                MetaFeature::IG_ACCOUNT_METRICS->value => false,
+                MetaFeature::IG_ACCOUNT_MEDIA->value => false,
+                MetaFeature::IG_ACCOUNT_MEDIA_METRICS->value => false,
                 'lost_access' => false,
             ]
         ];

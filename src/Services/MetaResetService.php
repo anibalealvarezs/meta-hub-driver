@@ -6,6 +6,7 @@ namespace Anibalealvarezs\MetaHubDriver\Services;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Anibalealvarezs\ApiSkeleton\Enums\Channel;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
 
 class MetaResetService
 {
@@ -29,7 +30,7 @@ class MetaResetService
 
         $stats = ['cleared' => 0];
 
-        if ($mode === 'all' || $mode === 'metrics') {
+        if ($mode === 'all' || $mode === MetaSyncScope::METRICS->value) {
             $connection->executeStatement(
                 "DELETE FROM jobs WHERE channel = ? AND entity = 'metric'",
                 [$channelSlug],
@@ -51,7 +52,7 @@ class MetaResetService
             $connection->executeStatement("DELETE FROM metric_configs WHERE channel = ?", [$channelId], [\Doctrine\DBAL\ParameterType::INTEGER]);
         }
 
-        if ($mode === 'all' || $mode === 'entities') {
+        if ($mode === 'all' || $mode === MetaSyncScope::ENTITIES->value) {
             $connection->executeStatement(
                 "DELETE FROM jobs WHERE channel = ? AND entity != 'metric'",
                 [$channelSlug],

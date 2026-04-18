@@ -7,6 +7,8 @@ namespace Anibalealvarezs\MetaHubDriver\Services;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingConvert;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookOrganicConvert;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaFeature;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Helpers\Helpers;
@@ -64,15 +66,12 @@ class FacebookEntitySync
                 return new Response(json_encode(['message' => 'No accounts to sync']), 200, ['Content-Type' => 'application/json']);
             }
 
-            foreach ($channeledAccounts as $channeledAccount) {
-                $adAccountId = (string)$channeledAccount->getPlatformId();
-                $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Processing ad account: $adAccountId");
-
-                // Get config for this specific account
-                $adAccountCfg = array_values(array_filter($config['ad_accounts'] ?? [], fn ($acc) => (string)$acc['id'] === $adAccountId))[0] ?? [];
-
-                if (empty($adAccountCfg['enabled']) || empty($adAccountCfg['campaigns'])) {
-                    $logger?->info("Skipping campaigns sync for ad account: $adAccountId (disabled in config)");
+            foreach ($channeledAccounts as $adAccount) {
+                $accId = (string)$adAccount->getPlatformId();
+                $adAccountCfg = $config['ad_accounts'][$accId] ?? [];
+                
+                if (empty($adAccountCfg['enabled']) || empty($adAccountCfg[MetaFeature::CAMPAIGNS->value])) {
+                    $logger?->info("Skipping Campaign sync for account $accId (disabled in config)");
                     continue;
                 }
 
@@ -84,7 +83,7 @@ class FacebookEntitySync
                 while ($retryCount < $maxRetries && ! $fetched) {
                     try {
                         $campaigns = $api->getCampaigns(
-                            adAccountId: $adAccountId,
+                            adAccountId: $accId,
                             limit: $currentLimit,
                             additionalParams: [
                                 'filtering' => json_encode([[
@@ -95,7 +94,7 @@ class FacebookEntitySync
                             ]
                         );
                         if (! empty($campaigns['data'])) {
-                            $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - API found " . count($campaigns['data']) . " campaigns for account: $adAccountId");
+                            $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - API found " . count($campaigns['data']) . " campaigns for account: $accId");
                             $includeFilter = self::getFacebookFilter($config, 'CAMPAIGN', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'CAMPAIGN', 'cache_exclude');
 
@@ -104,7 +103,7 @@ class FacebookEntitySync
                                 $cName = $c['name'] ?? '';
                                 $cId = (string)$c['id'];
                                 if (self::matchesFilter($cName, $includeFilter, $excludeFilter) || self::matchesFilter($cId, $includeFilter, $excludeFilter)) {
-                                    $authorizedIdsMap[$adAccountId][] = $cId;
+                                    $authorizedIdsMap[$accId][] = $cId;
                                     $filteredCampaigns[] = $c;
                                 } else {
                                     $logger?->info("Skipping campaign $cId ($cName) - filtered out by extraction patterns");
@@ -112,12 +111,12 @@ class FacebookEntitySync
                             }
 
                             if (! empty($filteredCampaigns)) {
-                                $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - " . count($filteredCampaigns) . " campaigns passed the filters for account: $adAccountId");
-                                $converted = FacebookMarketingConvert::campaigns($filteredCampaigns, $channeledAccount->getId());
+                                $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - " . count($filteredCampaigns) . " campaigns passed the filters for account: $accId");
+                                $converted = FacebookMarketingConvert::campaigns($filteredCampaigns, $adAccount->getId());
                                 foreach ($converted as $item) {
                                     if ($entityProcessor) {
-                                        $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                        ($entityProcessor)($item, 'campaign');
+                                        $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $adAccount]));
+                                        ($entityProcessor)($item, MetaEntityType::CAMPAIGN->value);
                                     }
                                 }
                             }
@@ -176,15 +175,12 @@ class FacebookEntitySync
                 return new Response(json_encode(['message' => 'No accounts to sync']), 200, ['Content-Type' => 'application/json']);
             }
 
-            foreach ($channeledAccounts as $channeledAccount) {
-                $adAccountId = (string)$channeledAccount->getPlatformId();
-                $logger?->info("DEBUG: FacebookEntitySync::syncAdGroups - Processing ad account: $adAccountId");
-
-                // Get config for this specific account
-                $adAccountCfg = array_values(array_filter($config['ad_accounts'] ?? [], fn ($acc) => (string)$acc['id'] === $adAccountId))[0] ?? [];
-
-                if (empty($adAccountCfg['enabled']) || empty($adAccountCfg['adsets'])) {
-                    $logger?->info("Skipping adsets sync for ad account: $adAccountId (disabled in config)");
+            foreach ($channeledAccounts as $adAccount) {
+                $accId = (string)$adAccount->getPlatformId();
+                $adAccountCfg = $config['ad_accounts'][$accId] ?? [];
+ 
+                if (empty($adAccountCfg['enabled']) || empty($adAccountCfg[MetaFeature::ADSETS->value])) {
+                    $logger?->info("Skipping AdSet sync for account $accId (disabled in config)");
                     continue;
                 }
 
@@ -196,12 +192,12 @@ class FacebookEntitySync
                 while ($retryCount < $maxRetries && ! $fetched) {
                     try {
                         $additionalParams = [];
-                        if ($parentIdsMap && isset($parentIdsMap[$adAccountId])) {
+                        if ($parentIdsMap && isset($parentIdsMap[$accId])) {
                             $additionalParams['filtering'] = json_encode([
                                 [
                                     'field' => 'campaign.id',
                                     'operator' => 'IN',
-                                    'value' => $parentIdsMap[$adAccountId],
+                                    'value' => $parentIdsMap[$accId],
                                 ],
                                 [
                                     'field' => 'effective_status',
@@ -218,7 +214,7 @@ class FacebookEntitySync
                         }
 
                         $adsets = $api->getAdsets(
-                            adAccountId: $adAccountId, 
+                            adAccountId: $accId, 
                             limit: $currentLimit, 
                             additionalParams: $additionalParams
                         );
@@ -231,7 +227,7 @@ class FacebookEntitySync
                                 $aName = $a['name'] ?? '';
                                 $aId = (string)$a['id'];
                                 if (self::matchesFilter($aName, $includeFilter, $excludeFilter) || self::matchesFilter($aId, $includeFilter, $excludeFilter)) {
-                                    $authorizedIdsMap[$adAccountId][] = $aId;
+                                    $authorizedIdsMap[$accId][] = $aId;
                                     $filteredAdsets[] = $a;
                                 } else {
                                     $logger?->info("Skipping adset $aId ($aName) - filtered out by extraction patterns");
@@ -239,11 +235,11 @@ class FacebookEntitySync
                             }
 
                             if (! empty($filteredAdsets)) {
-                                $converted = FacebookMarketingConvert::adsets($filteredAdsets, $channeledAccount->getId());
+                                $converted = FacebookMarketingConvert::adsets($filteredAdsets, $adAccount->getId());
                                 foreach ($converted as $item) {
                                     if ($entityProcessor) {
-                                        $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                        ($entityProcessor)($item, 'ad_group');
+                                        $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $adAccount]));
+                                        ($entityProcessor)($item, MetaEntityType::AD_GROUP->value);
                                     }
                                 }
                             }
@@ -252,11 +248,11 @@ class FacebookEntitySync
                     } catch (\Exception $e) {
                         if (str_contains($e->getMessage(), 'reduce the amount of data')) {
                             $currentLimit = max(10, (int) floor($currentLimit / 2));
-                            $logger?->warning("Data limit error for $adAccountId in syncAdGroups (AdSets): Reducing limit to $currentLimit");
+                            $logger?->warning("Data limit error for $accId in syncAdGroups (AdSets): Reducing limit to $currentLimit");
                         }
                         $retryCount++;
                         if ($retryCount >= $maxRetries) {
-                            $logger?->error("Error syncing adsets for $adAccountId: " . $e->getMessage());
+                            $logger?->error("Error syncing adsets for $accId: " . $e->getMessage());
                         } else {
                             usleep(200000 * $retryCount);
                         }
@@ -306,12 +302,10 @@ class FacebookEntitySync
 
             foreach ($channeledAccounts as $channeledAccount) {
                 $adAccountId = (string)$channeledAccount->getPlatformId();
-                $logger?->info("DEBUG: FacebookEntitySync::syncAds - Processing ad account: $adAccountId");
-
-                // Get config for this specific account
-                $adAccountCfg = array_values(array_filter($config['ad_accounts'] ?? [], fn ($acc) => (string)$acc['id'] === $adAccountId))[0] ?? [];
-
-                if (empty($adAccountCfg['enabled']) || empty($adAccountCfg['ads'])) {
+                $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? [];
+                
+                if (empty($adAccountCfg['enabled']) || empty($adAccountCfg[MetaFeature::ADS->value])) {
+                    $logger?->info("Skipping Ad sync for account $adAccountId (disabled in config)");
                     continue;
                 }
 
@@ -369,7 +363,7 @@ class FacebookEntitySync
                                 foreach ($converted as $item) {
                                     if ($entityProcessor) {
                                         $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                        ($entityProcessor)($item, 'ad');
+                                        ($entityProcessor)($item, MetaEntityType::AD->value);
                                     }
                                 }
                             }
@@ -425,12 +419,10 @@ class FacebookEntitySync
 
             foreach ($channeledAccounts as $channeledAccount) {
                 $adAccountId = (string)$channeledAccount->getPlatformId();
-                $logger?->info("DEBUG: FacebookEntitySync::syncCreatives - Processing ad account: $adAccountId");
-
-                // Get config for this specific account
-                $adAccountCfg = array_values(array_filter($config['ad_accounts'] ?? [], fn ($acc) => (string)$acc['id'] === $adAccountId))[0] ?? [];
-
-                if (empty($adAccountCfg['enabled']) || empty($adAccountCfg['creatives'])) {
+                $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? [];
+                
+                if (empty($adAccountCfg['enabled']) || empty($adAccountCfg[MetaFeature::CREATIVES->value])) {
+                    $logger?->info("Skipping Creative sync for account $adAccountId (disabled in config)");
                     continue;
                 }
 
@@ -462,7 +454,7 @@ class FacebookEntitySync
                                 foreach ($converted as $item) {
                                     if ($entityProcessor) {
                                         $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                        ($entityProcessor)($item, 'creative');
+                                        ($entityProcessor)($item, MetaEntityType::CREATIVE->value);
                                     }
                                 }
                             }
@@ -537,7 +529,7 @@ class FacebookEntitySync
                         $converted = FacebookOrganicConvert::pages([$pageData]);
                         foreach ($converted as $item) {
                             if ($entityProcessor) {
-                                ($entityProcessor)($item, 'page');
+                                ($entityProcessor)($item, MetaEntityType::PAGE->value);
                             }
                         }
                     } catch (\Exception $e) {
@@ -586,7 +578,7 @@ class FacebookEntitySync
                                     foreach ($converted as $item) {
                                         if ($entityProcessor) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                            ($entityProcessor)($item, 'page');
+                                            ($entityProcessor)($item, MetaEntityType::PAGE->value);
                                         }
                                     }
                                 }
@@ -645,10 +637,10 @@ class FacebookEntitySync
             foreach ($channeledPages as $channeledPage) {
                 Helpers::checkJobStatus($jobId);
                 $pageId = (string)$channeledPage->getPlatformId();
-                $pageCfg = array_values(array_filter($config['pages'] ?? [], fn ($p) => (string)($p['id'] ?? '') === $pageId))[0] ?? [];
-
-                if ((isset($pageCfg['enabled']) && !$pageCfg['enabled']) || (isset($pageCfg['posts']) && !$pageCfg['posts'])) {
-                    $logger?->info("Skipping posts sync for page $pageId (disabled in config)");
+ 
+                $pageCfg = array_values(array_filter($config['pages'] ?? [], fn ($p) => (string)$p['id'] === $pageId))[0] ?? [];
+                if ((isset($pageCfg['enabled']) && !$pageCfg['enabled']) || (isset($pageCfg[MetaFeature::POSTS->value]) && !$pageCfg[MetaFeature::POSTS->value])) {
+                    $logger?->info("Skipping Post sync for page $pageId (disabled in config)");
                     continue;
                 }
 
@@ -697,7 +689,7 @@ class FacebookEntitySync
                                     foreach ($converted as $item) {
                                         if ($entityProcessor) {
                                             $item->setContext(array_merge($item->getContext(), ['facebookPage' => $channeledPage]));
-                                            ($entityProcessor)($item, 'post');
+                                            ($entityProcessor)($item, MetaEntityType::POST->value);
                                             $saveCount++;
                                         }
                                     }
@@ -760,9 +752,9 @@ class FacebookEntitySync
 
             foreach ($channeledAccounts as $channeledAccount) {
                 $igId = (string)$channeledAccount->getPlatformId();
-
+ 
                 $pageCfg = array_values(array_filter($config['pages'] ?? [], fn ($p) => (string)($p['ig_account'] ?? '') === $igId))[0] ?? [];
-                if ((isset($pageCfg['enabled']) && !$pageCfg['enabled']) || (isset($pageCfg['ig_account_media']) && !$pageCfg['ig_account_media'])) {
+                if ((isset($pageCfg['enabled']) && !$pageCfg['enabled']) || (isset($pageCfg[MetaFeature::IG_ACCOUNT_MEDIA->value]) && !$pageCfg[MetaFeature::IG_ACCOUNT_MEDIA->value])) {
                     $logger?->info("Skipping Instagram media sync for IG account $igId (disabled in config)");
                     continue;
                 }
@@ -822,7 +814,7 @@ class FacebookEntitySync
                                     foreach ($converted as $item) {
                                         if ($entityProcessor) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                            ($entityProcessor)($item, 'ig_media');
+                                            ($entityProcessor)($item, MetaEntityType::IG_MEDIA->value);
                                             $saveCount++;
                                         }
                                     }
