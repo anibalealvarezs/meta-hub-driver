@@ -718,50 +718,59 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     private function filterInsightRows(array $rows, string $level, array $config): array
     {
-        $entityKey = match($level) {
-            'campaign' => 'CAMPAIGN',
-            'adset' => 'ADSET',
-            'ad' => 'AD', // Level 'ad' corresponds to entity 'AD' and 'CREATIVE' filters
-            default => null
-        };
+        // 1. Get filters for all relevant levels to ensure hierarchical consistency
+        $campaignInclude = FacebookEntitySync::getFacebookFilter($config, 'CAMPAIGN', 'cache_include');
+        $campaignExclude = FacebookEntitySync::getFacebookFilter($config, 'CAMPAIGN', 'cache_exclude');
 
-        if (!$entityKey) return $rows;
+        $adsetInclude = FacebookEntitySync::getFacebookFilter($config, 'ADSET', 'cache_include');
+        $adsetExclude = FacebookEntitySync::getFacebookFilter($config, 'ADSET', 'cache_exclude');
 
-        $include = FacebookEntitySync::getFacebookFilter($config, $entityKey, 'cache_include');
-        $exclude = FacebookEntitySync::getFacebookFilter($config, $entityKey, 'cache_exclude');
+        $adInclude = FacebookEntitySync::getFacebookFilter($config, 'AD', 'cache_include');
+        $adExclude = FacebookEntitySync::getFacebookFilter($config, 'AD', 'cache_exclude');
 
-        // Special case: If level is 'ad', we also check 'CREATIVE' filters if they exist
-        $creativeInclude = ($level === 'ad') ? FacebookEntitySync::getFacebookFilter($config, 'CREATIVE', 'cache_include') : null;
-        $creativeExclude = ($level === 'ad') ? FacebookEntitySync::getFacebookFilter($config, 'CREATIVE', 'cache_exclude') : null;
+        $creativeInclude = FacebookEntitySync::getFacebookFilter($config, 'CREATIVE', 'cache_include');
+        $creativeExclude = FacebookEntitySync::getFacebookFilter($config, 'CREATIVE', 'cache_exclude');
 
-        if (!$include && !$exclude && !$creativeInclude && !$creativeExclude) return $rows;
-
-        $idField = "{$level}_id";
-        $nameField = "{$level}_name"; // Facebook API fields like campaign_name, adset_name, ad_name
-        
-        // Fix field name mapping for Facebook API
-        if ($level === 'adset') {
-            $nameField = 'adset_name';
-            $idField = 'adset_id';
+        // If no filters at all, just return everything
+        if (!$campaignInclude && !$campaignExclude && !$adsetInclude && !$adsetExclude && !$adInclude && !$adExclude && !$creativeInclude && !$creativeExclude) {
+            return $rows;
         }
 
-        return array_filter($rows, function($row) use ($include, $exclude, $idField, $nameField, $creativeInclude, $creativeExclude) {
-            $id = (string)($row[$idField] ?? '');
-            $name = (string)($row[$nameField] ?? '');
-            
-            $entityPasses = true;
-            if ($include || $exclude) {
-                $entityPasses = Helpers::matchesFilter($id, $include, $exclude) || Helpers::matchesFilter($name, $include, $exclude);
+        return array_filter($rows, function ($row) use (
+            $level, $campaignInclude, $campaignExclude, $adsetInclude, $adsetExclude, 
+            $adInclude, $adExclude, $creativeInclude, $creativeExclude
+        ) {
+            // A. Check Campaign level (available in most marketing insight levels)
+            if (!empty($row['campaign_id']) && ($campaignInclude || $campaignExclude)) {
+                $cId = (string)$row['campaign_id'];
+                $cName = (string)($row['campaign_name'] ?? '');
+                if (!Helpers::matchesFilter($cId, $campaignInclude, $campaignExclude) && !Helpers::matchesFilter($cName, $campaignInclude, $campaignExclude)) {
+                    return false;
+                }
             }
 
-            if (!$entityPasses) return false;
+            // B. Check AdSet level
+            if (!empty($row['adset_id']) && ($adsetInclude || $adsetExclude)) {
+                $asId = (string)$row['adset_id'];
+                $asName = (string)($row['adset_name'] ?? '');
+                if (!Helpers::matchesFilter($asId, $adsetInclude, $adsetExclude) && !Helpers::matchesFilter($asName, $adsetInclude, $adsetExclude)) {
+                    return false;
+                }
+            }
 
-            // Optional: Filter by creative if level is 'ad' and creative info is available
-            if ($creativeInclude || $creativeExclude) {
-                $cId = (string)($row['creative_id'] ?? '');
-                // Note: creative_name is not usually in insights fields unless requested or resolved later
-                // If it's not present, we can only filter by ID
-                if ($cId && !Helpers::matchesFilter($cId, $creativeInclude, $creativeExclude)) {
+            // C. Check Ad level
+            if (!empty($row['ad_id']) && ($adInclude || $adExclude)) {
+                $adId = (string)$row['ad_id'];
+                $adName = (string)($row['ad_name'] ?? '');
+                if (!Helpers::matchesFilter($adId, $adInclude, $adExclude) && !Helpers::matchesFilter($adName, $adInclude, $adExclude)) {
+                    return false;
+                }
+            }
+
+            // D. Check Creative level
+            if (!empty($row['creative_id']) && ($creativeInclude || $creativeExclude)) {
+                $crId = (string)$row['creative_id'];
+                if (!Helpers::matchesFilter($crId, $creativeInclude, $creativeExclude)) {
                     return false;
                 }
             }
