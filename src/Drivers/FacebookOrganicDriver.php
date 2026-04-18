@@ -755,7 +755,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
                                 ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::tryFrom(strtoupper((string)$mType))
                                 ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::CAROUSEL_ALBUM;
                         
-                        $mediaInsights = $api->getInstagramMediaInsights(mediaId: (string)$mediaId, mediaType: $type);
+                        $metricSet = isset($config['metric_set']) ? (MetricSet::tryFrom($config['metric_set']) ?: MetricSet::BASIC) : MetricSet::BASIC;
+                        $customMetrics = $config['metrics'] ?? [];
+                        if (!is_array($customMetrics)) $customMetrics = explode(',', (string)$customMetrics);
+
+                        $mediaInsights = $api->getInstagramMediaInsights(
+                            mediaId: (string)$mediaId, 
+                            mediaType: $type,
+                            metricSet: $metricSet,
+                            customMetrics: $customMetrics
+                        );
                         if (!empty($mediaInsights['data'])) {
                             $data['ig_media_insights'][] = [
                                 'id' => $mediaId,
