@@ -650,9 +650,9 @@ class FacebookEntitySync
                     $maxRetries = 3;
                     $retryCount = 0;
 
-                    while ($retryCount < $maxRetries && ! $fetched) {
                         try {
                             $api->setPageId($pageId);
+                            $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
                             $posts = $api->getFacebookPosts(pageId: $pageId, limit: $limit);
                             if (! empty($posts['data'])) {
                                 $includeFilter = self::getFacebookFilter($config, 'POST', 'cache_include');
@@ -755,6 +755,7 @@ class FacebookEntitySync
                             $pageCfg = array_values(array_filter($config['pages'] ?? [], fn ($p) => (string)($p['ig_account'] ?? '') === $igId))[0] ?? [];
                             if (!empty($pageCfg['id'])) {
                                 $api->setPageId((string)$pageCfg['id']);
+                                $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
                             }
                             
                             $media = $api->getInstagramMedia(igUserId: $igId, limit: $limit);

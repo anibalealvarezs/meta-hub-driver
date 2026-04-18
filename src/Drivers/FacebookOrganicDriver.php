@@ -389,6 +389,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $igCaId = $igPlatformId ? ((count($caMap) && isset($caMap[$igPlatformId])) ? $caMap[$igPlatformId]->getId() : $igPlatformId) : null;
 
             $api->setAccessToken($page['access_token'] ?? $config['access_token'] ?? null);
+            $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
+            $api->setPageId($pagePlatformId);
 
             $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
             foreach ($chunks as $chunk) {
