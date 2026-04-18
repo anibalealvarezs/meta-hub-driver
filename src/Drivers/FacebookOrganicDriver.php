@@ -733,8 +733,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         $pType = $rawInfo['media_product_type'] ?? null;
 
                         // Prioritize MediaProductType for more accurate metrics (Story/Reel/Feed)
-                        $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaProductType::tryFrom($pType)
-                                ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::tryFrom($mType)
+                        $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaProductType::tryFrom(strtoupper((string)$pType))
+                                ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::tryFrom(strtoupper((string)$mType))
                                 ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::CAROUSEL_ALBUM;
                         
                         $mediaInsights = $api->getInstagramMediaInsights(mediaId: (string)$mediaId, mediaType: $type);
