@@ -178,7 +178,9 @@ class FacebookEntitySync
             foreach ($channeledAccounts as $adAccount) {
                 $accId = (string)$adAccount->getPlatformId();
                 $adAccountCfg = $config['ad_accounts'][$accId] ?? [];
- 
+
+                $logger?->info("DEBUG: FacebookEntitySync::syncAdGroups - Account: $accId | Enabled: " . ($adAccountCfg['enabled'] ?? 'N/A') . " | Feature: " . ($adAccountCfg[MetaFeature::ADSETS->value] ?? 'N/A'));
+                
                 if (empty($adAccountCfg['enabled']) || empty($adAccountCfg[MetaFeature::ADSETS->value])) {
                     $logger?->info("Skipping AdSet sync for account $accId (disabled in config)");
                     continue;
@@ -303,6 +305,8 @@ class FacebookEntitySync
             foreach ($channeledAccounts as $channeledAccount) {
                 $adAccountId = (string)$channeledAccount->getPlatformId();
                 $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? [];
+                
+                $logger?->info("DEBUG: FacebookEntitySync::syncAds - Account: $adAccountId | Enabled: " . ($adAccountCfg['enabled'] ?? 'N/A') . " | Feature: " . ($adAccountCfg[MetaFeature::ADS->value] ?? 'N/A'));
                 
                 if (empty($adAccountCfg['enabled']) || empty($adAccountCfg[MetaFeature::ADS->value])) {
                     $logger?->info("Skipping Ad sync for account $adAccountId (disabled in config)");

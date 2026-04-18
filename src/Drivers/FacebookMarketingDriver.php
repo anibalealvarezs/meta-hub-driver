@@ -27,6 +27,20 @@ class FacebookMarketingDriver implements SyncDriverInterface
 {
     use \Anibalealvarezs\ApiDriverCore\Traits\HasHierarchicalValidationTrait;
     use SyncDriverTrait;
+    use HasUpdatableCredentials;
+
+    public array $updatableCredentials = [
+        'FACEBOOK_USER_TOKEN',
+        'FACEBOOK_USER_ID',
+        'FACEBOOK_ACCOUNTS_GROUP',
+        'FACEBOOK_APP_ID',
+        'FACEBOOK_APP_SECRET'
+    ];
+
+    public function getUpdatableCredentials(): array
+    {
+        return $this->updatableCredentials;
+    }
 
     public static function getCommonConfigKey(): ?string
     {
@@ -326,16 +340,6 @@ class FacebookMarketingDriver implements SyncDriverInterface
             ];
         }
     }
-    use HasUpdatableCredentials;
-    use SyncDriverTrait;
-
-    public array $updatableCredentials = [
-        'FACEBOOK_USER_TOKEN',
-        'FACEBOOK_USER_ID',
-        'FACEBOOK_ACCOUNTS_GROUP',
-        'FACEBOOK_APP_ID',
-        'FACEBOOK_APP_SECRET'
-    ];
 
     private ?AuthProviderInterface $authProvider = null;
     private ?LoggerInterface $logger = null;
@@ -578,6 +582,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             case MetaSyncScope::ENTITIES:
                 $results = [];
                 $accCfg = $config['AD_ACCOUNT'] ?? [];
+                $this->logger?->info("DEBUG: FacebookMarketingDriver::syncEntities (ENTITIES) - Features config: " . json_encode($accCfg));
 
                 // 1. Campaigns
                 if (!empty($accCfg[MetaFeature::CAMPAIGNS->value])) {
