@@ -620,6 +620,8 @@ class FacebookEntitySync
      * @param int|null $jobId
      * @param array|null $channeledPages
      * @param callable|null $entityProcessor
+     * @param array|int|string|null $channeledAccountId
+     * @param int|string|null $accountId
      * @return Response
      */
     public static function syncPosts(
@@ -631,7 +633,7 @@ class FacebookEntitySync
         ?int $jobId = null,
         ?array $channeledPages = null,
         ?callable $entityProcessor = null,
-        int|string|null $channeledAccountId = null,
+        array|int|string|null $channeledAccountId = null,
         int|string|null $accountId = null
     ): Response {
         try {
