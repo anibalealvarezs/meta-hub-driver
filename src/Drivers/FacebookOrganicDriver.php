@@ -404,9 +404,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $caId = $caObj ? $caObj->getId() : $pagePlatformId;
             $igCaId = $igCaObj ? $igCaObj->getId() : $igPlatformId;
 
+            $api->setPageId($pagePlatformId);
             $api->setPageAccesstoken($page['access_token'] ?? $config['access_token'] ?? null);
             $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
-            $api->setPageId($pagePlatformId);
 
             $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
             foreach ($chunks as $chunk) {
