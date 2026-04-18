@@ -635,6 +635,7 @@ class FacebookEntitySync
         int|string|null $accountId = null
     ): Response {
         try {
+            $logger?->info("DEBUG: FacebookEntitySync::syncPosts - IDs received: Account: $accountId | ChanneledAccount: $channeledAccountId");
             if (empty($channeledPages)) {
                 return new Response(json_encode(['message' => 'No pages to sync']), 200, ['Content-Type' => 'application/json']);
             }
