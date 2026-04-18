@@ -705,7 +705,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return [
             'metricSet' => MetricSet::BASIC,
             'breakdowns' => [MetricBreakdown::AGE, MetricBreakdown::GENDER],
-            'fields' => 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,creative_id,impressions,clicks,spend,actions,action_values',
+            'fields' => 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,actions,action_values',
             'metrics' => []
         ];
     }
