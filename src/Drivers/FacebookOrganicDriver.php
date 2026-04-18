@@ -728,8 +728,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     }
                     try {
                         // Resolve IG media type/product from Hub data
-                        $mType = $mediaInfo['data']['media_type'] ?? null;
-                        $pType = $mediaInfo['data']['media_product_type'] ?? null;
+                        $rawInfo = is_object($mediaInfo) && method_exists($mediaInfo, 'getData') ? $mediaInfo->getData() : ($mediaInfo['data'] ?? []);
+                        $mType = $rawInfo['media_type'] ?? null;
+                        $pType = $rawInfo['media_product_type'] ?? null;
 
                         // Prioritize MediaProductType for more accurate metrics (Story/Reel/Feed)
                         $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaProductType::tryFrom($pType)
