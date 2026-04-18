@@ -22,6 +22,8 @@ use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
+use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
+use Helpers\Helpers;
 
 class FacebookMarketingDriver implements SyncDriverInterface
 {
@@ -430,14 +432,24 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $accountPlatformId = (string)($account['id'] ?? $account);
             if (!$accountPlatformId) continue;
 
+            $accCfg = $account['account_data'] ?? $account;
+            if (isset($accCfg['enabled']) && !$accCfg['enabled']) {
+                $this->logger?->info("Skipping metrics sync for account $accountPlatformId (disabled in config)");
+                continue;
+            }
+
+            if (!empty($accCfg['lost_access'])) {
+                $this->logger?->info("Skipping metrics sync for account $accountPlatformId (lost access)");
+                continue;
+            }
+
             // Resolve Internal Ad Account Identity from pre-loaded map
             $caId = (count($caMap) && isset($caMap[$accountPlatformId])) ? $caMap[$accountPlatformId]->getId() : $accountPlatformId;
 
+            $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
             $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
-            foreach ($chunks as $chunk) {
-                $accCfg = $account['account_data'] ?? $account;
-                $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
 
+            foreach ($chunks as $chunk) {
                 foreach ($levelsToFetch as $level) {
                     if ($shouldContinue && !$shouldContinue()) {
                         throw new Exception("Sync aborted by the orchestrator.");
@@ -445,6 +457,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountPlatformId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
                     $response = $this->fetchInsights($api, $accountPlatformId, $chunk['start'], $chunk['end'], $config, $level, $shouldContinue);
                     $rows = $response['data'] ?? [];
+                    
+                    if (!empty($rows)) {
+                        $rows = $this->filterInsightRows($rows, $level, $config);
+                    }
 
                     if (!empty($rows)) {
                         $collection = FacebookMarketingMetricConvert::metrics(
@@ -689,7 +705,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return [
             'metricSet' => MetricSet::BASIC,
             'breakdowns' => [MetricBreakdown::AGE, MetricBreakdown::GENDER],
-            'fields' => 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,actions,action_values',
+            'fields' => 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,creative_id,impressions,clicks,spend,actions,action_values',
             'metrics' => []
         ];
     }
@@ -698,6 +714,60 @@ class FacebookMarketingDriver implements SyncDriverInterface
     {
         $msg = $e->getMessage();
         return (stripos($msg, '(#100)') !== false || stripos($msg, 'valid insights metric') !== false || stripos($msg, 'permissions') !== false);
+    }
+
+    private function filterInsightRows(array $rows, string $level, array $config): array
+    {
+        $entityKey = match($level) {
+            'campaign' => 'CAMPAIGN',
+            'adset' => 'ADSET',
+            'ad' => 'AD', // Level 'ad' corresponds to entity 'AD' and 'CREATIVE' filters
+            default => null
+        };
+
+        if (!$entityKey) return $rows;
+
+        $include = FacebookEntitySync::getFacebookFilter($config, $entityKey, 'cache_include');
+        $exclude = FacebookEntitySync::getFacebookFilter($config, $entityKey, 'cache_exclude');
+
+        // Special case: If level is 'ad', we also check 'CREATIVE' filters if they exist
+        $creativeInclude = ($level === 'ad') ? FacebookEntitySync::getFacebookFilter($config, 'CREATIVE', 'cache_include') : null;
+        $creativeExclude = ($level === 'ad') ? FacebookEntitySync::getFacebookFilter($config, 'CREATIVE', 'cache_exclude') : null;
+
+        if (!$include && !$exclude && !$creativeInclude && !$creativeExclude) return $rows;
+
+        $idField = "{$level}_id";
+        $nameField = "{$level}_name"; // Facebook API fields like campaign_name, adset_name, ad_name
+        
+        // Fix field name mapping for Facebook API
+        if ($level === 'adset') {
+            $nameField = 'adset_name';
+            $idField = 'adset_id';
+        }
+
+        return array_filter($rows, function($row) use ($include, $exclude, $idField, $nameField, $creativeInclude, $creativeExclude) {
+            $id = (string)($row[$idField] ?? '');
+            $name = (string)($row[$nameField] ?? '');
+            
+            $entityPasses = true;
+            if ($include || $exclude) {
+                $entityPasses = Helpers::matchesFilter($id, $include, $exclude) || Helpers::matchesFilter($name, $include, $exclude);
+            }
+
+            if (!$entityPasses) return false;
+
+            // Optional: Filter by creative if level is 'ad' and creative info is available
+            if ($creativeInclude || $creativeExclude) {
+                $cId = (string)($row['creative_id'] ?? '');
+                // Note: creative_name is not usually in insights fields unless requested or resolved later
+                // If it's not present, we can only filter by ID
+                if ($cId && !Helpers::matchesFilter($cId, $creativeInclude, $creativeExclude)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
     }
 
     /**
