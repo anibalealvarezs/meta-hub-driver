@@ -28,13 +28,7 @@ class FacebookEntitySync
 
     private static function matchesFilter(string $value, ?string $include, ?string $exclude): bool
     {
-        if ($exclude && preg_match($exclude, $value)) {
-            return false;
-        }
-        if ($include && !preg_match($include, $value)) {
-            return false;
-        }
-        return true;
+        return Helpers::matchesFilter($value, $include, $exclude);
     }
 
     /**
@@ -98,15 +92,18 @@ class FacebookEntitySync
                             $includeFilter = self::getFacebookFilter($config, 'CAMPAIGN', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'CAMPAIGN', 'cache_exclude');
 
+                            $logger?->info("DEBUG: FacebookEntitySync::syncCampaigns - Filters for CAMPAIGN: Include [$includeFilter] | Exclude [$excludeFilter]");
+
                             $filteredCampaigns = [];
                             foreach ($campaigns['data'] as $c) {
                                 $cName = $c['name'] ?? '';
                                 $cId = (string)$c['id'];
-                                if (self::matchesFilter($cName, $includeFilter, $excludeFilter) || self::matchesFilter($cId, $includeFilter, $excludeFilter)) {
+                                $matches = self::matchesFilter($cName, $includeFilter, $excludeFilter) || self::matchesFilter($cId, $includeFilter, $excludeFilter);
+                                if ($matches) {
                                     $authorizedIdsMap[$accId][] = $cId;
                                     $filteredCampaigns[] = $c;
                                 } else {
-                                    $logger?->info("Skipping campaign $cId ($cName) - filtered out by extraction patterns");
+                                    $logger?->info("Skipping campaign $cId ($cName) - filtered out by extraction patterns. (Include: $includeFilter, Exclude: $excludeFilter)");
                                 }
                             }
 
