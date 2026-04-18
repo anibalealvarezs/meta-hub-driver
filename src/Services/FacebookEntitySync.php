@@ -750,7 +750,8 @@ class FacebookEntitySync
         ?LoggerInterface $logger = null,
         ?int $jobId = null,
         ?array $channeledAccounts = null,
-        ?callable $entityProcessor = null
+        ?callable $entityProcessor = null,
+        ?array $channeledPages = null
     ): Response {
         try {
             if (empty($channeledAccounts)) {
@@ -804,10 +805,16 @@ class FacebookEntitySync
                                 }
 
                                 if (!empty($filteredMedia)) {
+                                    $fbPagePlatformId = (string)($pageCfg['id'] ?? '');
+                                    $fbPageEntity = array_values(array_filter($channeledPages ?? [], fn ($p) => (string)$p->getPlatformId() === $fbPagePlatformId))[0] ?? null;
+                                    $internalPageId = $fbPageEntity ? $fbPageEntity->getId() : $fbPagePlatformId;
+                                    
+                                    $igAccountId = (method_exists($channeledAccount, 'getAccount') && $channeledAccount->getAccount()) ? $channeledAccount->getAccount()->getId() : null;
+
                                     $converted = FacebookOrganicConvert::media(
                                         $filteredMedia, 
-                                        null, 
-                                        null, // accountId resolved in host
+                                        $internalPageId, 
+                                        $igAccountId, 
                                         $channeledAccount->getId()
                                     );
                                     
@@ -815,7 +822,7 @@ class FacebookEntitySync
                                     foreach ($converted as $item) {
                                         if ($entityProcessor) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                            ($entityProcessor)($item, 'media');
+                                            ($entityProcessor)($item, 'ig_media');
                                             $saveCount++;
                                         }
                                     }
