@@ -649,7 +649,7 @@ class FacebookEntitySync
                     if ($fetched) break;
                     $maxRetries = 3;
                     $retryCount = 0;
-
+                    while ($retryCount < $maxRetries && ! $fetched) {
                         try {
                             $api->setPageId($pageId);
                             $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
