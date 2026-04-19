@@ -410,7 +410,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
             
             $isEndDateRecent = $endDate->getTimestamp() >= (new \DateTime('yesterday'))->getTimestamp();
-            $isDurationShort = $startDate->getTimestamp() >= (new \DateTime('-30 days'))->getTimestamp();
+            $isDurationShort = $startDate->getTimestamp() >= (new \DateTime('-100 days'))->getTimestamp();
             $isRecent = $isEndDateRecent && $isDurationShort;
 
             $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
