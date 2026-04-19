@@ -405,7 +405,13 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
             $api->setPageId($pagePlatformId);
             $api->setPageAccesstoken($page['access_token'] ?? $config['access_token'] ?? null);
-            $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
+
+            try {
+                $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
+            } catch (Exception $e) {
+                $this->logger?->error("Failed to set page-based token for FB Page $pagePlatformId: " . $e->getMessage());
+                continue; // Skip this page
+            }
             
             $this->logger?->info("Syncing Organic metrics from {$startDate->format('Y-m-d')} to {$endDate->format('Y-m-d')}");
 

@@ -426,67 +426,81 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         $totalStats = ['metrics' => 0, 'rows' => 0, 'duplicates' => 0];
 
+        $consecutiveFailures = 0;
+        $maxConsecutiveFailures = 5;
+
         foreach ($accountsToProcess as $account) {
             $accountPlatformId = (string)($account['id'] ?? $account);
             if (!$accountPlatformId) continue;
 
-            $accCfg = $account['account_data'] ?? $account;
-            if (isset($accCfg['enabled']) && !$accCfg['enabled']) {
-                $this->logger?->info("Skipping metrics sync for account $accountPlatformId (disabled in config)");
-                continue;
-            }
+            try {
 
-            if (!empty($accCfg['lost_access'])) {
-                $this->logger?->info("Skipping metrics sync for account $accountPlatformId (lost access)");
-                continue;
-            }
+                $accCfg = $account['account_data'] ?? $account;
+                if (isset($accCfg['enabled']) && !$accCfg['enabled']) {
+                    $this->logger?->info("Skipping metrics sync for account $accountPlatformId (disabled in config)");
+                    continue;
+                }
 
-            // Resolve Internal Ad Account Entity object from pre-loaded map
-            $caObject = $caMap[$accountPlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($accountPlatformId);
-            $caId = $caObject->getPlatformId();
+                if (!empty($accCfg['lost_access'])) {
+                    $this->logger?->info("Skipping metrics sync for account $accountPlatformId (lost access)");
+                    continue;
+                }
 
-            $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
-            $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
+                // Resolve Internal Ad Account Entity object from pre-loaded map
+                $caObject = $caMap[$accountPlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($accountPlatformId);
+                $caId = $caObject->getPlatformId();
 
-            foreach ($chunks as $chunk) {
-                foreach ($levelsToFetch as $level) {
-                    if ($shouldContinue && !$shouldContinue()) {
-                        throw new Exception("Sync aborted by the orchestrator.");
-                    }
-                    $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountPlatformId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
-                    $response = $this->fetchInsights($api, $accountPlatformId, $chunk['start'], $chunk['end'], $config, $level, $shouldContinue);
-                    $rows = $response['data'] ?? [];
-                    
-                    if (!empty($rows)) {
-                        $rows = $this->filterInsightRows($rows, $level, $config);
-                    }
+                $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
+                $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
 
-                    if (!empty($rows)) {
-                        $collection = FacebookMarketingMetricConvert::metrics(
-                            rows: $rows, 
-                            channeledAccount: $caObject ?? $accountPlatformId, 
-                            level: $level, 
-                            logger: $this->logger,
-                            account: ($caObject && method_exists($caObject, 'getAccount')) ? $caObject->getAccount() : ($config['accounts_group_name'] ?? 'Default')
-                        );
-                        if ($this->dataProcessor && $collection->count() > 0) {
-                            $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::MARKETING);
-
-                            $result = ($this->dataProcessor)($collection, $this->logger);
-                            
-                            $metricsCount = $result['metrics'] ?? $collection->count();
-                            $processedRows = $result['rows'] ?? count($rows);
-                            $duplicates = $result['duplicates'] ?? 0;
-
-                            $totalStats['metrics'] += $metricsCount;
-                            $totalStats['rows'] += $processedRows;
-                            $totalStats['duplicates'] += $duplicates;
-
-                            $this->logger?->info("<<< EXITO: Sincronización completada para Ad Account: $accountPlatformId (Level: $level). Métricas: $metricsCount | Filas: $processedRows | Duplicados: $duplicates");
+                foreach ($chunks as $chunk) {
+                    foreach ($levelsToFetch as $level) {
+                        if ($shouldContinue && !$shouldContinue()) {
+                            throw new Exception("Sync aborted by the orchestrator.");
                         }
-                    } else {
-                        $this->logger?->info("--- INFO: No se encontraron datos de Marketing para Ad Account: $accountPlatformId (Level: $level)");
+                        $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountPlatformId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
+                        $response = $this->fetchInsights($api, $accountPlatformId, $chunk['start'], $chunk['end'], $config, $level, $shouldContinue);
+                        $rows = $response['data'] ?? [];
+                        
+                        if (!empty($rows)) {
+                            $rows = $this->filterInsightRows($rows, $level, $config);
+                        }
+
+                        if (!empty($rows)) {
+                            $collection = FacebookMarketingMetricConvert::metrics(
+                                rows: $rows, 
+                                channeledAccount: $caObject ?? $accountPlatformId, 
+                                level: $level, 
+                                logger: $this->logger,
+                                account: ($caObject && method_exists($caObject, 'getAccount')) ? $caObject->getAccount() : ($config['accounts_group_name'] ?? 'Default')
+                            );
+                            if ($this->dataProcessor && $collection->count() > 0) {
+                                $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::MARKETING);
+
+                                $result = ($this->dataProcessor)($collection, $this->logger);
+                                
+                                $metricsCount = $result['metrics'] ?? $collection->count();
+                                $processedRows = $result['rows'] ?? count($rows);
+                                $duplicates = $result['duplicates'] ?? 0;
+
+                                $totalStats['metrics'] += $metricsCount;
+                                $totalStats['rows'] += $processedRows;
+                                $totalStats['duplicates'] += $duplicates;
+
+                                $this->logger?->info("<<< EXITO: Sincronización completada para Ad Account: $accountPlatformId (Level: $level). Métricas: $metricsCount | Filas: $processedRows | Duplicados: $duplicates");
+                            }
+                        } else {
+                            $this->logger?->info("--- INFO: No se encontraron datos de Marketing para Ad Account: $accountPlatformId (Level: $level)");
+                        }
                     }
+                }
+                $consecutiveFailures = 0; // Reset on success
+            } catch (Exception $e) {
+                if (str_contains($e->getMessage(), 'Sync aborted')) throw $e;
+                $this->logger?->error("Unhandled error syncing Ad Account $accountPlatformId: " . $e->getMessage());
+                $consecutiveFailures++;
+                if ($consecutiveFailures >= $maxConsecutiveFailures) {
+                    throw new Exception("Terminating marketing sync due to $consecutiveFailures consecutive unhandled failures.");
                 }
             }
         }
