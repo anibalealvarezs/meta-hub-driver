@@ -395,13 +395,13 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $this->logger?->info(">>> INICIO: Sincronizando métricas Orgánicas para FB Page: $pagePlatformId" . ($igPlatformId ? " e Instagram: $igPlatformId" : ""));
             
             // Resolve Internal Identities from pre-loaded maps
-            $pageObj = (count($pageMap) && isset($pageMap[$pagePlatformId])) ? $pageMap[$pagePlatformId] : null;
-            $caObj = (count($caMap) && isset($caMap[$pagePlatformId])) ? $caMap[$pagePlatformId] : null;
-            $igCaObj = $igPlatformId ? ((count($caMap) && isset($caMap[$igPlatformId])) ? $caMap[$igPlatformId] : null) : null;
+            $pageObj = $pageMap[$pagePlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($pagePlatformId);
+            $caObj = $caMap[$pagePlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($pagePlatformId);
+            $igCaObj = $igPlatformId ? ($caMap[$igPlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($igPlatformId)) : null;
 
-            $pageId = $pageObj ? $pageObj->getId() : $pagePlatformId;
-            $caId = $caObj ? $caObj->getId() : $pagePlatformId;
-            $igCaId = $igCaObj ? $igCaObj->getId() : $igPlatformId;
+            $pageId = $pageObj->getPlatformId();
+            $caId = $caObj->getPlatformId();
+            $igCaId = $igCaObj ? $igCaObj->getPlatformId() : null;
 
             $api->setPageId($pagePlatformId);
             $api->setPageAccesstoken($page['access_token'] ?? $config['access_token'] ?? null);

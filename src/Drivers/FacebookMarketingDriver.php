@@ -442,8 +442,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
             }
 
             // Resolve Internal Ad Account Entity object from pre-loaded map
-            $caObject = (count($caMap) && isset($caMap[$accountPlatformId])) ? $caMap[$accountPlatformId] : null;
-            $caId = $caObject ? $caObject->getId() : $accountPlatformId;
+            $caObject = $caMap[$accountPlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($accountPlatformId);
+            $caId = $caObject->getPlatformId();
 
             $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
             $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
