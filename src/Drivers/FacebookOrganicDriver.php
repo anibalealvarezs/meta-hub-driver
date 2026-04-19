@@ -470,7 +470,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                             postPlatformId: $postInsight['id'],
                             logger: $this->logger,
                             page: $pageObj ?? $pageId,
-                            post: $postInsight['id'],
+                            post: $postInsight['instance'] ?? $postInsight['id'],
                             period: 'lifetime',
                             channeledAccount: $caObj ?? $pagePlatformId,
                             account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')
@@ -486,7 +486,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                             rows: $mediaInsight['data'],
                             date: date('Y-m-d'), // Lifetime metrics must be stamped with 'today'
                             page: $pageObj ?? $pageId,
-                            post: $mediaInsight['id'],
+                            post: $mediaInsight['instance'] ?? $mediaInsight['id'],
                             account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
                             channeledAccount: $igCaObj ?? $igPlatformId,
                             logger: $this->logger
@@ -741,6 +741,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         if (!empty($postInsights['data'])) {
                             $data['fb_post_insights'][] = [
                                 'id' => $postId,
+                                'instance' => $postInfo,
                                 'data' => $postInsights['data']
                             ];
                         }
@@ -784,6 +785,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         if (!empty($mediaInsights['data'])) {
                             $data['ig_media_insights'][] = [
                                 'id' => $mediaId,
+                                'instance' => $mediaInfo,
                                 'data' => $mediaInsights['data']
                             ];
                         }
