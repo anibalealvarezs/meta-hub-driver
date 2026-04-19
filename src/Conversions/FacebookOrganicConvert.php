@@ -28,11 +28,11 @@ class FacebookOrganicConvert
             'channel' => 'facebook_organic',
             'platform_id_field' => 'id',
             'date_field' => 'created_time',
-            'context' => [
-                'pageId' => $pageId,
-                'accountId' => $accountId,
+            'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
+                'pagePlatformId' => $pageId,
+                'accountPlatformId' => $accountId,
                 'channeledAccountId' => $channeledAccountId,
-            ],
+            ]),
         ]);
     }
 
@@ -51,9 +51,9 @@ class FacebookOrganicConvert
                 'hostname' => fn ($r) => $r['hostname'] ?? 'facebook.com',
                 'canonicalId' => fn ($r) => $r['url'] ?? $r['id'] ?? null, // Simplified for SDK
             ],
-            'context' => [
-                'accountId' => $accountId,
-            ],
+            'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
+                'accountPlatformId' => $accountId,
+            ]),
         ]);
     }
 
@@ -70,11 +70,11 @@ class FacebookOrganicConvert
             'channel' => 'facebook_organic',
             'platform_id_field' => 'id',
             'date_field' => 'timestamp',
-            'context' => [
-                'pageId' => $pageId,
-                'accountId' => $accountId,
+            'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
+                'pagePlatformId' => $pageId,
+                'accountPlatformId' => $accountId,
                 'channeledAccountId' => $channeledAccountId,
-            ],
+            ]),
         ]);
     }
 }

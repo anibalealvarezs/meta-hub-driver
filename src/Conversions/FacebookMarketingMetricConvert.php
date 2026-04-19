@@ -51,12 +51,15 @@ class FacebookMarketingMetricConvert
             'metrics' => array_combine($metricsList, $metricsList),
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
-            'context' => [
+            'context' => UniversalMetricConverter::getUniversalContext([
                 'account' => $account,
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
-                'creative' => $creative,
-            ],
+                'campaign' => $campaign,
+                'channeledCampaign' => $channeledCampaign,
+                'channeledAdGroup' => $channeledAdGroup,
+                'channeledAd' => $channeledAd,
+            ]),
             'row_key_fields' => [
                 'account_id' => ['account', 'channeledAccount'],
                 'ad_id'      => 'channeledAd',

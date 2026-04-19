@@ -42,13 +42,13 @@ class FacebookOrganicMetricConvert
                 'row_path' => 'values',
                 'nested_date_field' => 'end_time',
                 'metrics' => ['value' => $row['name'] ?? 'unknown'],
-                'context' => [
+                'context' => UniversalMetricConverter::getUniversalContext([
                     'page' => $page,
                     'post' => $post,
                     'account' => $account,
                     'channeledAccount' => $channeledAccount,
                     'channeledAccountId' => $channeledAccountId,
-                ]
+                ])
             ], $logger);
             
             foreach ($rowMetrics as $m) $collection->add($m);
@@ -118,12 +118,12 @@ class FacebookOrganicMetricConvert
                             'date_field' => 'date',
                             'metrics' => ['breakdown_value' => ($row['name'] ?? 'unknown')],
                             'dimensions' => $dimensions,
-                            'context' => [
+                            'context' => UniversalMetricConverter::getUniversalContext([
                                 'account' => $account,
                                 'channeledAccount' => $channeledAccount,
                                 'channeledAccountId' => $channeledAccountId,
                                 'page' => $page,
-                            ],
+                            ]),
                         ], $logger);
                         foreach ($rowMetrics as $m) $collection->add($m);
                     }
@@ -159,13 +159,13 @@ class FacebookOrganicMetricConvert
                 'date_field' => 'date',
                 'metrics' => ['values' => $row['name'] ?? 'unknown'],
                 'include_nulls' => true,
-                'context' => [
+                'context' => UniversalMetricConverter::getUniversalContext([
                     'account' => $account,
                     'channeledAccount' => $channeledAccount,
                     'channeledAccountId' => $channeledAccountId,
                     'page' => $page,
                     'post' => $post,
-                ]
+                ])
             ], $logger);
             foreach ($rowMetrics as $m) $collection->add($m);
         }

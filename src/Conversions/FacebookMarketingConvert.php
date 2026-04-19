@@ -32,9 +32,9 @@ class FacebookMarketingConvert
                 'budget' => 'daily_budget',
                 'lifetimeBudget' => 'lifetime_budget',
             ],
-            'context' => [
+            'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'channeledAccountId' => $channeledAccountId,
-            ],
+            ]),
         ]);
     }
 
@@ -54,9 +54,9 @@ class FacebookMarketingConvert
                 'targeting' => 'targeting',
                 'channeledCampaignId' => 'campaign_id',
             ],
-            'context' => [
+            'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'channeledAccountId' => $channeledAccountId,
-            ],
+            ]),
         ]);
     }
 
@@ -73,9 +73,9 @@ class FacebookMarketingConvert
                 'channeledAdGroupId' => 'adset_id',
                 'channeledCreativeId' => 'creative.id',
             ],
-            'context' => [
+            'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'channeledAccountId' => $channeledAccountId,
-            ],
+            ]),
         ]);
     }
 
@@ -88,9 +88,9 @@ class FacebookMarketingConvert
             'mapping' => [
                 'name' => 'name',
             ],
-            'context' => [
+            'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'channeledAccountId' => $channeledAccountId,
-            ],
+            ]),
         ]);
     }
 }
