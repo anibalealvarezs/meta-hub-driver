@@ -314,6 +314,16 @@ class FacebookOrganicDriver implements SyncDriverInterface
         return 'facebook_organic';
     }
 
+    public static function getProviderLabel(): string
+    {
+        return 'Meta';
+    }
+
+    public static function getProviderName(): string
+    {
+        return 'meta';
+    }
+
     public function setAuthProvider(AuthProviderInterface $provider): void
     {
         $this->authProvider = $provider;

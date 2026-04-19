@@ -357,6 +357,16 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return 'facebook_marketing';
     }
 
+    public static function getProviderLabel(): string
+    {
+        return 'Meta';
+    }
+
+    public static function getProviderName(): string
+    {
+        return 'meta';
+    }
+
     public function setAuthProvider(AuthProviderInterface $provider): void
     {
         $this->authProvider = $provider;
