@@ -20,6 +20,7 @@ use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaFeature;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
+use Doctrine\Common\Collections\ArrayCollection;
 
 class FacebookOrganicDriver implements SyncDriverInterface
 {
