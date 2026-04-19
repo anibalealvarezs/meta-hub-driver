@@ -408,13 +408,26 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $api->setPageId($pagePlatformId);
             $api->setPageAccesstoken($page['access_token'] ?? $config['access_token'] ?? null);
             $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
+            
+            $isRecent = $endDate->getTimestamp() >= (new \DateTime('yesterday'))->getTimestamp();
 
             $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
-            foreach ($chunks as $chunk) {
+            foreach ($chunks as $idx => $chunk) {
                 if ($shouldContinue && !$shouldContinue()) {
                     throw new Exception("Sync aborted by the orchestrator.");
                 }
-                $pageData = $this->fetchPageData($api, $page, $chunk['start'], $chunk['end'], $config, $shouldContinue, $identityMapper, $pageObj ?? $pageId, $igCaObj ?? $igCaId);
+                $pageData = $this->fetchPageData(
+                    $api, 
+                    $page, 
+                    $chunk['start'], 
+                    $chunk['end'], 
+                    $config, 
+                    $shouldContinue, 
+                    $identityMapper, 
+                    $pageObj ?? $pageId, 
+                    $igCaObj ?? $igCaId,
+                    ($idx === 0 && $isRecent) // Only include lifetime metrics on the first chunk of a recent sync
+                );
 
                 $collection = new ArrayCollection();
 
@@ -469,7 +482,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     foreach ($pageData['ig_media_insights'] as $mediaInsight) {
                         $igMediaCollection = FacebookOrganicMetricConvert::igMediaMetrics(
                             rows: $mediaInsight['data'],
-                            date: $chunk['start'],
+                            date: date('Y-m-d'), // Lifetime metrics must be stamped with 'today'
                             page: $pageObj ?? $pageId,
                             post: $mediaInsight['id'],
                             account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
@@ -646,7 +659,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
         ?callable $shouldContinue = null,
         ?callable $identityMapper = null,
         $internalPageId = null,
-        $igCaId = null
+        $igCaId = null,
+        bool $includeLifetime = true
     ): array {
         $pagePlatformId = (string)($page['id'] ?? $page);
         
@@ -705,7 +719,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
 
         // 3. Facebook Post Insights (Dynamic Discovery via Mapper)
-        if (($page[MetaFeature::POST_METRICS->value] ?? false) && $identityMapper && $internalPageId) {
+        if ($includeLifetime && ($page[MetaFeature::POST_METRICS->value] ?? false) && $identityMapper && $internalPageId) {
             $postsMap = $identityMapper('posts', ['page_id' => $internalPageId]);
             if ($postsMap) {
                 foreach ($postsMap as $postId => $postInfo) {
@@ -736,7 +750,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
 
         // 4. Instagram Media Insights (Dynamic Discovery via Mapper)
-        if (!empty($page['ig_account']) && !empty($page[MetaFeature::IG_ACCOUNT_MEDIA_METRICS->value]) && $identityMapper && $igCaId) {
+        if ($includeLifetime && !empty($page['ig_account']) && !empty($page[MetaFeature::IG_ACCOUNT_MEDIA_METRICS->value]) && $identityMapper && $igCaId) {
             // Instagram media are often synced under ChanneledAccount context
             $mediaMap = $identityMapper('posts', ['channeled_account_id' => $igCaId]);
             if ($mediaMap) {
