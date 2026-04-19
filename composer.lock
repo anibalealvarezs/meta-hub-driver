@@ -12,13 +12,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "9c6f2bb82052a88d46a05980a5a0f36ed74bf75d"
+                "reference": "2539607f24d21f2684d3e7baa7a01e9e8144fc91"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-9c6f2bb82052a88d46a05980a5a0f36ed74bf75d-zip-94db2b.zip",
-                "reference": "9c6f2bb82052a88d46a05980a5a0f36ed74bf75d",
-                "shasum": "c10e1b551ed06654ce3b061b077af946808f8099"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-2539607f24d21f2684d3e7baa7a01e9e8144fc91-zip-5d0272.zip",
+                "reference": "2539607f24d21f2684d3e7baa7a01e9e8144fc91",
+                "shasum": "b640d2460e5d16cd818a36afa155d33a47b01854"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "@dev",
@@ -67,7 +67,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-04-17T22:38:18+00:00"
+            "time": "2026-04-19T23:14:45+00:00"
         },
         {
             "name": "anibalealvarezs/api-driver-core",
@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "fcedfcbd9888e630472750cf03de761923a956f9"
+                "reference": "8db25099aee139c7251b134cb7314dc9da9b5ddf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-fcedfcbd9888e630472750cf03de761923a956f9-zip-9b749a.zip",
-                "reference": "fcedfcbd9888e630472750cf03de761923a956f9",
-                "shasum": "ccb6ad5dd4049db6ccbee1d25dca37bb11212ca3"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-8db25099aee139c7251b134cb7314dc9da9b5ddf-zip-0a7101.zip",
+                "reference": "8db25099aee139c7251b134cb7314dc9da9b5ddf",
+                "shasum": "caf5959f00c0f064ac78659d3066a313467ca316"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -111,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-17T23:11:12+00:00"
+            "time": "2026-04-19T23:21:04+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -119,13 +119,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "db0b34ac5b51b9f11e05b249d42eba89f3014415"
+                "reference": "07d2d2b9ae0a64826763fadd8503ee354220db3e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-db0b34ac5b51b9f11e05b249d42eba89f3014415-zip-2927b4.zip",
-                "reference": "db0b34ac5b51b9f11e05b249d42eba89f3014415",
-                "shasum": "c30856f98bcf0a02ee8dbf1d8749a045e1c3d354"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-07d2d2b9ae0a64826763fadd8503ee354220db3e-zip-5d2b3b.zip",
+                "reference": "07d2d2b9ae0a64826763fadd8503ee354220db3e",
+                "shasum": "357a4c649e348a3da3589dcbebc22adb970072fc"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -176,7 +176,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-04-18T22:33:27+00:00"
+            "time": "2026-04-19T23:19:40+00:00"
         },
         {
             "name": "anibalealvarezs/oauth-v1",
