@@ -14,10 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
 use Exception;
-use Doctrine\Common\Collections\ArrayCollection;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
-use Doctrine\ORM\EntityManagerInterface;
-use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
 use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaFeature;
@@ -923,20 +920,11 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $output = $config['output'] ?? null;
         if ($output) $output->writeln("🚀 Seeding Facebook Organic Realistic Demo Data...");
 
-        $em = $seeder->getEntityManager();
-        $channelClass = $seeder->getEnumClass('channel');
-        $fbChan = $channelClass::facebook_organic;
+        $gscChan = \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic;
         
         $igMediaTypes = ['IMAGE', 'VIDEO', 'CAROUSEL_ALBUM', 'REEL'];
         $igProductTypes = ['FEED', 'REELS', 'STORY'];
         $dates = $seeder->getDates(30);
-
-        $accountClass = $seeder->getEntityClass('account');
-        $pageClass = $seeder->getEntityClass('page');
-        $chanAccountClass = $seeder->getEntityClass('channeled_account');
-        $postClass = $seeder->getEntityClass('post');
-        $accTypeEnumClass = $seeder->getEnumClass('account_type');
-        $convertClass = "\\Anibalealvarezs\\MetaHubDriver\\Conversions\\FacebookOrganicMetricConvert";
 
         $faker = \Faker\Factory::create('en_US');
 
@@ -944,38 +932,36 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $seededPages = [];
         for ($i = 1; $i <= $pagesToSeed; $i++) {
             $name = "Demo Brand $i";
-            $fbAcc = $em->getRepository($accountClass)->findOneBy(['name' => "$name (FB)"]);
-            if (!$fbAcc) {
-                $fbAcc = (new $accountClass())->addName("$name (FB)");
-                $em->persist($fbAcc);
-            }
+            
+            $fbAcc = $seeder->resolveEntity('account', ['name' => "$name (FB)"]);
 
             $fbPId = "fb_page_$i";
-            $page = $em->getRepository($pageClass)->findOneBy(['platformId' => $fbPId]);
-            if (!$page) {
-                $page = (new $pageClass())->addPlatformId($fbPId)->addAccount($fbAcc)->addTitle("$name FB Page")->addUrl("https://fb.com/$fbPId")->addCanonicalId($fbPId);
-                $em->persist($page);
-            }
+            $page = $seeder->resolveEntity('page', [
+                'platformId' => $fbPId,
+                'account' => $fbAcc,
+                'title' => "$name FB Page",
+                'url' => "https://fb.com/$fbPId",
+                'canonicalId' => $fbPId
+            ]);
 
-            $caFb = $em->getRepository($chanAccountClass)->findOneBy(['platformId' => $fbPId]);
-            if (!$caFb) {
-                $caFb = (new $chanAccountClass())->addPlatformId($fbPId)->addAccount($fbAcc)->addType('facebook_page')->addChannel($fbChan->value)->addName("$name FB Page");
-                $em->persist($caFb);
-            }
+            $caFb = $seeder->resolveEntity('channeled_account', [
+                'platformId' => $fbPId,
+                'account' => $fbAcc,
+                'type' => 'facebook_page',
+                'channel' => $gscChan->value,
+                'name' => "$name FB Page"
+            ]);
 
             $igPId = "ig_acc_$i";
-            $caIg = $em->getRepository($chanAccountClass)->findOneBy(['platformId' => $igPId, 'channel' => $fbChan->value]);
-            if (!$caIg) {
-                $caIg = $em->getRepository($chanAccountClass)->findOneBy(['name' => "$name IG Account", 'channel' => $fbChan->value]);
-            }
-            if (!$caIg) {
-                $caIg = (new $chanAccountClass())->addPlatformId($igPId)->addAccount($fbAcc)->addType('instagram')->addChannel($fbChan->value)->addName("$name IG Account");
-                $caIg->addData(['instagram_id' => $igPId, 'facebook_page_id' => $fbPId]); 
-                $em->persist($caIg);
-            } else {
-                $caIg->addPlatformId($igPId)->addAccount($fbAcc)->addData(['instagram_id' => $igPId, 'facebook_page_id' => $fbPId]);
-            }
-            $em->flush();
+            $caIg = $seeder->resolveEntity('channeled_account', [
+                'platformId' => $igPId,
+                'account' => $fbAcc,
+                'type' => 'instagram',
+                'channel' => $gscChan->value,
+                'name' => "$name IG Account",
+                'data' => ['instagram_id' => $igPId, 'facebook_page_id' => $fbPId]
+            ]);
+
             $seededPages[] = ['page' => $page, 'fbAcc' => $fbAcc, 'caIg' => $caIg, 'caFb' => $caFb];
         }
 
@@ -986,7 +972,6 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
 
         $now = date('Y-m-d H:i:s');
-        $conn = $em->getConnection();
 
         foreach ($seededPages as $data) {
             $page = $data['page'];
@@ -994,164 +979,145 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $caIg = $data['caIg'];
             $caFb = $data['caFb'];
 
-            $postParams = [];
+            $postPIds = [];
             $igMediaCount = rand(50, 100);
             for ($m = 0; $m < $igMediaCount; $m++) {
-                $mediaPId = 'ig_media_' . $page->getId() . '_' . $m;
+                $mediaPId = 'ig_media_' . $page->getPlatformId() . '_' . $m;
                 $itemDate = $dates[array_rand($dates)];
-                $postParams[] = [
-                    'post_id' => $mediaPId,
-                    'account_id' => $fbParent->getId(),
-                    'page_id' => $page->getId(),
-                    'channeled_account_id' => $caIg->getId(),
-                    'data' => json_encode([
+                $postPIds[] = $mediaPId;
+                
+                $seeder->queueMetric(
+                    channel: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic,
+                    name: 'post_engagement', 
+                    date: $itemDate,
+                    value: 0,
+                    gAccId: $fbParent->id,
+                    pageId: $page->id,
+                    caId: $caIg->id,
+                    postPId: $mediaPId,
+                    data: json_encode([
                         'id' => $mediaPId,
                         'caption' => $faker->sentence(),
                         'media_type' => $igMediaTypes[array_rand($igMediaTypes)],
                         'media_product_type' => $igProductTypes[array_rand($igProductTypes)],
+                        'timestamp' => $itemDate . 'T12:00:00+0000',
                         'permalink' => "https://www.instagram.com/p/demo_" . $mediaPId,
-                        'timestamp' => $itemDate . 'T07:00:00+0000',
-                    ]),
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
+                    ])
+                );
             }
 
             $fbPostCount = rand(30, 60);
             for ($p = 0; $p < $fbPostCount; $p++) {
-                $postPId = 'fb_post_' . $page->getId() . '_' . $p;
+                $postPId = 'fb_post_' . $page->getPlatformId() . '_' . $p;
                 $itemDate = $dates[array_rand($dates)];
-                $postParams[] = [
-                    'post_id' => $postPId,
-                    'account_id' => $fbParent->getId(),
-                    'page_id' => $page->getId(),
-                    'channeled_account_id' => $caFb->getId(),
-                    'data' => json_encode([
+                $postPIds[] = $postPId;
+
+                $seeder->queueMetric(
+                    channel: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic,
+                    name: 'post_impressions', 
+                    date: $itemDate,
+                    value: 0,
+                    gAccId: $fbParent->id,
+                    pageId: $page->id,
+                    caId: $caFb->id,
+                    postPId: $postPId,
+                    data: json_encode([
                         'id' => $postPId,
                         'message' => $faker->sentence(),
                         'created_time' => $itemDate . 'T07:00:00+0000',
                         'permalink_url' => "https://www.facebook.com/posts/demo_" . $postPId,
-                    ]),
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            }
-
-            if (!empty($postParams)) {
-                $cols = array_keys($postParams[0]);
-                $plat = $conn->getDatabasePlatform();
-                $isP = str_contains(strtolower(get_class($plat)), 'postgre');
-                $ignore = $isP ? "" : "IGNORE";
-                $suffix = $isP ? " ON CONFLICT DO NOTHING" : "";
-                $sql = "INSERT $ignore INTO posts (" . implode(', ', $cols) . ") VALUES ";
-                $values = [];
-                $flatParams = [];
-                foreach ($postParams as $row) {
-                    $values[] = "(" . implode(',', array_fill(0, count($row), '?')) . ")";
-                    foreach ($row as $val) $flatParams[] = $val;
-                }
-                $sql .= implode(', ', $values) . $suffix;
-                $conn->executeStatement($sql, $flatParams);
-            }
-
-            $allPosts = $em->getRepository($postClass)->findBy(['page' => $page]);
-            $fbPostEntities = [];
-            $mediaEntities = [];
-            $currentLifetimeValues = [];
-
-            foreach ($allPosts as $pst) {
-                if (str_starts_with($pst->getPostId(), 'fb_post_')) {
-                    $fbPostEntities[] = $pst;
-                } elseif (str_starts_with($pst->getPostId(), 'ig_media_')) {
-                    $mediaEntities[] = $pst;
-                    $currentLifetimeValues[$pst->getPostId()] = [
-                        'reach' => rand(10, 50), 'impressions' => rand(15, 60), 'likes' => 0, 'comments' => 0,
-                        'saved' => 0, 'shares' => 0, 'views' => 0, 'total_interactions' => 0,
-                    ];
-                }
+                    ])
+                );
             }
 
             // FB Simulation
-            $gId = $fbParent->getId();
-            $gAccName = $fbParent->getName();
-            $pId = $page->getId();
+            $gId = $fbParent->id;
+            $gAccName = $fbParent->getTitle();
+            $pId = $page->id;
             $pageUrl = $page->getUrl();
-            $caFbId = $caFb->getId();
+            $caFbId = $caFb->id;
 
-            $this->seedDailyMetrics($seeder, $dates, $fbChan, [
-                'page_fans' => [0, 10, 'trend'],
-                'page_impressions' => [50, 500],
-                'page_post_engagements' => [10, 100],
-                'page_views_total' => [5, 40],
-            ], $gId, $caFbId, null, null, null, $pId, $gAccName, (string)$caFb->getPlatformId(), null, null, null, $pageUrl, null);
+            $this->seedDailyMetrics(
+                seeder: $seeder, 
+                dates: $dates, 
+                chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic, 
+                metricsCfg: [
+                    'page_fans' => [0, 10, 'trend'],
+                    'page_impressions' => [50, 500],
+                    'page_post_engagements' => [10, 100],
+                    'page_views_total' => [5, 40],
+                ], 
+                gId: $gId, 
+                caId: $caFbId, 
+                gCpId: null, 
+                cpId: null, 
+                postId: null, 
+                pId: $pId, 
+                gAccName: $gAccName, 
+                caPId: (string)$caFb->getPlatformId(), 
+                gCpPId: null, 
+                cpPId: null, 
+                pageUrl: $pageUrl, 
+                postPId: null
+            );
 
-            foreach ($fbPostEntities as $fbPostEntity) {
-                $this->seedDailyMetrics($seeder, $dates, $fbChan, [
-                    'post_impressions' => [10, 100],
-                    'post_engagement' => [2, 20],
-                    'post_reactions_by_type_total' => [1, 10],
-                ], $gId, $caFbId, null, null, $fbPostEntity->getId(), $pId, $gAccName, (string)$caFb->getPlatformId(), null, null, null, $pageUrl, $fbPostEntity->getPostId());
-            }
-
-            // IG Simulation
-            $allIgMetrics = new ArrayCollection();
-            foreach ($dates as $date) {
-                $accountPayload = [
-                    ['name' => 'reach', 'total_value' => ['value' => rand(100, 500)]],
-                    ['name' => 'impressions', 'total_value' => ['value' => rand(150, 600)]],
-                    ['name' => 'profile_views', 'total_value' => ['value' => rand(10, 100)]],
-                    ['name' => 'website_clicks', 'total_value' => ['value' => rand(0, 5)]],
-                    ['name' => 'profile_links_taps', 'total_value' => ['value' => rand(0, 5)]],
-                    ['name' => 'follows_and_unfollows', 'total_value' => ['value' => rand(-2, 5)]],
-                    ['name' => 'replies', 'total_value' => ['value' => rand(0, 5)]],
-                    ['name' => 'accounts_engaged', 'total_value' => ['value' => rand(5, 40)]],
-                ];
-                $accountMetrics = $convertClass::igAccountMetrics($accountPayload, $date, $page, $fbParent, $caIg);
-                foreach ($accountMetrics as $m) {
-                    $m->date = new DateTime($date);
-                    $m->page = $page;
-                    $allIgMetrics->add($m);
+            foreach ($postPIds as $pstId) {
+                if (str_starts_with($pstId, 'fb_post_')) {
+                    $this->seedDailyMetrics(
+                        seeder: $seeder, 
+                        dates: $dates, 
+                        chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic, 
+                        metricsCfg: [
+                            'post_impressions' => [10, 100],
+                            'post_engagement' => [2, 20],
+                            'post_reactions_by_type_total' => [1, 10],
+                        ], 
+                        gId: $gId, 
+                        caId: $caFbId, 
+                        gCpId: null, 
+                        cpId: null, 
+                        postId: null, 
+                        pId: $pId, 
+                        gAccName: $gAccName, 
+                        caPId: (string)$caFb->getPlatformId(), 
+                        gCpPId: null, 
+                        cpPId: null, 
+                        pageUrl: $pageUrl, 
+                        postPId: $pstId
+                    );
+                } else {
+                    $this->seedDailyMetrics(
+                        seeder: $seeder, 
+                        dates: $dates, 
+                        chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic, 
+                        metricsCfg: [
+                            'reach' => [10, 50],
+                            'impressions' => [15, 60],
+                            'likes' => [1, 10],
+                            'comments' => [0, 5],
+                        ], 
+                        gId: $gId, 
+                        caId: $caIg->id, 
+                        gCpId: null, 
+                        cpId: null, 
+                        postId: null, 
+                        pId: $page->id, 
+                        gAccName: $gAccName, 
+                        caPId: (string)$caIg->getPlatformId(), 
+                        gCpPId: null, 
+                        cpPId: null, 
+                        pageUrl: $pageUrl, 
+                        postPId: $pstId
+                    );
                 }
-
-                foreach ($mediaEntities as $media) {
-                    $mId = (string)$media->getPostId();
-                    $currentLifetimeValues[$mId]['reach'] += rand(5, 50);
-                    $currentLifetimeValues[$mId]['impressions'] += rand(10, 100);
-                    $currentLifetimeValues[$mId]['likes'] += rand(0, 5);
-                    $currentLifetimeValues[$mId]['comments'] += rand(0, 2);
-                    $currentLifetimeValues[$mId]['saved'] += rand(0, 3);
-                    $currentLifetimeValues[$mId]['shares'] += rand(0, 2);
-                    $currentLifetimeValues[$mId]['views'] += rand(10, 40);
-                    $currentLifetimeValues[$mId]['total_interactions'] = array_sum(array_slice($currentLifetimeValues[$mId], 2, 4));
-
-                    $mediaPayload = [];
-                    foreach ($currentLifetimeValues[$mId] as $n => $v) {
-                        $mediaPayload[] = ['name' => $n, 'values' => [['value' => $v, 'end_time' => $date . 'T07:00:00+0000']]];
-                    }
-
-                    $metrics = $convertClass::igMediaMetrics($mediaPayload, $date, $page, $media, $fbParent, $caIg);
-                    foreach ($metrics as $metric) {
-                        $metric->post = $media;
-                        $metric->page = $page;
-                        $metric->account = $fbParent;
-                        $metric->channeledAccount = $caIg;
-                        $metric->gId = $gId;
-                        $allIgMetrics->add($metric);
-                    }
-                }
-            }
-
-            if (!$allIgMetrics->isEmpty()) {
-                $seeder->processMetricsMassive($allIgMetrics);
             }
 
             if ($progress) $progress->advance();
-            $em->clear();
         }
         if ($progress) $progress->finish();
     }
 
-    private function seedDailyMetrics($seeder, $dates, $chan, $metricsCfg, $gId, $caId, $gCpId, $cpId, $postId, $pId, $gAccName, $caPId, $gCpPId, $cpPId, $gPostPId, $pageUrl, $postPId): void
+    private function seedDailyMetrics($seeder, $dates, $chan, $metricsCfg, $gId, $caId, $gCpId, $cpId, $postId, $pId, $gAccName, $caPId, $gCpPId, $cpPId, $pageUrl, $postPId): void
     {
         $currentValues = [];
         foreach ($metricsCfg as $name => $cfg) {
@@ -1309,15 +1275,30 @@ class FacebookOrganicDriver implements SyncDriverInterface
      */
     public function initializeEntities(array $config = []): array
     {
-        $entityManager = $config['manager'] ?? null;
-        if (!$entityManager instanceof EntityManagerInterface) {
-            throw new Exception("EntityManagerInterface required for FacebookOrganicDriver entity initialization.");
+        $assets = $this->fetchAvailableAssets(throwOnError: true);
+        
+        $initializerClass = '\\Anibalealvarezs\\MetaHubDriver\\Services\\MetaInitializerService';
+        if (!class_exists($initializerClass)) {
+            throw new Exception("MetaInitializerService not found.");
+        }
+        
+        $initializer = new $initializerClass($this->logger);
+        
+        $identityMapper = $config['identityMapper'] ?? null;
+        $dataProcessor = $config['dataProcessor'] ?? null;
+
+        if (!$identityMapper || !$dataProcessor) {
+            // Fallback for when called without callbacks (legacy or direct)
+            return ['initialized' => 0, 'skipped' => 0, 'error' => 'Callbacks missing'];
         }
 
-        $assets = $this->fetchAvailableAssets(throwOnError: true);
-        $initializer = new MetaInitializerService($entityManager, $this->logger);
-        
-        return $initializer->initialize($this->getChannel(), $config, ['pages' => $assets['facebook_pages'] ?? []]);
+        return $initializer->initialize(
+            $this->getChannel(), 
+            $config, 
+            ['pages' => $assets['facebook_pages'] ?? []],
+            $identityMapper,
+            $dataProcessor
+        );
     }
 
     /**
@@ -1325,13 +1306,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
      */
     public function reset(string $mode = 'all', array $config = []): array
     {
-        $entityManager = $config['manager'] ?? null;
-        if (!$entityManager instanceof EntityManagerInterface) {
-            throw new Exception("EntityManagerInterface required for FacebookOrganicDriver reset.");
+        $resetCallback = $config['resetCallback'] ?? null;
+        if ($resetCallback instanceof \Closure) {
+            return $resetCallback($this->getChannel(), $mode);
         }
 
-        $resetter = new \Anibalealvarezs\MetaHubDriver\Services\MetaResetService($entityManager);
-        return $resetter->reset($this->getChannel(), $mode);
+        throw new Exception("Reset callback not provided for " . $this->getChannel()->name);
     }
     /**
      * @inheritdoc

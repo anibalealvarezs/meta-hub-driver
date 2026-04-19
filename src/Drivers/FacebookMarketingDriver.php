@@ -20,8 +20,6 @@ use Psr\Log\LoggerInterface;
 use DateTime;
 use Exception;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
-use Doctrine\ORM\EntityManagerInterface;
-use Anibalealvarezs\MetaHubDriver\Services\MetaInitializerService;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
 
@@ -910,86 +908,72 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $output = $config['output'] ?? null;
         if ($output) $output->writeln("🚀 Facebook Marketing (5 Campaigns, 180 Days)...");
 
-        $em = $seeder->getEntityManager();
         $faker = \Faker\Factory::create('en_US');
         $dates = $seeder->getDates(180);
 
-        $chanEnumClass = $seeder->getEnumClass('channel');
-        $accTypeEnumClass = $seeder->getEnumClass('account_type');
-        $fbChan = $chanEnumClass::facebook_marketing;
+        $fbChan = \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_marketing;
 
-        $accClass = $seeder->getEntityClass('account');
-        $chanAccountClass = $seeder->getEntityClass('channeled_account');
-        $campaignClass = $seeder->getEntityClass('campaign');
-        $chanCampaignClass = $seeder->getEntityClass('channeled_campaign');
-        $chanAdGroupClass = $seeder->getEntityClass('channeled_ad_group');
-        $chanAdClass = $seeder->getEntityClass('channeled_ad');
-
-        $accRepo = $em->getRepository($accClass);
-        $demoAccount = $accRepo->findOneBy(['name' => 'Demo Agency Marketing']) ?? (new $accClass())->addName('Demo Agency Marketing');
-        $em->persist($demoAccount);
-        $em->flush();
+        $demoAccount = $seeder->resolveEntity('account', ['name' => 'Demo Agency Marketing']);
 
         $adAccountId = "act_" . $faker->numerify('################');
-        $ca = $em->getRepository($chanAccountClass)->findOneBy(['platformId' => $adAccountId]) ?? (new $chanAccountClass());
-        $ca->addPlatformId($adAccountId)
-            ->addAccount($demoAccount)
-            ->addType('meta_ad_account')
-            ->addChannel($fbChan->value)
-            ->addName("Demo Ad Account");
-        $em->persist($ca);
-        $em->flush();
+        $ca = $seeder->resolveEntity('channeled_account', [
+            'platformId' => $adAccountId,
+            'account' => $demoAccount,
+            'type' => 'meta_ad_account',
+            'channel' => \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_marketing->value,
+            'name' => "Demo Ad Account"
+        ]);
 
         $campaigns = [];
         for ($i = 1; $i <= 5; $i++) {
             $cId = $faker->numerify('##########');
             $cName = "Demo " . $faker->catchPhrase() . " Campaign";
             
-            $campaign = $em->getRepository($campaignClass)->findOneBy(['campaignId' => $cId]) ?? new $campaignClass();
-            $campaign->addCampaignId($cId)->addName($cName);
-            $em->persist($campaign);
+            $campaign = $seeder->resolveEntity('campaign', [
+                'campaignId' => $cId,
+                'name' => $cName
+            ]);
 
-            $chanCampaign = $em->getRepository($chanCampaignClass)->findOneBy(['platformId' => $cId, 'channeledAccount' => $ca]) ?? new $chanCampaignClass();
-            $chanCampaign->addPlatformId($cId)
-                ->addChannel($fbChan->value)
-                ->addChanneledAccount($ca)
-                ->addCampaign($campaign)
-                ->addBudget($faker->randomFloat(2, 50, 500));
-            $em->persist($chanCampaign);
+            $chanCampaign = $seeder->resolveEntity('channeled_campaign', [
+                'platformId' => $cId,
+                'channel' => \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_marketing->value,
+                'channeledAccount' => $ca,
+                'campaign' => $campaign,
+                'budget' => $faker->randomFloat(2, 50, 500)
+            ]);
             
             $adGroups = [];
             for ($j = 1; $j <= 2; $j++) {
                 $agId = $faker->numerify('##########');
                 $agName = "AdSet $j - " . $faker->word();
                 
-                $chanAdGroup = $em->getRepository($chanAdGroupClass)->findOneBy(['platformId' => $agId, 'channeledAccount' => $ca]) ?? new $chanAdGroupClass();
-                $chanAdGroup->addPlatformId($agId)
-                    ->addChannel($fbChan->value)
-                    ->addName($agName)
-                    ->addChanneledAccount($ca)
-                    ->addCampaign($campaign)
-                    ->addChanneledCampaign($chanCampaign);
-                $em->persist($chanAdGroup);
+                $chanAdGroup = $seeder->resolveEntity('channeled_ad_group', [
+                    'platformId' => $agId,
+                    'channel' => \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_marketing->value,
+                    'name' => $agName,
+                    'channeledAccount' => $ca,
+                    'campaign' => $campaign,
+                    'channeledCampaign' => $chanCampaign
+                ]);
                 
                 for ($k = 1; $k <= 2; $k++) {
                     $adId = $faker->numerify('##########');
                     $adName = "Ad $k (" . $faker->colorName() . ")";
                     
-                    $chanAd = $em->getRepository($chanAdClass)->findOneBy(['platformId' => $adId, 'channeledAccount' => $ca]) ?? new $chanAdClass();
-                    $chanAd->addPlatformId($adId)
-                        ->addChannel($fbChan->value)
-                        ->addName($adName)
-                        ->addChanneledAccount($ca)
-                        ->addChanneledAdGroup($chanAdGroup)
-                        ->addChanneledCampaign($chanCampaign);
-                    $em->persist($chanAd);
+                    $chanAd = $seeder->resolveEntity('channeled_ad', [
+                        'platformId' => $adId,
+                        'channel' => \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_marketing->value,
+                        'name' => $adName,
+                        'channeledAccount' => $ca,
+                        'channeledAdGroup' => $chanAdGroup,
+                        'channeledCampaign' => $chanCampaign
+                    ]);
                     
                     $adGroups[] = ['chanAd' => $chanAd, 'chanAdGroup' => $chanAdGroup, 'chanCampaign' => $chanCampaign];
                 }
             }
             $campaigns[] = ['campaign' => $campaign, 'chanCampaign' => $chanCampaign, 'adGroups' => $adGroups];
         }
-        $em->flush();
 
         $dimManager = $seeder->getDimensionManager();
         $countryEnumValues = ['USA', 'ESP', 'MEX', 'COL'];
@@ -997,29 +981,13 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
         $countries = [];
         foreach ($countryEnumValues as $code) {
-            $enumClass = $seeder->getEnumClass('country');
-            $countryClass = $seeder->getEntityClass('country');
-            $enum = $enumClass::from($code);
-            $c = $em->getRepository($countryClass)->findOneBy(['code' => $enum]);
-            if (!$c) {
-                $c = (new $countryClass())->addCode($enum)->addName($code);
-                $em->persist($c);
-            }
-            $countries[$code] = $c;
+            $countries[$code] = $seeder->resolveEntity('country', ['name' => $code]);
         }
+
         $devices = [];
         foreach ($deviceEnumValues as $type) {
-            $enumClass = $seeder->getEnumClass('device');
-            $deviceClass = $seeder->getEntityClass('device');
-            $enum = $enumClass::from($type);
-            $d = $em->getRepository($deviceClass)->findOneBy(['type' => $enum]);
-            if (!$d) {
-                $d = (new $deviceClass())->addType($enum);
-                $em->persist($d);
-            }
-            $devices[$type] = $d;
+            $devices[$type] = $seeder->resolveEntity('device', ['type' => $type]);
         }
-        $em->flush();
 
         foreach ($dates as $date) {
             foreach ($campaigns as $cpData) {
@@ -1049,18 +1017,18 @@ class FacebookMarketingDriver implements SyncDriverInterface
                                     name: $name,
                                     date: $date,
                                     value: $val,
-                                    setId: $dimSet->getId(),
-                                    caId: $ca->getId(),
-                                    cpId: $agData['chanCampaign']->getId(),
-                                    agId: $agData['chanAdGroup']->getId(),
-                                    adId: $agData['chanAd']->getId(),
-                                    countryId: $country->getId(),
-                                    deviceId: $device->getId(),
-                                    data: json_encode(['raw' => $val]),
-                                    setHash: $dimSet->getHash(),
-                                    caPId: $ca->getPlatformId(),
-                                    countryPId: $code,
-                                    devicePId: $type
+                                    setId: $dimSet->id,
+                                    caId: $ca->id,
+                                    gAccId: $demoAccount->id,
+                                    gCpId: $cpData['campaign']->id,
+                                    cpId: $cpData['chanCampaign']->id,
+                                    agId: $agData['chanAdGroup']->id,
+                                    adId: $agData['chanAd']->id,
+                                    accName: $demoAccount->getTitle(),
+                                    caPId: (string)$ca->getPlatformId(),
+                                    gCpPId: (string)$cpData['campaign']->getPlatformId(),
+                                    cpPId: (string)$cpData['chanCampaign']->getPlatformId(),
+                                    data: json_encode($metrics)
                                 );
                             }
                         }
@@ -1069,7 +1037,6 @@ class FacebookMarketingDriver implements SyncDriverInterface
             }
             if ($output) $output->write(".");
         }
-        $em->clear();
         if ($output) $output->writeln("\n   - Facebook Marketing complete.");
     }
 
@@ -1168,15 +1135,30 @@ class FacebookMarketingDriver implements SyncDriverInterface
      */
     public function initializeEntities(array $config = []): array
     {
-        $entityManager = $config['manager'] ?? null;
-        if (!$entityManager instanceof EntityManagerInterface) {
-            throw new Exception("EntityManagerInterface required for FacebookMarketingDriver entity initialization.");
+        $assets = $this->fetchAvailableAssets(throwOnError: true);
+        
+        $initializerClass = '\\Anibalealvarezs\\MetaHubDriver\\Services\\MetaInitializerService';
+        if (!class_exists($initializerClass)) {
+            throw new Exception("MetaInitializerService not found.");
+        }
+        
+        $initializer = new $initializerClass($this->logger);
+
+        $identityMapper = $config['identityMapper'] ?? null;
+        $dataProcessor = $config['dataProcessor'] ?? null;
+
+        if (!$identityMapper || !$dataProcessor) {
+            // Fallback for when called without callbacks (legacy or direct)
+            return ['initialized' => 0, 'skipped' => 0, 'error' => 'Callbacks missing'];
         }
 
-        $assets = $this->fetchAvailableAssets(throwOnError: true);
-        $initializer = new MetaInitializerService($entityManager, $this->logger);
-        
-        return $initializer->initialize($this->getChannel(), $config, ['ad_accounts' => $assets['facebook_ad_accounts'] ?? []]);
+        return $initializer->initialize(
+            $this->getChannel(), 
+            $config, 
+            ['ad_accounts' => $assets['facebook_ad_accounts'] ?? []],
+            $identityMapper,
+            $dataProcessor
+        );
     }
 
     /**
@@ -1184,13 +1166,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
      */
     public function reset(string $mode = 'all', array $config = []): array
     {
-        $entityManager = $config['manager'] ?? null;
-        if (!$entityManager instanceof EntityManagerInterface) {
-            throw new Exception("EntityManagerInterface required for FacebookMarketingDriver reset.");
+        $resetCallback = $config['resetCallback'] ?? null;
+        if ($resetCallback instanceof \Closure) {
+            return $resetCallback($this->getChannel(), $mode);
         }
 
-        $resetter = new \Anibalealvarezs\MetaHubDriver\Services\MetaResetService($entityManager);
-        return $resetter->reset($this->getChannel(), $mode);
+        throw new Exception("Reset callback not provided for " . $this->getChannel()->name);
     }
 
     /**

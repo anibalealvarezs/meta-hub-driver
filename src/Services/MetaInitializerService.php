@@ -5,37 +5,37 @@ declare(strict_types=1);
 namespace Anibalealvarezs\MetaHubDriver\Services;
 
 use Anibalealvarezs\ApiDriverCore\Classes\AssetRegistry;
-use Anibalealvarezs\ApiSkeleton\Enums\Channel;
-use DateTime;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 class MetaInitializerService
 {
-    private EntityManagerInterface $entityManager;
     private ?LoggerInterface $logger;
 
-    public function __construct(EntityManagerInterface $entityManager, ?LoggerInterface $logger = null)
+    public function __construct(?LoggerInterface $logger = null)
     {
-        $this->entityManager = $entityManager;
         $this->logger = $logger;
     }
 
-    public function initialize(string $channel, array $config, array $apiData): array
-    {
+    /**
+     * Initializes Meta assets by resolving identities and persisting them via callbacks.
+     */
+    public function initialize(
+        string $channel,
+        array $config,
+        array $apiData,
+        callable $identityMapper,
+        callable $dataProcessor
+    ): array {
         $stats = ['initialized' => 0, 'skipped' => 0];
 
-        // We assume $apiData contains 'pages' if it's organic/general
-        // and 'ad_accounts' if it's marketing
-
         if (isset($apiData['pages'])) {
-             $res = $this->initializePages($channel, $config, $apiData['pages']);
+             $res = $this->initializePages($channel, $config, $apiData['pages'], $identityMapper, $dataProcessor);
              $stats['initialized'] += $res['initialized'];
              $stats['skipped'] += $res['skipped'];
         }
 
         if (isset($apiData['ad_accounts'])) {
-             $res = $this->initializeAdAccounts($channel, $config, $apiData['ad_accounts']);
+             $res = $this->initializeAdAccounts($channel, $config, $apiData['ad_accounts'], $identityMapper, $dataProcessor);
              $stats['initialized'] += $res['initialized'];
              $stats['skipped'] += $res['skipped'];
         }
@@ -43,241 +43,167 @@ class MetaInitializerService
         return $stats;
     }
 
-    private function initializePages(string $channel, array $config, array $pages): array
-    {
+    private function initializePages(
+        string $channel,
+        array $config,
+        array $pages,
+        callable $identityMapper,
+        callable $dataProcessor
+    ): array {
         $stats = ['initialized' => 0, 'skipped' => 0];
+        $fbPIds = array_map(fn($p) => (string)$p['id'], $pages);
+        $igPIds = array_filter(array_map(fn($p) => $p['instagram_business_account']['id'] ?? $p['ig_account'] ?? null, $pages));
         
-        // Resolve classes from host
-        // In a real modular app, these should be interfaces or provided via a container
-        // For now, we use the known host namespaces
-        $pageClass = '\Entities\Analytics\Page';
-        $accountClass = '\Entities\Analytics\Account';
-        $channeledAccountClass = '\Entities\Analytics\Channeled\ChanneledAccount';
-        $pageTypeClass = '\Enums\PageType';
-        $accountEnumClass = '\Enums\Account';
+        $urls = array_map(fn($p) => $p['url'] ?? "https://www.facebook.com/" . $p['id'], $pages);
+        $igUrls = array_map(fn($id) => "https://www.instagram.com/" . $id, $igPIds);
 
-        if (!class_exists($pageClass)) return $stats;
-
-        $pageRepository = $this->entityManager->getRepository($pageClass);
-        $accountRepository = $this->entityManager->getRepository($accountClass);
-        $channeledAccountRepository = $this->entityManager->getRepository($channeledAccountClass);
-
+        // 1. Batch Resolve Identities
+        $pageMap = $identityMapper('pages', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
+        $caMap = $identityMapper('channeled_accounts', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
+        
         $fbGroupName = $config['accounts_group_name'] ?? 'Default Meta Group';
-        $accountEntity = $accountRepository->findOneBy(['name' => $fbGroupName]);
-        if (!$accountEntity) {
-            $accountEntity = new $accountClass();
-            $accountEntity->addName($fbGroupName);
-            $this->entityManager->persist($accountEntity);
-            $this->entityManager->flush();
-        }
-
-        $processedPages = [];
+        $accountMap = $identityMapper('accounts', ['names' => [$fbGroupName]]) ?? [];
+        $defaultAccount = $accountMap[$fbGroupName] ?? null;
 
         foreach ($pages as $page) {
             $platformId = (string)$page['id'];
             $title = $page['title'] ?? $page['name'] ?? "Page " . $platformId;
 
             if (\Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($title, $config, 'PAGE')) {
-                $this->logger?->info("Skipping filtered FB Page: $title");
                 continue;
             }
 
-            // Resolve specific account for this page, fallback to global
-            $pageSpecificAccountName = $page['account'] ?? $config['accounts_group_name'] ?? 'Default Meta Group';
-            $pageSpecificAccountEntity = $accountRepository->findOneBy(['name' => $pageSpecificAccountName]);
-            if (!$pageSpecificAccountEntity) {
-                $pageSpecificAccountEntity = new $accountClass();
-                $pageSpecificAccountEntity->addName($pageSpecificAccountName);
-                $this->entityManager->persist($pageSpecificAccountEntity);
-                $this->entityManager->flush();
-            }
-
             $pageUrl = $page['url'] ?? "https://www.facebook.com/" . $platformId;
-            $hostname = $page['website'] ?? $page['hostname'] ?? null;
-            if (!$hostname && $pageUrl) {
-                $parsed = parse_url($pageUrl);
-                $hostname = $parsed['host'] ?? null;
-            }
-            if ($hostname) {
-                $hostname = preg_replace('~^https?://(?:www\.)?~i', '', $hostname);
-                $hostname = strtolower(explode('/', $hostname)[0]);
-            }
+            $hostname = $page['website'] ?? $page['hostname'] ?? 'facebook.com';
+            $canonicalId = AssetRegistry::getCanonicalId($pageUrl, $platformId, 'facebook_page', $hostname);
 
-            $typeEnum = defined("$pageTypeClass::FACEBOOK_PAGE") ? constant("$pageTypeClass::FACEBOOK_PAGE") : 'facebook_page';
-            $canonicalId = AssetRegistry::getCanonicalId($pageUrl, $platformId, $typeEnum, $hostname);
+            $pageEntity = $pageMap[$platformId] ?? null;
+            $caFb = $caMap[$platformId] ?? null;
 
-            if (isset($processedPages[$canonicalId])) {
-                $pageEntity = $processedPages[$canonicalId];
-                $isNew = false;
-            } else {
-                $pageEntity = $pageRepository->findOneBy(['canonicalId' => $canonicalId]);
-                $isNew = false;
-                if (!$pageEntity) {
-                    $pageEntity = new $pageClass();
-                    $pageEntity->addCanonicalId($canonicalId)
-                        ->addPlatformId($platformId)
-                        ->addAccount($pageSpecificAccountEntity);
-                    $isNew = true;
+            $isNew = false;
+            $toPersist = new \Doctrine\Common\Collections\ArrayCollection();
+
+            // 1. Resolve/Create FB Page
+            if (!$pageEntity) {
+                $pageEntity = new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity();
+                $pageEntity->setPlatformId($platformId)
+                    ->setCanonicalId($canonicalId)
+                    ->setTitle($title)
+                    ->setUrl($pageUrl)
+                    ->setHostname($hostname)
+                    ->setData($page);
+                
+                if ($defaultAccount) {
+                    $pageEntity->setContext(['account' => $defaultAccount]);
                 }
-                $processedPages[$canonicalId] = $pageEntity;
+                $toPersist->add($pageEntity);
+                $isNew = true;
             }
 
-            $pageEntity->addUrl($pageUrl)
-                ->addTitle($title)
-                ->addHostname($hostname ?: 'facebook.com')
-                ->addData($page)
-                ->addUpdatedAt(new DateTime());
-
-            $this->entityManager->persist($pageEntity);
-            
-            if ($isNew) $stats['initialized']++; else $stats['skipped']++;
-
-            // Initialize ChanneledAccount for Page
-            $fbChanneledAccount = $channeledAccountRepository->findOneBy([
-                'platformId' => $platformId, 
-                'channel' => Channel::facebook_organic->value
-            ]);
-            if (!$fbChanneledAccount) {
-                $fbChanneledAccount = new $channeledAccountClass();
-                $fbChanneledAccount->addPlatformId($platformId)
-                    ->addAccount($pageSpecificAccountEntity)
-                    ->addType(defined("$accountEnumClass::FACEBOOK_PAGE") ? constant("$accountEnumClass::FACEBOOK_PAGE") : 'FACEBOOK_PAGE')
-                    ->addChannel(Channel::facebook_organic->value)
-                    ->addName($title)
-                    ->addPlatformCreatedAt(new DateTime('2004-02-04'))
-                    ->addData($page);
+            // 2. Resolve/Create FB ChanneledAccount
+            if (!$caFb) {
+                $caFb = new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity();
+                $caFb->setPlatformId($platformId)
+                    ->setChannel($channel)
+                    ->setType('facebook_page')
+                    ->setTitle($title)
+                    ->setContext(['page' => $pageEntity, 'account' => $defaultAccount]);
+                $toPersist->add($caFb);
             }
-            if (method_exists($fbChanneledAccount, 'addPage')) {
-                $fbChanneledAccount->addPage($pageEntity);
-            }
-            $this->entityManager->persist($fbChanneledAccount);
 
-            // Initialize Instagram Account as Page if present
+            // 3. Handle Instagram if present
             $igId = $page['instagram_business_account']['id'] ?? $page['ig_account'] ?? null;
             if ($igId) {
+                $igId = (string)$igId;
                 $igData = $page['instagram_business_account'] ?? ['id' => $igId];
                 $igName = $igData['name'] ?? $igData['username'] ?? "IG " . $igId;
                 $igUrl = "https://www.instagram.com/" . ($igData['username'] ?? $igId);
-                
-                $igTypeEnum = defined("$pageTypeClass::INSTAGRAM") ? constant("$pageTypeClass::INSTAGRAM") : 'instagram';
-                $igCanonicalId = AssetRegistry::getCanonicalId($igUrl, (string)$igId, $igTypeEnum, 'instagram.com');
+                $igCanonicalId = AssetRegistry::getCanonicalId($igUrl, $igId, 'instagram', 'instagram.com');
 
-                if (isset($processedPages[$igCanonicalId])) {
-                    $igPageEntity = $processedPages[$igCanonicalId];
-                } else {
-                    $igPageEntity = $pageRepository->findOneBy(['canonicalId' => $igCanonicalId]);
-                    if (!$igPageEntity) {
-                        $igPageEntity = new $pageClass();
-                        $igPageEntity->addCanonicalId($igCanonicalId)
-                            ->addPlatformId((string)$igId)
-                            ->addAccount($pageSpecificAccountEntity);
-                        $this->logger?->info("Initialized new IG Page: $igName");
+                $igPage = $pageMap[$igId] ?? null;
+                $caIg = $caMap[$igId] ?? null;
+
+                if (!$igPage) {
+                    $igPage = new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity();
+                    $igPage->setPlatformId($igId)
+                        ->setCanonicalId($igCanonicalId)
+                        ->setTitle($igName)
+                        ->setUrl($igUrl)
+                        ->setHostname('instagram.com')
+                        ->setData($igData);
+                    if ($defaultAccount) {
+                        $igPage->setContext(['account' => $defaultAccount]);
                     }
-                    $processedPages[$igCanonicalId] = $igPageEntity;
+                    $toPersist->add($igPage);
                 }
 
-                $igPageEntity->addUrl($igUrl)
-                    ->addTitle($igName)
-                    ->addHostname($hostname ?: 'instagram.com')
-                    ->addData($igData)
-                    ->addUpdatedAt(new DateTime());
-
-                $this->entityManager->persist($igPageEntity);
-
-                $igChanneledAccount = $channeledAccountRepository->findOneBy([
-                    'platformId' => (string)$igId, 
-                    'channel' => Channel::facebook_organic->value
-                ]);
-                
-                if (!$igChanneledAccount) {
-                    $igChanneledAccount = new $channeledAccountClass();
-                    $igChanneledAccount->addPlatformId((string)$igId)
-                        ->addAccount($pageSpecificAccountEntity)
-                        ->addType(defined("$accountEnumClass::INSTAGRAM") ? constant("$accountEnumClass::INSTAGRAM") : 'INSTAGRAM')
-                        ->addChannel(Channel::facebook_organic->value)
-                        ->addName($igName)
-                        ->addPlatformCreatedAt(new DateTime('2010-10-06'))
-                        ->addData($igData);
+                if (!$caIg) {
+                    $caIg = new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity();
+                    $caIg->setPlatformId($igId)
+                        ->setChannel($channel)
+                        ->setType('instagram')
+                        ->setTitle($igName)
+                        ->setContext(['page' => $igPage, 'account' => $defaultAccount]);
+                    $toPersist->add($caIg);
                 }
-                
-                if (method_exists($igChanneledAccount, 'addPage')) {
-                    $igChanneledAccount->addPage($igPageEntity);
-                }
-                $this->entityManager->persist($igChanneledAccount);
             }
+
+            if ($toPersist->count() > 0) {
+                $dataProcessor($toPersist, 'initialization');
+            }
+
+            if ($isNew) $stats['initialized']++; else $stats['skipped']++;
         }
 
-        $this->entityManager->flush();
         return $stats;
     }
 
-    private function initializeAdAccounts(string $channel, array $config, array $adAccounts): array
-    {
+    private function initializeAdAccounts(
+        string $channel,
+        array $config,
+        array $adAccounts,
+        callable $identityMapper,
+        callable $dataProcessor
+    ): array {
         $stats = ['initialized' => 0, 'skipped' => 0];
-        
-        $accountClass = '\Entities\Analytics\Account';
-        $channeledAccountClass = '\Entities\Analytics\Channeled\ChanneledAccount';
-        $accountEnumClass = '\Enums\Account';
+        $ids = array_map(fn($a) => (string)$a['id'], $adAccounts);
 
-        if (!class_exists($channeledAccountClass)) return $stats;
-
-        $accountRepository = $this->entityManager->getRepository($accountClass);
-        $channeledAccountRepository = $this->entityManager->getRepository($channeledAccountClass);
-
+        // 1. Batch Resolve Identities
+        $caMap = $identityMapper('channeled_accounts', ['platform_ids' => $ids]) ?? [];
         $fbGroupName = $config['accounts_group_name'] ?? 'Default Meta Group';
-        $accountEntity = $accountRepository->findOneBy(['name' => $fbGroupName]);
-        if (!$accountEntity) {
-            $accountEntity = new $accountClass();
-            $accountEntity->addName($fbGroupName);
-            $this->entityManager->persist($accountEntity);
-            $this->entityManager->flush();
-        }
+        $accountMap = $identityMapper('accounts', ['names' => [$fbGroupName]]) ?? [];
+        $defaultAccount = $accountMap[$fbGroupName] ?? null;
 
         foreach ($adAccounts as $adAccount) {
             $adAccountId = (string)$adAccount['id'];
             $name = $adAccount['name'] ?? "Ad Account " . $adAccountId;
 
             if (\Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($name, $config, 'AD_ACCOUNT')) {
-                $this->logger?->info("Skipping filtered FB Ad Account: $name");
                 continue;
             }
 
-            // Resolve specific account for this ad account, fallback to global
-            $accSpecificAccountName = $adAccount['account'] ?? $config['accounts_group_name'] ?? 'Default Meta Group';
-            $accSpecificAccountEntity = $accountRepository->findOneBy(['name' => $accSpecificAccountName]);
-            if (!$accSpecificAccountEntity) {
-                $accSpecificAccountEntity = new $accountClass();
-                $accSpecificAccountEntity->addName($accSpecificAccountName);
-                $this->entityManager->persist($accSpecificAccountEntity);
-                $this->entityManager->flush();
-            }
-            
-            $adAccEntity = $channeledAccountRepository->findOneBy([
-                'platformId' => $adAccountId,
-                'channel' => Channel::facebook_marketing->value
-            ]);
+            $ca = $caMap[$adAccountId] ?? null;
 
-            if (!$adAccEntity) {
-                $adAccEntity = new $channeledAccountClass();
-                $adAccEntity->addPlatformId($adAccountId)
-                    ->addAccount($accSpecificAccountEntity)
-                    ->addType(defined("$accountEnumClass::META_AD_ACCOUNT") ? constant("$accountEnumClass::META_AD_ACCOUNT") : 'META_AD_ACCOUNT')
-                    ->addChannel(Channel::facebook_marketing->value)
-                    ->addName($name)
-                    ->addPlatformCreatedAt(new DateTime('2010-10-06'))
-                    ->addData($adAccount);
-                $this->entityManager->persist($adAccEntity);
+            if (!$ca) {
+                $ca = new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity();
+                $ca->setPlatformId($adAccountId)
+                    ->setChannel($channel)
+                    ->setType('meta_ad_account')
+                    ->setTitle($name)
+                    ->setData($adAccount);
+                
+                if ($defaultAccount) {
+                    $ca->setContext(['account' => $defaultAccount]);
+                }
+
+                $collection = new \Doctrine\Common\Collections\ArrayCollection([$ca]);
+                $dataProcessor($collection, 'initialization');
                 $stats['initialized']++;
             } else {
-                $adAccEntity->addName($name)
-                    ->addAccount($accSpecificAccountEntity)
-                    ->addData($adAccount);
-                $this->entityManager->persist($adAccEntity);
                 $stats['skipped']++;
             }
         }
 
-        $this->entityManager->flush();
         return $stats;
     }
 }
