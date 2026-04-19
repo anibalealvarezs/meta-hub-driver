@@ -888,6 +888,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
             }
             $config['pages'] = $newPages;
         }
+
+        // 4. Handle Sync Window (History Range)
+        if (empty($config['startDate']) && empty($config['start_date']) && !empty($config['cache_history_range'])) {
+            $config['startDate'] = date('Y-m-d', strtotime('-' . $config['cache_history_range']));
+        }
+
         return $config;
     }
 
