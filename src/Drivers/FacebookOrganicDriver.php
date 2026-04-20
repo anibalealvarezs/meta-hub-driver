@@ -1206,6 +1206,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
         return [
             'facebook_page' => [
                 'prefix' => 'fb',
+                'hostname' => 'facebook.com',
                 'hostnames' => ['facebook.com'],
                 'url_id_regex' => '~(\d+)/?$~',
                 'type' => 'facebook_page',
@@ -1214,7 +1215,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     'instagram_account' => [
                         'id_key' => 'ig_account',
                         'name_key' => 'ig_account_name',
-                        'type' => 'instagram'
+                        'type' => 'instagram',
+                        'prefix' => 'ig',
+                        'hostname' => 'instagram.com'
                     ]
                 ]
             ]

@@ -1076,6 +1076,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return [
             'facebook_ad_account' => [
                 'prefix' => 'fb',
+                'hostname' => 'facebook.com',
                 'hostnames' => ['facebook.com'],
                 'url_id_regex' => '/act_([0-9]+)/',
                 'type' => 'facebook_ad_account',
