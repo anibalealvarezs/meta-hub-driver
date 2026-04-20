@@ -103,7 +103,7 @@ class FacebookEntitySync
                     throw new \Exception("Job cancelled or should not continue.");
                 }
                 $accId = (string)$adAccount->getPlatformId();
-                $adAccountCfg = $config['ad_accounts'][$accId] ?? [];
+                $adAccountCfg = $config['ad_accounts'][$accId] ?? ($config['ad_accounts']['act_' . $accId] ?? []);
                 
                 if (empty($adAccountCfg['enabled']) || empty($adAccountCfg[MetaFeature::CAMPAIGNS->value])) {
                     $logger?->info("Skipping Campaign sync for account $accId (disabled in config)");
@@ -215,7 +215,7 @@ class FacebookEntitySync
                     throw new \Exception("Job cancelled or should not continue.");
                 }
                 $accId = (string)$adAccount->getPlatformId();
-                $adAccountCfg = $config['ad_accounts'][$accId] ?? [];
+                $adAccountCfg = $config['ad_accounts'][$accId] ?? ($config['ad_accounts']['act_' . $accId] ?? []);
 
                 $logger?->info("DEBUG: FacebookEntitySync::syncAdGroups - Account: $accId | Enabled: " . ($adAccountCfg['enabled'] ?? 'N/A') . " | Feature: " . ($adAccountCfg[MetaFeature::ADSETS->value] ?? 'N/A'));
                 
@@ -346,7 +346,7 @@ class FacebookEntitySync
                     throw new \Exception("Job cancelled or should not continue.");
                 }
                 $adAccountId = (string)$channeledAccountItem->getPlatformId();
-                $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? [];
+                $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? ($config['ad_accounts']['act_' . $adAccountId] ?? []);
                 
                 $logger?->info("DEBUG: FacebookEntitySync::syncAds - Account: $adAccountId | Enabled: " . ($adAccountCfg['enabled'] ?? 'N/A') . " | Feature: " . ($adAccountCfg[MetaFeature::ADS->value] ?? 'N/A'));
                 
@@ -470,7 +470,7 @@ class FacebookEntitySync
                     throw new \Exception("Job cancelled or should not continue.");
                 }
                 $adAccountId = (string)$channeledAccount->getPlatformId();
-                $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? [];
+                $adAccountCfg = $config['ad_accounts'][$adAccountId] ?? ($config['ad_accounts']['act_' . $adAccountId] ?? []);
                 
                 if (empty($adAccountCfg['enabled']) || empty($adAccountCfg[MetaFeature::CREATIVES->value])) {
                     $logger?->info("Skipping Creative sync for account $adAccountId (disabled in config)");
