@@ -39,8 +39,8 @@ class FacebookMarketingMetricConvert
     ): ArrayCollection {
         $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdPermission::DEFAULT->insightsFields($metricSet)));
         
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
-        $creativePlatformId = is_object($creative) && method_exists($creative, 'getCreativeId') ? $creative->getCreativeId() : (string) $creative;
+        $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount) : (string) $channeledAccount;
+        $creativePlatformId = is_object($creative) ? (method_exists($creative, 'getCreativeId') ? $creative->getCreativeId() : (method_exists($creative, 'getPlatformId') ? $creative->getPlatformId() : (string) $creative)) : (string) $creative;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
         return UniversalMetricConverter::convert($rows, [
@@ -84,8 +84,8 @@ class FacebookMarketingMetricConvert
     ): ArrayCollection {
         $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdAccountPermission::DEFAULT->insightsFields($metricSet)));
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
-        $channeledPlatformId = is_object($channeledAccount) && method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount;
+        $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount) : (string) $channeledAccount;
+        $channeledPlatformId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string) $channeledAccount) : (string) $channeledAccount;
 
         return UniversalMetricConverter::convert($rows, [
             'channel' => 'facebook_marketing',
@@ -124,8 +124,8 @@ class FacebookMarketingMetricConvert
     ): ArrayCollection {
         $metricsList = $customFields ? explode(',', $customFields) : explode(',', CampaignPermission::DEFAULT->insightsFields($metricSet));
         
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
-        $channeledCampaignId = is_object($channeledCampaign) && method_exists($channeledCampaign, 'getPlatformId') ? $channeledCampaign->getPlatformId() : (string) $channeledCampaign;
+        $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount) : (string) $channeledAccount;
+        $channeledCampaignId = is_object($channeledCampaign) ? (method_exists($channeledCampaign, 'getPlatformId') ? $channeledCampaign->getPlatformId() : (string) $channeledCampaign) : (string) $channeledCampaign;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
         return UniversalMetricConverter::convert($rows, [
@@ -172,8 +172,8 @@ class FacebookMarketingMetricConvert
     ): ArrayCollection {
         $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdsetPermission::DEFAULT->insightsFields($metricSet)));
 
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
-        $channeledAdGroupId = is_object($channeledAdGroup) && method_exists($channeledAdGroup, 'getPlatformId') ? $channeledAdGroup->getPlatformId() : (string) $channeledAdGroup;
+        $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount) : (string) $channeledAccount;
+        $channeledAdGroupId = is_object($channeledAdGroup) ? (method_exists($channeledAdGroup, 'getPlatformId') ? $channeledAdGroup->getPlatformId() : (string) $channeledAdGroup) : (string) $channeledAdGroup;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
         return UniversalMetricConverter::convert($rows, [
@@ -224,8 +224,8 @@ class FacebookMarketingMetricConvert
     ): ArrayCollection {
         $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdPermission::DEFAULT->insightsFields($metricSet)));
 
-        $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount;
-        $channeledAdId = is_object($channeledAd) && method_exists($channeledAd, 'getPlatformId') ? $channeledAd->getPlatformId() : (string) $channeledAd;
+        $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string) $channeledAccount) : (string) $channeledAccount;
+        $channeledAdId = is_object($channeledAd) ? (method_exists($channeledAd, 'getPlatformId') ? $channeledAd->getPlatformId() : (string) $channeledAd) : (string) $channeledAd;
         $periodValue = is_object($period) && isset($period->value) ? $period->value : (string) $period;
 
         return UniversalMetricConverter::convert($rows, [
