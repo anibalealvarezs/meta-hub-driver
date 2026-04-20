@@ -198,6 +198,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         // Pages management
         $newPagesList = [];
+        if ($this->logger) $this->logger->info("DEBUG: updateConfiguration received assets", ['count' => count($selectedAssets), 'first_asset' => reset($selectedAssets)]);
         foreach ($selectedAssets as $pData) {
             $pageId = (string)$pData['id'];
             $item = [
@@ -255,6 +256,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 limit: 100, 
                 fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
             );
+
+            if ($this->logger) $this->logger->info("DEBUG: Facebook Organic raw pages response", ['data_keys' => !empty($pagesData['data']) ? array_keys(reset($pagesData['data'])) : 'empty']);
 
             $assets = ['facebook_pages' => []];
 
