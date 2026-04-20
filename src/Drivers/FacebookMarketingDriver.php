@@ -440,7 +440,11 @@ class FacebookMarketingDriver implements SyncDriverInterface
         if ($identityMapper && !empty($accountsToProcess)) {
             $aIds = [];
             foreach ($accountsToProcess as $account) {
-                $aIds[] = (string)($account['id'] ?? $account);
+                $id = (string)($account['id'] ?? $account);
+                if ($id) {
+                    $cleanId = method_exists($this, 'getCleanId') ? $this->getCleanId($id) : $id;
+                    $aIds[] = $cleanId;
+                }
             }
             $caMap = $identityMapper('channeled_accounts', ['platform_ids' => $aIds]) ?? [];
         }
@@ -563,7 +567,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $aIds = [];
             foreach ($config['ad_accounts'] as $account) {
                 $id = (string)($account['id'] ?? $account);
-                if ($id) $aIds[] = $id;
+                if ($id) {
+                    $cleanId = method_exists($this, 'getCleanId') ? $this->getCleanId($id) : $id;
+                    $aIds[] = $cleanId;
+                }
             }
             if (!empty($aIds)) {
                 $channeledAccounts = array_values($identityMapper('channeled_accounts', ['platform_ids' => $aIds]) ?? []);
