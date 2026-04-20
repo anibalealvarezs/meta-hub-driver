@@ -209,6 +209,11 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 'exclude_from_caching' => filter_var($pData['exclude_from_caching'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'ig_account' => $pData['ig_account'] ?? null,
                 'ig_account_name' => $pData['ig_account_name'] ?? null,
+                'ig_hostname' => $pData['ig_hostname'] ?? null,
+                'created_time' => $pData['created_time'] ?? null,
+                'ig_created_time' => $pData['ig_created_time'] ?? null,
+                'data' => $pData['data'] ?? [],
+                'ig_data' => $pData['ig_data'] ?? [],
                 // Granularity Flags
                 'page_metrics' => filter_var($pData['page_metrics'] ?? true, FILTER_VALIDATE_BOOLEAN),
                 'posts' => filter_var($pData['posts'] ?? true, FILTER_VALIDATE_BOOLEAN),
@@ -248,7 +253,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 userId: $userId,
                 permissions: [], 
                 limit: 100, 
-                fields: 'id,name,website,instagram_business_account{id,name,username}'
+                fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
             );
 
             $assets = ['facebook_pages' => []];
@@ -259,8 +264,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         'id' => $page['id'],
                         'title' => $page['name'],
                         'hostname' => $page['website'] ?? null,
+                        'created_time' => $page['created_time'] ?? null,
+                        'data' => $page,
                         'ig_account' => $page['instagram_business_account']['id'] ?? null,
                         'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
+                        'ig_hostname' => $page['instagram_business_account']['website'] ?? null,
+                        'ig_data' => $page['instagram_business_account'] ?? null,
                     ];
                 }
             }
@@ -1262,7 +1271,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         'preffix' => 'https://instagram.com/',
                         'key' => 'ig_account'
                     ],
-                    'hostname_key' => 'hostname',
+                    'hostname_key' => 'ig_hostname',
                     'data_key' => 'ig_data'
                 ]
             ]

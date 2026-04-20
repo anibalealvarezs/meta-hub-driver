@@ -159,7 +159,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 userId: $userId,
                 permissions: [], 
                 limit: 100, 
-                fields: 'id,name,website,instagram_business_account{id,name,username}'
+                fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
             );
 
             $assets = [
@@ -173,8 +173,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
                         'id' => $page['id'],
                         'title' => $page['name'],
                         'hostname' => $page['website'] ?? null,
+                        'created_time' => $page['created_time'] ?? null,
+                        'data' => $page,
                         'ig_account' => $page['instagram_business_account']['id'] ?? null,
                         'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
+                        'ig_hostname' => $page['instagram_business_account']['website'] ?? null,
+                        'ig_data' => $page['instagram_business_account'] ?? null,
                     ];
                 }
             }
@@ -182,7 +186,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $adAccountsData = $api->getAdAccounts(
                 userId: $userId,
                 limit: 100, 
-                fields: 'id,name,account_id,account_status,currency'
+                fields: 'id,name,account_id,account_status,currency,created_time'
             );
 
             if (!empty($adAccountsData['data'])) {
@@ -190,6 +194,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     $assets['facebook_ad_accounts'][] = [
                         'id' => $acc['id'],
                         'name' => $acc['name'] ?? ('Ad Account ' . $acc['id']),
+                        'created_time' => $acc['created_time'] ?? null,
+                        'data' => $acc,
                     ];
                 }
             }
@@ -276,13 +282,19 @@ class FacebookMarketingDriver implements SyncDriverInterface
         foreach ($currentAccs as $acc) {
             if (in_array((string)$acc['id'], $selectedIds)) {
                 $lostAccess = false;
+                $matchingSelected = null;
                 foreach ($selectedAssets as $sa) {
                     if ((string)$sa['id'] === (string)$acc['id']) {
                         $lostAccess = filter_var($sa['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                        $matchingSelected = $sa;
                         break;
                     }
                 }
                 $acc['lost_access'] = $lostAccess;
+                if ($matchingSelected) {
+                    $acc['created_time'] = $matchingSelected['created_time'] ?? $acc['created_time'] ?? null;
+                    $acc['data'] = $matchingSelected['data'] ?? $acc['data'] ?? [];
+                }
                 $newAccsList[] = $acc;
             }
         }
@@ -293,21 +305,20 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $isLostAccess = filter_var($newAcc['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN);
             
             if (!in_array($accId, $existingIds)) {
+                $item = [
+                    'id' => $accId,
+                    'name' => $newAcc['name'] ?? ("Ad Account " . $accId),
+                    'hostname' => $newAcc['hostname'] ?? null,
+                    'created_time' => $newAcc['created_time'] ?? null,
+                    'data' => $newAcc['data'] ?? [],
+                    'lost_access' => $isLostAccess
+                ];
+
                 if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
-                    $schema = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_marketing', [
-                        'id' => $accId,
-                        'name' => $newAcc['name'] ?? ("Ad Account " . $accId),
-                        'hostname' => $newAcc['hostname'] ?? null,
-                    ]);
-                    $schema['lost_access'] = $isLostAccess;
+                    $schema = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_marketing', $item);
                     $newAccsList[] = $schema;
                 } else {
-                    $newAccsList[] = [
-                        'id' => $accId, 
-                        'name' => $newAcc['name'] ?? ("Ad Account " . $accId), 
-                        'hostname' => $newAcc['hostname'] ?? null,
-                        'lost_access' => $isLostAccess
-                    ];
+                    $newAccsList[] = $item;
                 }
             }
         }
