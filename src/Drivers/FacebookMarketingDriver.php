@@ -1075,11 +1075,34 @@ class FacebookMarketingDriver implements SyncDriverInterface
     {
         return [
             'facebook_ad_account' => [
-                'url_id_regex' => '/act_([0-9]+)/',
-                'type' => 'facebook_ad_account',
-                'key' => 'ad_accounts'
+                'key' => 'ad_accounts',
+                'channeled_account' => [
+                    'platform_id' => [
+                        'type' => 'raw',
+                        'key' => 'id'
+                    ],
+                    'platform_created_at_key' => 'created_time',
+                    'name_key' => 'name',
+                    'type' => 'facebook_ad_account',
+                    'data_key' => 'data'
+                ]
             ]
         ];
+    }
+
+    public function getCleanHostname(string $hostname): string
+    {
+        if (str_contains($hostname, 'sc-domain:')) {
+            $hostname = str_replace('sc-domain:', '', $hostname);
+        } else {
+            $hostname = parse_url($hostname, PHP_URL_HOST);
+        }
+        return $hostname;
+    }
+
+    public function getCleanId(string $id): string
+    {
+        return str_replace('act_', '', $id);
     }
 
     /**

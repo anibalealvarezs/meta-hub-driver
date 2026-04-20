@@ -1205,22 +1205,68 @@ class FacebookOrganicDriver implements SyncDriverInterface
     {
         return [
             'facebook_page' => [
-                'prefix' => 'fb',
-                'hostname' => 'facebook.com',
-                'hostnames' => ['facebook.com'],
-                'url_id_regex' => '~(\d+)/?$~',
-                'type' => 'facebook_page',
                 'key' => 'pages',
-                'children' => [
-                    'instagram_account' => [
-                        'id_key' => 'ig_account',
-                        'name_key' => 'ig_account_name',
-                        'type' => 'instagram',
-                        'prefix' => 'ig',
-                        'hostname' => 'instagram.com'
-                    ]
+                'channeled_account' => [
+                    'platform_id' => [
+                        'type' => 'raw',
+                        'key' => 'id'
+                    ],
+                    'platform_created_at_key' => 'created_time',
+                    'name_key' => 'title',
+                    'type' => MetaEntityType::PAGE->value,
+                    'data_key' => 'data'
+                ],
+                'page' => [
+                    'canonical_id' => [
+                        'preffix' => 'fb',
+                        'field' => 'platformId'
+                    ],
+                    'platform_id' => [
+                        'type' => 'raw',
+                        'key' => 'id'
+                    ],
+                    'title_key' => 'title',
+                    'url' => [
+                        'type' => 'custom',
+                        'preffix' => 'https://facebook.com/',
+                        'key' => 'id'
+                    ],
+                    'hostname_key' => 'hostname',
+                    'data_key' => 'data'
+                ]
+            ],
+            'instagram_account' => [
+                'key' => 'pages',
+                'channeled_account' => [
+                    'platform_id' => [
+                        'type' => 'raw',
+                        'key' => 'ig_account'
+                    ],
+                    'platform_created_at_key' => 'ig_created_time',
+                    'name_key' => 'ig_account_name',
+                    'type' => MetaEntityType::INSTAGRAM_ACCOUNT->value,
+                    'data_key' => 'ig_data'
+                ],
+                'page' => [
+                    'canonical_id' => [
+                        'preffix' => 'ig',
+                        'field' => 'platformId'
+                    ],
+                    'platform_id' => [
+                        'type' => 'raw',
+                        'key' => 'ig_account'
+                    ],
+                    'title_key' => 'ig_account_name',
+                    'url' => [
+                        'type' => 'custom',
+                        'preffix' => 'https://instagram.com/',
+                        'key' => 'ig_account'
+                    ],
+                    'hostname_key' => 'hostname',
+                    'data_key' => 'ig_data'
                 ]
             ]
+
         ];
     }
 

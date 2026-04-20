@@ -11,7 +11,8 @@ namespace Anibalealvarezs\MetaHubDriver\Enums;
  */
 enum MetaEntityType: string
 {
-    case PAGE = 'page';
+    case PAGE = 'facebook_page';
+    case INSTAGRAM_ACCOUNT = 'instagram_account';
     case POST = 'post';
     case IG_MEDIA = 'ig_media';
     case CAMPAIGN = 'campaign';
