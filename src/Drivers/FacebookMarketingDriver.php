@@ -799,13 +799,13 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $adInclude, $adExclude, $creativeInclude, $creativeExclude
         ) {
             // 1. Strict Validation: Row must contain the ID for the requested level
-            if ($level === 'ad' && (empty($row['ad_id']) || $row['ad_id'] === '0')) {
+            if ($level === 'ad' && (empty(trim((string)($row['ad_id'] ?? ''))) || trim((string)$row['ad_id']) === '0' || empty(trim((string)($row['adset_id'] ?? ''))))) {
                 return false;
             }
-            if ($level === 'adset' && (empty($row['adset_id']) || $row['adset_id'] === '0')) {
+            if ($level === 'adset' && (empty(trim((string)($row['adset_id'] ?? ''))) || trim((string)$row['adset_id']) === '0')) {
                 return false;
             }
-            if ($level === 'campaign' && (empty($row['campaign_id']) || $row['campaign_id'] === '0')) {
+            if ($level === 'campaign' && (empty(trim((string)($row['campaign_id'] ?? ''))) || trim((string)$row['campaign_id']) === '0')) {
                 return false;
             }
 
