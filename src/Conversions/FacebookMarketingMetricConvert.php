@@ -135,9 +135,7 @@ class FacebookMarketingMetricConvert
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
                 'campaign' => $campaign,
-                'campaign_name' => $row['campaign_name'] ?? null,
                 'channeledCampaign' => $channeledCampaign,
-                'channeledCampaign_name' => $row['campaign_name'] ?? null,
             ]),
             'row_key_fields' => [
                 'campaign_id' => ['campaign', 'channeledCampaign'],
@@ -184,12 +182,8 @@ class FacebookMarketingMetricConvert
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
                 'campaign' => $campaign,
-                'campaign_name' => $row['campaign_name'] ?? null,
                 'channeledCampaign' => $channeledCampaign,
-                'channeledCampaign_name' => $row['campaign_name'] ?? null,
-                'adset_name' => $row['adset_name'] ?? null,
                 'channeledAdGroup' => $channeledAdGroup,
-                'channeledAdGroup_name' => $row['adset_name'] ?? null,
             ]),
             'row_key_fields' => [
                 'campaign_id' => ['campaign', 'channeledCampaign'],
@@ -239,16 +233,9 @@ class FacebookMarketingMetricConvert
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
                 'campaign' => $campaign,
-                'campaign_name' => $row['campaign_name'] ?? null,
                 'channeledCampaign' => $channeledCampaign,
-                'channeledCampaign_name' => $row['campaign_name'] ?? null,
-                'adset_name' => $row['adset_name'] ?? null,
                 'channeledAdGroup' => $channeledAdGroup,
-                'channeledAdGroup_name' => $row['adset_name'] ?? null,
-                'ad_name' => $row['ad_name'] ?? null,
                 'channeledAd' => $channeledAd,
-                'channeledAd_name' => $row['ad_name'] ?? null,
-                'creative' => $row['creative']['id'] ?? ($row['creative'] ?? null),
             ]),
             'row_key_fields' => [
                 'campaign_id' => ['campaign', 'channeledCampaign'],
@@ -260,6 +247,7 @@ class FacebookMarketingMetricConvert
                 'campaign_id' => 'channeledCampaign',
                 'adset_id'    => 'channeledAdGroup',
                 'ad_id'       => 'channeledAd',
+                'creative'    => 'creative',
             ],
             'fallback_platform_id' => $channeledAdId
         ], $logger);
