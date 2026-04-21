@@ -833,17 +833,6 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 }
             }
 
-            // E. Level-specific completeness check to avoid orphan metric configurations
-            if ($level === 'ad' && empty($row['ad_id'])) {
-                return false;
-            }
-            if ($level === 'adset' && empty($row['adset_id'])) {
-                return false;
-            }
-            if ($level === 'campaign' && empty($row['campaign_id'])) {
-                return false;
-            }
-
             return true;
         });
     }

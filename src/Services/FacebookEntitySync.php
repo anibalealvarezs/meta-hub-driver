@@ -151,7 +151,7 @@ class FacebookEntitySync
                                 'filtering' => json_encode([[
                                     'field' => 'effective_status',
                                     'operator' => 'IN',
-                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]
+                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
                                 ]])
                             ]
                         );
@@ -245,14 +245,14 @@ class FacebookEntitySync
                                 [
                                     'field' => 'effective_status',
                                     'operator' => 'IN',
-                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]
+                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
                                 ]
                             ]);
                         } else {
                             $additionalParams['filtering'] = json_encode([[
                                 'field' => 'effective_status',
                                 'operator' => 'IN',
-                                'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]
+                                'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
                             ]]);
                         }
 
