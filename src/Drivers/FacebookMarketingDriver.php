@@ -455,8 +455,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $maxConsecutiveFailures = 5;
 
         foreach ($accountsToProcess as $account) {
-            $accountPlatformId = (string)($account['id'] ?? $account);
-            if (!$accountPlatformId) continue;
+            $accountPlatformIdRaw = (string)($account['id'] ?? $account);
+            if (!$accountPlatformIdRaw) continue;
+
+            $accountPlatformId = method_exists($this, 'getCleanId') ? $this->getCleanId($accountPlatformIdRaw) : $accountPlatformIdRaw;
 
             try {
 
