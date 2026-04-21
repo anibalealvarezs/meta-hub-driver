@@ -798,6 +798,18 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $level, $campaignInclude, $campaignExclude, $adsetInclude, $adsetExclude, 
             $adInclude, $adExclude, $creativeInclude, $creativeExclude
         ) {
+            // 1. Strict Validation: Row must contain the ID for the requested level
+            if ($level === 'ad' && (empty($row['ad_id']) || $row['ad_id'] === '0')) {
+                return false;
+            }
+            if ($level === 'adset' && (empty($row['adset_id']) || $row['adset_id'] === '0')) {
+                return false;
+            }
+            if ($level === 'campaign' && (empty($row['campaign_id']) || $row['campaign_id'] === '0')) {
+                return false;
+            }
+
+            // 2. Hierarchy Filters
             // A. Check Campaign level (available in most marketing insight levels)
             if (!empty($row['campaign_id']) && ($campaignInclude || $campaignExclude)) {
                 $cId = (string)$row['campaign_id'];
