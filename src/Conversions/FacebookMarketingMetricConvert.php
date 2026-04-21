@@ -55,10 +55,7 @@ class FacebookMarketingMetricConvert
                 'account' => $account,
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
-                'campaign' => $campaign,
-                'channeledCampaign' => $channeledCampaign,
-                'channeledAdGroup' => $channeledAdGroup,
-                'channeledAd' => $channeledAd,
+                'creative' => $creative,
             ]),
             'row_key_fields' => [
                 'ad_id'      => 'channeledAd',
@@ -94,11 +91,11 @@ class FacebookMarketingMetricConvert
             'metrics' => array_combine($metricsList, $metricsList),
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
-            'context' => [
+            'context' => UniversalMetricConverter::getUniversalContext([
                 'account' => $account,
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
-            ],
+            ]),
             'row_key_fields' => [],
             'fallback_platform_id' => $channeledPlatformId
         ], $logger);
@@ -133,13 +130,13 @@ class FacebookMarketingMetricConvert
             'metrics' => array_combine($metricsList, $metricsList),
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
-            'context' => [
+            'context' => UniversalMetricConverter::getUniversalContext([
                 'account' => $account,
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
                 'campaign' => $campaign,
                 'channeledCampaign' => $channeledCampaign,
-            ],
+            ]),
             'row_key_fields' => [
                 'campaign_id' => ['campaign', 'channeledCampaign'],
             ],
@@ -180,14 +177,14 @@ class FacebookMarketingMetricConvert
             'metrics' => array_combine($metricsList, $metricsList),
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
-            'context' => [
+            'context' => UniversalMetricConverter::getUniversalContext([
                 'account' => $account,
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
                 'campaign' => $campaign,
                 'channeledCampaign' => $channeledCampaign,
                 'channeledAdGroup' => $channeledAdGroup,
-            ],
+            ]),
             'row_key_fields' => [
                 'campaign_id' => ['campaign', 'channeledCampaign'],
                 'adset_id'    => ['channeledAdGroup'],
@@ -231,7 +228,7 @@ class FacebookMarketingMetricConvert
             'metrics' => array_combine($metricsList, $metricsList),
             'dimensions' => ['age', 'gender'],
             'metadata_fields' => self::METADATA_FIELDS,
-            'context' => [
+            'context' => UniversalMetricConverter::getUniversalContext([
                 'account' => $account,
                 'channeledAccount' => $channeledAccount,
                 'channeledAccountId' => $channeledAccountId,
@@ -239,7 +236,7 @@ class FacebookMarketingMetricConvert
                 'channeledCampaign' => $channeledCampaign,
                 'channeledAdGroup' => $channeledAdGroup,
                 'channeledAd' => $channeledAd,
-            ],
+            ]),
             'row_key_fields' => [
                 'campaign_id' => ['campaign', 'channeledCampaign'],
                 'adset_id'    => ['channeledAdGroup'],
