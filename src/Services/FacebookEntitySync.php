@@ -235,7 +235,11 @@ class FacebookEntitySync
                         $excludeFilter = self::getFacebookFilter($config, 'ADSET', 'cache_exclude');
 
                         $additionalParams = [];
-                        if ($parentIdsMap && isset($parentIdsMap[$accId])) {
+                        if ($parentIdsMap) {
+                            if (empty($parentIdsMap[$accId])) {
+                                $fetched = true;
+                                continue;
+                            }
                             $additionalParams['filtering'] = json_encode([
                                 [
                                     'field' => 'campaign.id',
@@ -366,7 +370,11 @@ class FacebookEntitySync
                         $excludeFilter = self::getFacebookFilter($config, 'AD', 'cache_exclude');
 
                         $additionalParams = [];
-                        if ($parentIdsMap && isset($parentIdsMap[$adAccountId])) {
+                        if ($parentIdsMap) {
+                            if (empty($parentIdsMap[$adAccountId])) {
+                                $fetched = true;
+                                continue;
+                            }
                             $additionalParams['filtering'] = json_encode([
                                 [
                                     'field' => 'adset.id',

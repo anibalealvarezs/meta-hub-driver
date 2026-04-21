@@ -52,7 +52,7 @@ class FacebookMarketingConvert
                 'optimizationGoal' => 'optimization_goal',
                 'billingEvent' => 'billing_event',
                 'targeting' => 'targeting',
-                'channeledCampaignId' => 'campaign_id',
+                'channeledCampaignId' => fn($r) => $r['campaign_id'] ?? ($r['campaign']['id'] ?? null),
             ],
             'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'channeledAccountId' => $channeledAccountId,
@@ -69,8 +69,8 @@ class FacebookMarketingConvert
             'mapping' => [
                 'name' => 'name',
                 'status' => 'status',
-                'channeledCampaignId' => 'campaign_id',
-                'channeledAdGroupId' => 'adset_id',
+                'channeledCampaignId' => fn($r) => $r['campaign_id'] ?? ($r['campaign']['id'] ?? null),
+                'channeledAdGroupId' => fn($r) => $r['adset_id'] ?? ($r['adset']['id'] ?? null),
                 'channeledCreativeId' => 'creative.id',
             ],
             'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
