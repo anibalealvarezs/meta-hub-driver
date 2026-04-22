@@ -1424,7 +1424,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             'instagram_account' => 'ig_account',
             default => 'id'
         };
-        return FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]);
+        return isset($asset[$platformIdKey]) && ($asset[$platformIdKey]) ? FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]) : '';
     }
 
     public static function getChanneledAccountPlatformCreatedAt(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
@@ -1440,7 +1440,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             'instagram_account' => 'ig_account_name',
             default => 'title'
         };
-        return FieldsNormalizerHelper::getCleanString($asset[$nameKey]);
+        return isset($asset[$nameKey]) && ($asset[$nameKey]) ? FieldsNormalizerHelper::getCleanString($asset[$nameKey]) : '';
     }
 
     public static function getChanneledAccountType(string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
