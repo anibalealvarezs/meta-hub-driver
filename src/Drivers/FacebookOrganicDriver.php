@@ -1417,10 +1417,11 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getPageData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
-        return match(self::getChanneledAccountType($entityType)){
-            'instagram_account' => FieldsNormalizerHelper::getCleanArray($asset['data']['instagram_business_account']),
-            default => FieldsNormalizerHelper::getCleanArray($asset['data'])
+        $dataKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_data',
+            default => 'data'
         };
+        return isset($asset[$dataKey]) && $asset[$dataKey] ? FieldsNormalizerHelper::getCleanArray($asset[$dataKey]) : [];
     }
 
     // CHANNELED ACCOUNT FIELDS
@@ -1454,10 +1455,11 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getChanneledAccountData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
-        return match(self::getChanneledAccountType($entityType)){
-            'instagram_account' => FieldsNormalizerHelper::getCleanArray($asset['data']['instagram_business_account']),
-            default => FieldsNormalizerHelper::getCleanArray($asset['data'])
+        $dataKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_data',
+            default => 'data'
         };
+        return isset($asset[$dataKey]) && $asset[$dataKey] ? FieldsNormalizerHelper::getCleanArray($asset[$dataKey]) : [];
     }
 
     /**
