@@ -1327,7 +1327,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             ];
             $list[] = $fbPage;
         }
-        $igPlatformId = self::getPageCanonicalId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT);
+        $igPlatformId = self::getPagePlatformId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT);
         if ($igPlatformId) {
             $igAccount = [
                 'platformId' => $igPlatformId,
@@ -1387,11 +1387,14 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getPageHostname(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        $hostnameKey = match(self::getChanneledAccountType($entityType)){
-            'instagram_account' => 'ig_hostname',
-            default => 'hostname'
+        return match(self::getChanneledAccountType($entityType)){
+            'instagram_account' =>
+            isset($asset['hostname']) && $asset['hostname'] ?
+                FieldsNormalizerHelper::getCleanString($asset['hostname']) :
+                    (isset($asset['instagram_business_account']['website']) && $asset['instagram_business_account']['website'] ?
+                        FieldsNormalizerHelper::getCleanString($asset['instagram_business_account']['website']) : ''),
+            default => $asset['hostname'] ? FieldsNormalizerHelper::getCleanString($asset['hostname']) : ''
         };
-        return isset($asset[$hostnameKey]) && $asset[$hostnameKey] ? FieldsNormalizerHelper::getCleanString($asset[$hostnameKey]) : '';
     }
 
     public static function getPageTitle(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
@@ -1410,11 +1413,10 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getPageData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
-        $dataKey = match(self::getChanneledAccountType($entityType)){
-            'instagram_account' => 'ig_data',
-            default => 'data'
+        return match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => FieldsNormalizerHelper::getCleanArray($asset['data']['instagram_business_account']),
+            default => FieldsNormalizerHelper::getCleanArray($asset['data'])
         };
-        return FieldsNormalizerHelper::getCleanArray($asset[$dataKey]);
     }
 
     // CHANNELED ACCOUNT FIELDS
