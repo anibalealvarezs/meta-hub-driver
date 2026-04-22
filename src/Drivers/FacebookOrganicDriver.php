@@ -2,14 +2,32 @@
 
 namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
+use Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider;
+use Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry;
+use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
+use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
+use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
+use Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes;
+use Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService;
+use Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService;
+use Anibalealvarezs\ApiDriverCore\Traits\HasHierarchicalValidationTrait;
+use Anibalealvarezs\FacebookGraphApi\Enums\MediaProductType;
+use Anibalealvarezs\FacebookGraphApi\Enums\MediaType;
+use Anibalealvarezs\FacebookGraphApi\Enums\TokenSample;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
+use Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController;
+use Anibalealvarezs\MetaHubDriver\Controllers\ReportController;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookOrganicMetricConvert;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
 use Anibalealvarezs\ApiDriverCore\Traits\SyncDriverTrait;
 use Anibalealvarezs\ApiSkeleton\Enums\Period;
+use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
+use GuzzleHttp\Exception\GuzzleException;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
@@ -22,9 +40,9 @@ use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
 use Doctrine\Common\Collections\ArrayCollection;
 
-class FacebookOrganicDriver implements SyncDriverInterface
+class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, ChanneledAccountableInterface
 {
-    use \Anibalealvarezs\ApiDriverCore\Traits\HasHierarchicalValidationTrait;
+    use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
     use HasUpdatableCredentials;
 
@@ -112,28 +130,28 @@ class FacebookOrganicDriver implements SyncDriverInterface
      */
     public static function getRoutes(): array
     {
-        return array_merge(\Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes::get(), [
+        return array_merge(AssetRoutes::get(), [
             '/fb-login' => [
                 'httpMethod' => 'GET',
-                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->login(),
+                'callable' => fn(...$args) => (new FacebookAuthController())->login(),
                 'public' => true,
                 'admin' => false
             ],
             '/fb-auth-start' => [
                 'httpMethod' => 'GET',
-                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->start(),
+                'callable' => fn(...$args) => (new FacebookAuthController())->start(),
                 'public' => true,
                 'admin' => false
             ],
             '/fb-callback' => [
                 'httpMethod' => 'GET',
-                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->callback($args['request'] ?? \Symfony\Component\HttpFoundation\Request::createFromGlobals()),
+                'callable' => fn(...$args) => (new FacebookAuthController())->callback($args['request'] ?? Request::createFromGlobals()),
                 'public' => true,
                 'admin' => false
             ],
             '/fb-organic-reports' => [
                 'httpMethod' => 'GET',
-                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\ReportController())->organic($args),
+                'callable' => fn(...$args) => (new ReportController())->organic($args),
                 'public' => true,
                 'admin' => false,
                 'html' => true
@@ -178,7 +196,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $chanCfg['cache_aggregations'] = $newValue;
             
             if ($prevValue && !$newValue && class_exists('\Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService')) {
-                \Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService::clearChannel('facebook_organic');
+                CacheStrategyService::clearChannel('facebook_organic');
             }
         }
 
@@ -198,7 +216,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
         // Pages management
         $newPagesList = [];
-        if ($this->logger) $this->logger->info("DEBUG: updateConfiguration received assets", ['count' => count($selectedAssets), 'first_asset' => reset($selectedAssets)]);
+        $this->logger?->info("DEBUG: updateConfiguration received assets",
+            ['count' => count($selectedAssets), 'first_asset' => reset($selectedAssets)]);
         foreach ($selectedAssets as $pData) {
             $pageId = (string)$pData['id'];
             $item = [
@@ -227,7 +246,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             ];
             
             if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
-                $newPagesList[] = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_organic', $item);
+                $newPagesList[] = ConfigSchemaRegistryService::getEntitySchema('facebook_organic', $item);
             } else {
                 $newPagesList[] = $item;
             }
@@ -239,6 +258,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     /**
      * @inheritdoc
+     * @throws Exception|GuzzleException
      */
     public function fetchAvailableAssets(bool $throwOnError = false): array
     {
@@ -252,12 +272,11 @@ class FacebookOrganicDriver implements SyncDriverInterface
             
             $pagesData = $api->getPages(
                 userId: $userId,
-                permissions: [], 
-                limit: 100, 
                 fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
             );
 
-            if ($this->logger) $this->logger->info("DEBUG: Facebook Organic raw pages response", ['data_keys' => !empty($pagesData['data']) ? array_keys(reset($pagesData['data'])) : 'empty']);
+            $this->logger?->info("DEBUG: Facebook Organic raw pages response",
+                ['data_keys' => !empty($pagesData['data']) ? array_keys(reset($pagesData['data'])) : 'empty']);
 
             $assets = ['facebook_pages' => []];
 
@@ -278,7 +297,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             }
             return $assets;
         } catch (Exception $e) {
-            if ($this->logger) $this->logger->error("FacebookOrganicDriver: Error fetching available assets: " . $e->getMessage());
+            $this->logger?->error("FacebookOrganicDriver: Error fetching available assets: " . $e->getMessage());
             if ($throwOnError) {
                 throw $e;
             }
@@ -310,8 +329,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
         }
     }
 
-    private ?AuthProviderInterface $authProvider = null;
-    private ?LoggerInterface $logger = null;
+    private ?AuthProviderInterface $authProvider;
+    private ?LoggerInterface $logger;
     /** @var callable|null */
     private $dataProcessor = null;
 
@@ -351,6 +370,10 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $this->dataProcessor = $processor;
     }
 
+    /**
+     * @throws GuzzleException
+     * @throws Exception
+     */
     public function sync(
         DateTime $startDate,
         DateTime $endDate,
@@ -382,6 +405,10 @@ class FacebookOrganicDriver implements SyncDriverInterface
         return $this->syncMetrics($startDate, $endDate, $config, $shouldContinue, $identityMapper);
     }
 
+    /**
+     * @throws GuzzleException
+     * @throws Exception
+     */
     public function syncMetrics(
         DateTime $startDate,
         DateTime $endDate,
@@ -417,19 +444,18 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $this->logger?->info(">>> INICIO: Sincronizando métricas Orgánicas para FB Page: $pagePlatformId" . ($igPlatformId ? " e Instagram: $igPlatformId" : ""));
             
             // Resolve Internal Identities from pre-loaded maps
-            $pageObj = $pageMap[$pagePlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($pagePlatformId);
-            $caObj = $caMap[$pagePlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($pagePlatformId);
-            $igCaObj = $igPlatformId ? ($caMap[$igPlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($igPlatformId)) : null;
+            $pageObj = $pageMap[$pagePlatformId] ?? (new UniversalEntity())->setPlatformId($pagePlatformId);
+            $caObj = $caMap[$pagePlatformId] ?? (new UniversalEntity())->setPlatformId($pagePlatformId);
+            $igCaObj = $igPlatformId ? ($caMap[$igPlatformId] ?? (new UniversalEntity())->setPlatformId($igPlatformId)) : null;
 
             $pageId = $pageObj->getPlatformId();
-            $caId = $caObj->getPlatformId();
             $igCaId = $igCaObj ? $igCaObj->getPlatformId() : null;
 
             $api->setPageId($pagePlatformId);
             $api->setPageAccesstoken($page['access_token'] ?? $config['access_token'] ?? null);
 
             try {
-                $api->setSampleBasedToken(\Anibalealvarezs\FacebookGraphApi\Enums\TokenSample::PAGE);
+                $api->setSampleBasedToken(TokenSample::PAGE);
             } catch (Exception $e) {
                 $this->logger?->error("Failed to set page-based token for FB Page $pagePlatformId: " . $e->getMessage());
                 continue; // Skip this page
@@ -452,7 +478,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     $config, 
                     $shouldContinue, 
                     $identityMapper, 
-                    $pageObj ?? $pageId, 
+                    $pageObj,
                     $igCaObj ?? $igCaId,
                     ($idx === 0 && $isRecent) // Only include lifetime metrics on the first chunk of a recent sync
                 );
@@ -465,7 +491,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         rows: $pageData['insights'],
                         pagePlatformId: (string)$pageId,
                         logger: $this->logger,
-                        page: $pageObj ?? $pageId,
+                        page: $pageObj,
                         channeledAccount: $caObj ?? $pagePlatformId,
                         account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')
                     );
@@ -478,7 +504,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         $igCollection = FacebookOrganicMetricConvert::igAccountMetrics(
                             rows: $insight['data'],
                             date: $chunk['start'],
-                            page: $pageObj ?? $pageId,
+                            page: $pageObj,
                             account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
                             channeledAccount: $igCaObj ?? $igPlatformId,
                             logger: $this->logger,
@@ -495,7 +521,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                             rows: $postInsight['data'],
                             postPlatformId: $postInsight['id'],
                             logger: $this->logger,
-                            page: $pageObj ?? $pageId,
+                            page: $pageObj,
                             post: $postInsight['instance'] ?? $postInsight['id'],
                             period: 'lifetime',
                             channeledAccount: $caObj ?? $pagePlatformId,
@@ -511,7 +537,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         $igMediaCollection = FacebookOrganicMetricConvert::igMediaMetrics(
                             rows: $mediaInsight['data'],
                             date: date('Y-m-d'), // Lifetime metrics must be stamped with 'today'
-                            page: $pageObj ?? $pageId,
+                            page: $pageObj,
                             post: $mediaInsight['instance'] ?? $mediaInsight['id'],
                             account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
                             channeledAccount: $igCaObj ?? $igPlatformId,
@@ -543,6 +569,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
         return new Response(json_encode(['status' => 'success', 'data' => $totalStats]));
     }
 
+    /**
+     * @throws Exception
+     */
     private function syncEntities(
         MetaSyncScope|MetaEntityType $entity,
         DateTime $startDate,
@@ -555,9 +584,8 @@ class FacebookOrganicDriver implements SyncDriverInterface
         $startDateStr = $startDate->format('Y-m-d');
         $endDateStr = $endDate->format('Y-m-d');
         $jobId = $config['jobId'] ?? null;
-        $filters = $config['filters'] ?? null;
 
-        $syncService = \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::class;
+        $syncService = FacebookEntitySync::class;
 
         $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
         $resolvedPages = [];
@@ -658,12 +686,15 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     public function getApi(array $config = []): FacebookGraphApi
     {
-        if (empty($config) && $this->authProvider instanceof \Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider) {
+        if (empty($config) && $this->authProvider instanceof BaseAuthProvider) {
             $config = $this->authProvider->getConfig();
         }
         return $this->initializeApi($config);
     }
 
+    /**
+     * @throws Exception
+     */
     protected function initializeApi(array $config): FacebookGraphApi
     {
         $this->logger?->info("DEBUG: FacebookOrganicDriver::initializeApi - START");
@@ -678,6 +709,10 @@ class FacebookOrganicDriver implements SyncDriverInterface
         );
     }
 
+    /**
+     * @throws GuzzleException
+     * @throws Exception
+     */
     private function fetchPageData(
         FacebookGraphApi $api,
         array $page,
@@ -725,7 +760,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 throw new Exception("Sync aborted by the orchestrator.");
             }
             $igTwoYearsAgo = (new DateTime())->modify('-2 years + 1 day')->format('Y-m-d');
-            $igSince = $start < $igTwoYearsAgo ? $igTwoYearsAgo : $start;
+            $igSince = max($start, $igTwoYearsAgo);
 
             foreach ([1, 2, 3, 4, 5] as $option) {
                 if ($shouldContinue && !$shouldContinue()) {
@@ -741,7 +776,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         $data['ig_insights'][] = ['option' => $option, 'data' => $insights['data']];
                     }
                 } catch (Exception $e) {
-                    if ($this->logger) $this->logger->warning("IG Insight option $option failed: " . $e->getMessage());
+                    $this->logger?->warning("IG Insight option $option failed: " . $e->getMessage());
                 }
             }
         }
@@ -772,7 +807,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                             ];
                         }
                     } catch (Exception $e) {
-                        if ($this->logger) $this->logger->warning("Failed to fetch insights for Post $postId: " . $e->getMessage());
+                        $this->logger?->warning("Failed to fetch insights for Post $postId: " . $e->getMessage());
                     }
                 }
             }
@@ -794,9 +829,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
                         $pType = $rawInfo['media_product_type'] ?? null;
 
                         // Prioritize MediaProductType for more accurate metrics (Story/Reel/Feed)
-                        $type = \Anibalealvarezs\FacebookGraphApi\Enums\MediaProductType::tryFrom(strtoupper((string)$pType))
-                                ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::tryFrom(strtoupper((string)$mType))
-                                ?? \Anibalealvarezs\FacebookGraphApi\Enums\MediaType::CAROUSEL_ALBUM;
+                        $type = MediaProductType::tryFrom(strtoupper((string)$pType))
+                                ?? MediaType::tryFrom(strtoupper((string)$mType))
+                                ?? MediaType::CAROUSEL_ALBUM;
                         
                         $metricSet = isset($config['metric_set']) ? (MetricSet::tryFrom($config['metric_set']) ?: MetricSet::BASIC) : MetricSet::BASIC;
                         $customMetrics = $config['metrics'] ?? [];
@@ -816,7 +851,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                             ];
                         }
                     } catch (Exception $e) {
-                        if ($this->logger) $this->logger->warning("Failed to fetch insights for IG Media $mediaId: " . $e->getMessage());
+                        $this->logger?->warning("Failed to fetch insights for IG Media $mediaId: " . $e->getMessage());
                     }
                 }
             }
@@ -862,7 +897,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
      */
     public function validateConfig(array $config): array
     {
-        $config = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::hydrate(
+        $config = ConfigSchemaRegistryService::hydrate(
             $this->getChannel(),
             'global',
             $config,
@@ -1017,12 +1052,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 
                 $seeder->queueMetric(
                     channel: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic,
-                    name: 'post_engagement', 
+                    name: 'post_engagement',
                     date: $itemDate,
                     value: 0,
-                    gAccId: $fbParent->id,
                     pageId: $page->id,
                     caId: $caIg->id,
+                    gAccId: $fbParent->id,
                     postPId: $mediaPId,
                     data: json_encode([
                         'id' => $mediaPId,
@@ -1043,12 +1078,12 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
                 $seeder->queueMetric(
                     channel: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic,
-                    name: 'post_impressions', 
+                    name: 'post_impressions',
                     date: $itemDate,
                     value: 0,
-                    gAccId: $fbParent->id,
                     pageId: $page->id,
                     caId: $caFb->id,
+                    gAccId: $fbParent->id,
                     postPId: $postPId,
                     data: json_encode([
                         'id' => $postPId,
@@ -1069,7 +1104,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
             $this->seedDailyMetrics(
                 seeder: $seeder, 
                 dates: $dates, 
-                chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic, 
+                chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic,
                 metricsCfg: [
                     'page_fans' => [0, 10, 'trend'],
                     'page_impressions' => [50, 500],
@@ -1095,7 +1130,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     $this->seedDailyMetrics(
                         seeder: $seeder, 
                         dates: $dates, 
-                        chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic, 
+                        chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic,
                         metricsCfg: [
                             'post_impressions' => [10, 100],
                             'post_engagement' => [2, 20],
@@ -1118,7 +1153,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     $this->seedDailyMetrics(
                         seeder: $seeder, 
                         dates: $dates, 
-                        chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic, 
+                        chan: \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_organic,
                         metricsCfg: [
                             'reach' => [10, 50],
                             'impressions' => [15, 60],
@@ -1148,10 +1183,9 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     private function seedDailyMetrics($seeder, $dates, $chan, $metricsCfg, $gId, $caId, $gCpId, $cpId, $postId, $pId, $gAccName, $caPId, $gCpPId, $cpPId, $pageUrl, $postPId): void
     {
-        $currentValues = [];
-        foreach ($metricsCfg as $name => $cfg) {
-            $currentValues[$name] = $cfg[0];
-        }
+        $currentValues = array_map(function ($cfg) {
+            return $cfg[0];
+        }, $metricsCfg);
 
         foreach ($dates as $date) {
             $payload = [];
@@ -1192,7 +1226,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     public function boot(): void
     {
-        \Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry::registerRelations([
+        RepositoryRegistry::registerRelations([
             'post'              => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'post_id', 'alias' => 'rpo'],
             'post_id'           => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'post_id', 'alias' => 'rpo_id'],
             'permalink_url'     => ['table' => 'posts', 'fk' => 'post_id', 'field' => 'data', 'alias' => 'rpo_pu', 'isJSON' => true, 'jsonPath' => 'permalink_url', 'isAttribute' => true],
@@ -1207,9 +1241,6 @@ class FacebookOrganicDriver implements SyncDriverInterface
         ]);
     }
 
-    /**
-     * @inheritdoc
-     */
     /**
      * @inheritdoc
      */
@@ -1282,6 +1313,136 @@ class FacebookOrganicDriver implements SyncDriverInterface
         ];
     }
 
+    public static function getPages(array $asset): array {
+        return [
+            // FB Page
+            [
+                'platformId' => self::getPagePlatformId(asset: $asset),
+                'canonicalId' => self::getPageCanonicalId(asset: $asset),
+                'hostname' => self::getPageHostname(asset: $asset),
+                'title' => self::getPageTitle(asset: $asset),
+                'url' => self::getPageUrl(asset: $asset),
+                'data' => self::getPageData(asset: $asset)
+            ],
+            [
+                'platformId' => self::getPagePlatformId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'canonicalId' => self::getPageCanonicalId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'hostname' => self::getPageHostname(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'title' => self::getPageTitle(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'url' => self::getPageUrl(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'data' => self::getPageData(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT)
+            ]
+            // IG Account
+        ];
+    }
+
+    public static function getChanneledAccounts(array $asset): array {
+        return [
+            // FB Page
+            [
+                'platformId' => self::getChanneledAccountPlatformId(asset: $asset),
+                'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
+                'name' => self::getChanneledAccountName(asset: $asset),
+                'type' => self::getChanneledAccountType(),
+                'data' => self::getChanneledAccountData(asset: $asset)
+            ],
+            [
+                'platformId' => self::getChanneledAccountPlatformId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'name' => self::getChanneledAccountName(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'type' => self::getChanneledAccountType(entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'data' => self::getChanneledAccountData(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT)
+            ]
+            // IG Account
+        ];
+    }
+
+    // PAGE FIELDS
+
+    public static function getPagePlatformId(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $platformIdKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_account',
+            default => 'id'
+        };
+        return FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]);
+    }
+
+    public static function getPageCanonicalId(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        return match(self::getChanneledAccountType($entityType)){
+                'instagram_account' => 'ig:',
+                    default => 'fb:'
+            }.self::getPagePlatformId($asset);
+    }
+
+    public static function getPageHostname(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $hostnameKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_hostname',
+            default => 'hostname'
+        };
+        return FieldsNormalizerHelper::getCleanString($asset[$hostnameKey]);
+    }
+
+    public static function getPageTitle(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $titleKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_account_name',
+            default => 'title'
+        };
+        return FieldsNormalizerHelper::getCleanString($asset[$titleKey]);
+    }
+
+    public static function getPageUrl(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        return match(self::getChanneledAccountType($entityType)){
+                'instagram_account' => 'https://instagram.com/',
+                default => 'https://facebook.com/:'
+            }.self::getPagePlatformId($asset);
+    }
+
+    public static function getPageData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
+        $dataKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_data',
+            default => 'data'
+        };
+        return FieldsNormalizerHelper::getCleanArray($asset[$dataKey]);
+    }
+
+    // CHANNELED ACCOUNT FIELDS
+
+    public static function getChanneledAccountPlatformId(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $platformIdKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_account',
+            default => 'id'
+        };
+        return FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]);
+    }
+
+    public static function getChanneledAccountPlatformCreatedAt(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $platformCreatedAtKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_created_time',
+            default => 'created_time'
+        };
+        return FieldsNormalizerHelper::getCleanString($asset[$platformCreatedAtKey]);
+    }
+
+    public static function getChanneledAccountName(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $nameKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_account_name',
+            default => 'title'
+        };
+        return FieldsNormalizerHelper::getCleanString($asset[$nameKey]);
+    }
+
+    public static function getChanneledAccountType(string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        return $entityType instanceof MetaEntityType ? $entityType->value : $entityType;
+    }
+
+    public static function getChanneledAccountData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
+        $dataKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_data',
+            default => 'data'
+        };
+        return FieldsNormalizerHelper::getCleanArray($asset[$dataKey]);
+    }
+
     /**
      * @inheritdoc
      */
@@ -1350,6 +1511,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     /**
      * @inheritdoc
+     * @throws Exception|GuzzleException
      */
     public function initializeEntities(array $config = []): array
     {
@@ -1381,6 +1543,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
 
     /**
      * @inheritdoc
+     * @throws Exception
      */
     public function reset(string $mode = 'all', array $config = []): array
     {

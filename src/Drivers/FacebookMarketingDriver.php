@@ -2,6 +2,16 @@
 
 namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
+use Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry;
+use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
+use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
+use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
+use Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes;
+use Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService;
+use Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService;
+use Anibalealvarezs\ApiDriverCore\Traits\HasHierarchicalValidationTrait;
+use Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaFeature;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
@@ -15,6 +25,7 @@ use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
 use Anibalealvarezs\ApiDriverCore\Traits\SyncDriverTrait;
+use GuzzleHttp\Exception\GuzzleException;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use DateTime;
@@ -23,9 +34,9 @@ use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
 
-class FacebookMarketingDriver implements SyncDriverInterface
+class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface
 {
-    use \Anibalealvarezs\ApiDriverCore\Traits\HasHierarchicalValidationTrait;
+    use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
     use HasUpdatableCredentials;
 
@@ -113,22 +124,22 @@ class FacebookMarketingDriver implements SyncDriverInterface
      */
     public static function getRoutes(): array
     {
-        return array_merge(\Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes::get(), [
+        return array_merge(AssetRoutes::get(), [
             '/fb-login' => [
                 'httpMethod' => 'GET',
-                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->login(),
+                'callable' => fn(...$args) => (new FacebookAuthController())->login(),
                 'public' => true,
                 'admin' => false
             ],
             '/fb-auth-start' => [
                 'httpMethod' => 'GET',
-                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->start(),
+                'callable' => fn(...$args) => (new FacebookAuthController())->start(),
                 'public' => true,
                 'admin' => false
             ],
             '/fb-callback' => [
                 'httpMethod' => 'GET',
-                'callable' => fn(...$args) => (new \Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController())->callback($args['request'] ?? \Symfony\Component\HttpFoundation\Request::createFromGlobals()),
+                'callable' => fn(...$args) => (new FacebookAuthController())->callback($args['request'] ?? \Symfony\Component\HttpFoundation\Request::createFromGlobals()),
                 'public' => true,
                 'admin' => false
             ],
@@ -144,6 +155,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     /**
      * @inheritdoc
+     * @throws Exception|GuzzleException
      */
     public function fetchAvailableAssets(bool $throwOnError = false): array
     {
@@ -157,8 +169,6 @@ class FacebookMarketingDriver implements SyncDriverInterface
             
             $pagesData = $api->getPages(
                 userId: $userId,
-                permissions: [], 
-                limit: 100, 
                 fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
             );
 
@@ -185,7 +195,6 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
             $adAccountsData = $api->getAdAccounts(
                 userId: $userId,
-                limit: 100, 
                 fields: 'id,name,account_id,account_status,currency,created_time'
             );
 
@@ -201,8 +210,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
             }
 
             return $assets;
-        } catch (\Exception $e) {
-            if ($this->logger) $this->logger->error("FacebookMarketingDriver: Error fetching available assets: " . $e->getMessage());
+        } catch (Exception $e) {
+            $this->logger?->error("FacebookMarketingDriver: Error fetching available assets: " . $e->getMessage());
             if ($throwOnError) {
                 throw $e;
             }
@@ -249,7 +258,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
             $chanCfg['cache_aggregations'] = $newValue;
             
             if ($prevValue && !$newValue && class_exists('\Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService')) {
-                \Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService::clearChannel('facebook_marketing');
+                CacheStrategyService::clearChannel('facebook_marketing');
             }
         }
 
@@ -315,7 +324,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 ];
 
                 if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
-                    $schema = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::getEntitySchema('facebook_marketing', $item);
+                    $schema = ConfigSchemaRegistryService::getEntitySchema('facebook_marketing', $item);
                     $newAccsList[] = $schema;
                 } else {
                     $newAccsList[] = $item;
@@ -343,7 +352,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     'user_id' => $api->getUserId()
                 ]
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -352,8 +361,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
     }
 
-    private ?AuthProviderInterface $authProvider = null;
-    private ?LoggerInterface $logger = null;
+    private ?AuthProviderInterface $authProvider;
+    private ?LoggerInterface $logger;
     /** @var callable|null */
     private $dataProcessor = null;
 
@@ -393,6 +402,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $this->dataProcessor = $processor;
     }
 
+    /**
+     * @throws GuzzleException
+     * @throws Exception
+     */
     public function sync(
         DateTime $startDate,
         DateTime $endDate,
@@ -424,6 +437,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return $this->syncMetrics($startDate, $endDate, $config, $shouldContinue, $identityMapper);
     }
 
+    /**
+     * @throws GuzzleException
+     * @throws Exception
+     */
     private function syncMetrics(
         DateTime $startDate,
         DateTime $endDate,
@@ -474,8 +491,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 }
 
                 // Resolve Internal Ad Account Entity object from pre-loaded map
-                $caObject = $caMap[$accountPlatformId] ?? (new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity())->setPlatformId($accountPlatformId);
-                $caId = $caObject->getPlatformId();
+                $caObject = $caMap[$accountPlatformId] ?? (new UniversalEntity())->setPlatformId($accountPlatformId);
 
                 $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
                 $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
@@ -499,7 +515,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
                                 channeledAccount: $caObject ?? $accountPlatformId, 
                                 level: $level, 
                                 logger: $this->logger,
-                                account: ($caObject && method_exists($caObject, 'getAccount')) ? $caObject->getAccount() : ($config['accounts_group_name'] ?? 'Default')
+                                account: (method_exists($caObject, 'getAccount')) ? $caObject->getAccount() : ($config['accounts_group_name'] ?? 'Default')
                             );
                             if ($this->dataProcessor && $collection->count() > 0) {
                                 $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::MARKETING);
@@ -547,6 +563,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return ['account'];
     }
 
+    /**
+     * @throws Exception
+     */
     protected function syncEntities(
         MetaSyncScope|MetaEntityType $entity,
         DateTime $startDate,
@@ -562,7 +581,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
         $jobId = $config['jobId'] ?? null;
         $filters = $config['filters'] ?? (object)[];
 
-        $syncService = \Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync::class;
+        $syncService = FacebookEntitySync::class;
 
         $channeledAccounts = [];
         if ($identityMapper && !empty($config['ad_accounts'])) {
@@ -683,6 +702,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
         }
     }
 
+    /**
+     * @throws Exception
+     */
     public function getApi(array $config = []): FacebookGraphApi
     {
         if (empty($config) && $this->authProvider instanceof \Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider) {
@@ -691,6 +713,9 @@ class FacebookMarketingDriver implements SyncDriverInterface
         return $this->initializeApi($config);
     }
 
+    /**
+     * @throws Exception
+     */
     protected function initializeApi(array $config): FacebookGraphApi
     {
         $this->logger?->info("DEBUG: FacebookMarketingDriver::initializeApi - START");
@@ -704,6 +729,10 @@ class FacebookMarketingDriver implements SyncDriverInterface
         );
     }
 
+    /**
+     * @throws GuzzleException
+     * @throws Exception
+     */
     protected function fetchInsights(FacebookGraphApi $api, string $accountId, string $startDate, string $endDate, array $config, string $level = 'account', ?callable $shouldContinue = null): array
     {
         $this->logger?->info("DEBUG: FacebookMarketingDriver::fetchInsights - Requesting level '$level' for '$accountId' from $startDate to $endDate");
@@ -728,8 +757,8 @@ class FacebookMarketingDriver implements SyncDriverInterface
                     adAccountId: $accountId,
                     limit: $currentLimit,
                     metricBreakdown: $metricConfig['breakdowns'],
-                    additionalParams: $params,
                     metricSet: $metricConfig['metricSet'],
+                    additionalParams: $params,
                     customMetrics: $metricConfig['metrics']
                 );
             } catch (Exception $e) {
@@ -891,7 +920,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
      */
     public function validateConfig(array $config): array
     {
-        $config = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::hydrate(
+        $config = ConfigSchemaRegistryService::hydrate(
             $this->getChannel(),
             'global',
             $config,
@@ -1074,12 +1103,12 @@ class FacebookMarketingDriver implements SyncDriverInterface
                                     date: $date,
                                     value: $val,
                                     setId: $dimSet->id,
+                                    adId: $agData['chanAd']->id,
+                                    agId: $agData['chanAdGroup']->id,
+                                    cpId: $cpData['chanCampaign']->id,
                                     caId: $ca->id,
                                     gAccId: $demoAccount->id,
                                     gCpId: $cpData['campaign']->id,
-                                    cpId: $cpData['chanCampaign']->id,
-                                    agId: $agData['chanAdGroup']->id,
-                                    adId: $agData['chanAd']->id,
                                     accName: $demoAccount->getTitle(),
                                     caPId: (string)$ca->getPlatformId(),
                                     gCpPId: (string)$cpData['campaign']->getPlatformId(),
@@ -1098,7 +1127,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     public function boot(): void
     {
-        \Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry::registerRelations([
+        RepositoryRegistry::registerRelations([
             'linked_fb_page_id' => ['table' => 'channeled_accounts', 'fk' => 'channeled_account_id', 'field' => 'data', 'alias' => 'rca', 'isJSON' => true, 'jsonPath' => 'facebook_page_id', 'isAttribute' => true],
         ]);
     }
@@ -1120,6 +1149,41 @@ class FacebookMarketingDriver implements SyncDriverInterface
                 ]
             ]
         ];
+    }
+
+    public static function getChanneledAccounts(array $asset): array {
+        return [
+            // Ad account
+            [
+                'platformId' => self::getChanneledAccountPlatformId(asset: $asset),
+                'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
+                'name' => self::getChanneledAccountName(asset: $asset),
+                'type' => self::getChanneledAccountType(),
+                'data' => self::getChanneledAccountData(asset: $asset)
+            ]
+        ];
+    }
+
+    // CHANNELED ACCOUNT FIELDS
+
+    public static function getChanneledAccountPlatformId(array $asset): string {
+        return FieldsNormalizerHelper::getCleanString($asset['id']);
+    }
+
+    public static function getChanneledAccountPlatformCreatedAt(array $asset): string {
+        return FieldsNormalizerHelper::getCleanString($asset['created_time']);
+    }
+
+    public static function getChanneledAccountName(array $asset): string {
+        return FieldsNormalizerHelper::getCleanString($asset['name']);
+    }
+
+    public static function getChanneledAccountType(string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
+        return $entityType instanceof MetaEntityType ? $entityType->value : $entityType;
+    }
+
+    public static function getChanneledAccountData(array $asset): array {
+        return FieldsNormalizerHelper::getCleanArray($asset['data']);
     }
 
     public function getCleanHostname(string $hostname): string
@@ -1172,7 +1236,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
     {
         $ui = [];
         if (class_exists('\Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService')) {
-            $ui['fb_metrics_config'] = \Anibalealvarezs\ApiDriverCore\Services\ConfigSchemaRegistryService::hydrate('facebook_marketing', 'metrics', $channelConfig['metrics_config'] ?? []);
+            $ui['fb_metrics_config'] = ConfigSchemaRegistryService::hydrate('facebook_marketing', 'metrics', $channelConfig['metrics_config'] ?? []);
         } else {
             $ui['fb_metrics_config'] = $channelConfig['metrics_config'] ?? [];
         }
@@ -1209,6 +1273,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     /**
      * @inheritdoc
+     * @throws Exception
      */
     public function initializeEntities(array $config = []): array
     {
@@ -1240,6 +1305,7 @@ class FacebookMarketingDriver implements SyncDriverInterface
 
     /**
      * @inheritdoc
+     * @throws Exception
      */
     public function reset(string $mode = 'all', array $config = []): array
     {

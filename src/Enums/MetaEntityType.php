@@ -13,6 +13,7 @@ enum MetaEntityType: string
 {
     case PAGE = 'facebook_page';
     case INSTAGRAM_ACCOUNT = 'instagram_account';
+    case META_AD_ACCOUNT = 'meta_ad_account';
     case POST = 'post';
     case IG_MEDIA = 'ig_media';
     case CAMPAIGN = 'campaign';

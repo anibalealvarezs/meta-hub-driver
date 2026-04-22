@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "8db25099aee139c7251b134cb7314dc9da9b5ddf"
+                "reference": "57f3dd3ad90d51e77ccc7edefc022143a725766d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-8db25099aee139c7251b134cb7314dc9da9b5ddf-zip-0a7101.zip",
-                "reference": "8db25099aee139c7251b134cb7314dc9da9b5ddf",
-                "shasum": "caf5959f00c0f064ac78659d3066a313467ca316"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-57f3dd3ad90d51e77ccc7edefc022143a725766d-zip-54a4e3.zip",
+                "reference": "57f3dd3ad90d51e77ccc7edefc022143a725766d",
+                "shasum": "9e85dbb3d2582d5e8d18899f1731d087fc173378"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -111,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-19T23:21:04+00:00"
+            "time": "2026-04-22T15:26:13+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -119,13 +119,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "07d2d2b9ae0a64826763fadd8503ee354220db3e"
+                "reference": "9c44710c7561bdf0df335535fffec27ca62c278a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-07d2d2b9ae0a64826763fadd8503ee354220db3e-zip-5d2b3b.zip",
-                "reference": "07d2d2b9ae0a64826763fadd8503ee354220db3e",
-                "shasum": "357a4c649e348a3da3589dcbebc22adb970072fc"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-9c44710c7561bdf0df335535fffec27ca62c278a-zip-62e48f.zip",
+                "reference": "9c44710c7561bdf0df335535fffec27ca62c278a",
+                "shasum": "965cf3ed7beb7d44b1adef7f584be669c4cf0da8"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -176,7 +176,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-04-19T23:19:40+00:00"
+            "time": "2026-04-21T02:11:11+00:00"
         },
         {
             "name": "anibalealvarezs/oauth-v1",
@@ -403,12 +403,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/dbal.git",
-                "reference": "748125cc3afee13f425d8a736f7fb180af5fa72c"
+                "reference": "f1b02f8415419b8e0b731baaa2c863db855e1190"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/dbal/zipball/748125cc3afee13f425d8a736f7fb180af5fa72c",
-                "reference": "748125cc3afee13f425d8a736f7fb180af5fa72c",
+                "url": "https://api.github.com/repos/doctrine/dbal/zipball/f1b02f8415419b8e0b731baaa2c863db855e1190",
+                "reference": "f1b02f8415419b8e0b731baaa2c863db855e1190",
                 "shasum": ""
             },
             "require": {
@@ -501,7 +501,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-03-19T16:59:56+00:00"
+            "time": "2026-04-21T17:06:25+00:00"
         },
         {
             "name": "doctrine/deprecations",
@@ -2219,12 +2219,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "ad665e88b844414e81707b0a33dfe757c65393f7"
+                "reference": "8c576a888693f99ddcb0bc4ad3acb48761d0bbe1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/ad665e88b844414e81707b0a33dfe757c65393f7",
-                "reference": "ad665e88b844414e81707b0a33dfe757c65393f7",
+                "url": "https://api.github.com/repos/symfony/console/zipball/8c576a888693f99ddcb0bc4ad3acb48761d0bbe1",
+                "reference": "8c576a888693f99ddcb0bc4ad3acb48761d0bbe1",
                 "shasum": ""
             },
             "require": {
@@ -2311,7 +2311,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-18T13:52:23+00:00"
+            "time": "2026-04-22T10:29:21+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
