@@ -1420,7 +1420,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             'instagram_account' => 'ig_created_time',
             default => 'created_time'
         };
-        return FieldsNormalizerHelper::getCleanString($asset[$platformCreatedAtKey]);
+        return isset($asset[$platformCreatedAtKey]) && $asset[$platformCreatedAtKey] ? FieldsNormalizerHelper::getCleanString($asset[$platformCreatedAtKey]) : '';
     }
 
     public static function getChanneledAccountName(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
