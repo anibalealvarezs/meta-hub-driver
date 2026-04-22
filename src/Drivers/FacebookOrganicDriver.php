@@ -1364,7 +1364,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             'instagram_account' => 'ig_account',
             default => 'id'
         };
-        return FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]);
+        return isset($asset[$platformIdKey]) && $asset[$platformIdKey] ? FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]) : '';
     }
 
     public static function getPageCanonicalId(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
