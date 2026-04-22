@@ -1390,14 +1390,11 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getPageHostname(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        return match(self::getChanneledAccountType($entityType)){
-            'instagram_account' =>
-            isset($asset['hostname']) && $asset['hostname'] ?
-                FieldsNormalizerHelper::getCleanString($asset['hostname']) :
-                    (isset($asset['instagram_business_account']['website']) && $asset['instagram_business_account']['website'] ?
-                        FieldsNormalizerHelper::getCleanString($asset['instagram_business_account']['website']) : ''),
-            default => $asset['hostname'] ? FieldsNormalizerHelper::getCleanString($asset['hostname']) : ''
+        $hostnameKey = match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => 'ig_hostname',
+            default => 'hostname'
         };
+        return isset($asset[$hostnameKey]) && ($asset[$hostnameKey]) ? FieldsNormalizerHelper::getCleanString($asset[$hostnameKey]) : '';
     }
 
     public static function getPageTitle(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
@@ -1410,8 +1407,8 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
 
     public static function getPageUrl(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
         return match(self::getChanneledAccountType($entityType)) {
-                'instagram_account' => (isset($asset['instagram_business_account']['username']) && $asset['instagram_business_account']['username'] ?
-                    'https://www.instagram.com/'.FieldsNormalizerHelper::getCleanString($asset['instagram_business_account']['username']) : ''),
+                'instagram_account' => (isset($asset['ig_data']['username']) && $asset['ig_data']['username'] ?
+                    'https://www.instagram.com/'.FieldsNormalizerHelper::getCleanString($asset['ig_data']['username']) : ''),
                 default => isset($asset['link']) && ($asset['link']) ? FieldsNormalizerHelper::getCleanString($asset['link']) : ''
             };
     }
