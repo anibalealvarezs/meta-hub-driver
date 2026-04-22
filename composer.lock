@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "57f3dd3ad90d51e77ccc7edefc022143a725766d"
+                "reference": "4b3ef24743ea0d8b03e63888d511a3954aa9c32e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-57f3dd3ad90d51e77ccc7edefc022143a725766d-zip-54a4e3.zip",
-                "reference": "57f3dd3ad90d51e77ccc7edefc022143a725766d",
-                "shasum": "9e85dbb3d2582d5e8d18899f1731d087fc173378"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-4b3ef24743ea0d8b03e63888d511a3954aa9c32e-zip-f5a5ad.zip",
+                "reference": "4b3ef24743ea0d8b03e63888d511a3954aa9c32e",
+                "shasum": "529773478d96db313c5daa05b5be971596b243a4"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -111,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-22T15:26:13+00:00"
+            "time": "2026-04-22T15:51:50+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
