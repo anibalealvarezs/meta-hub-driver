@@ -1314,47 +1314,51 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getPages(array $asset): array {
-        return [
-            // FB Page
-            [
-                'platformId' => self::getPagePlatformId(asset: $asset),
-                'canonicalId' => self::getPageCanonicalId(asset: $asset),
-                'hostname' => self::getPageHostname(asset: $asset),
-                'title' => self::getPageTitle(asset: $asset),
-                'url' => self::getPageUrl(asset: $asset),
-                'data' => self::getPageData(asset: $asset)
-            ],
-            [
-                'platformId' => self::getPagePlatformId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+        $fbPage = [
+            'platformId' => self::getPagePlatformId(asset: $asset),
+            'canonicalId' => self::getPageCanonicalId(asset: $asset),
+            'hostname' => self::getPageHostname(asset: $asset),
+            'title' => self::getPageTitle(asset: $asset),
+            'url' => self::getPageUrl(asset: $asset),
+            'data' => self::getPageData(asset: $asset)
+        ];
+        $list = [$fbPage];
+        $igPlatformId = self::getPageCanonicalId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT);
+        if ($igPlatformId) {
+            $igAccount = [
+                'platformId' => $igPlatformId,
                 'canonicalId' => self::getPageCanonicalId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'hostname' => self::getPageHostname(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'title' => self::getPageTitle(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'url' => self::getPageUrl(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'data' => self::getPageData(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT)
-            ]
-            // IG Account
-        ];
+            ];
+            $list[] = $igAccount;
+        }
+        return $list;
     }
 
     public static function getChanneledAccounts(array $asset): array {
-        return [
-            // FB Page
-            [
-                'platformId' => self::getChanneledAccountPlatformId(asset: $asset),
-                'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
-                'name' => self::getChanneledAccountName(asset: $asset),
-                'type' => self::getChanneledAccountType(),
-                'data' => self::getChanneledAccountData(asset: $asset)
-            ],
-            [
-                'platformId' => self::getChanneledAccountPlatformId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+        $fbPage = [
+            'platformId' => self::getChanneledAccountPlatformId(asset: $asset),
+            'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
+            'name' => self::getChanneledAccountName(asset: $asset),
+            'type' => self::getChanneledAccountType(),
+            'data' => self::getChanneledAccountData(asset: $asset)
+        ];
+        $list = [$fbPage];
+        $igPlatformId = self::getChanneledAccountPlatformId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT);
+        if ($igPlatformId) {
+            $igAccount = [
+                'platformId' => $igPlatformId,
                 'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'name' => self::getChanneledAccountName(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'type' => self::getChanneledAccountType(entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'data' => self::getChanneledAccountData(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT)
-            ]
-            // IG Account
-        ];
+            ];
+            $list[] = $igAccount;
+        }
+        return $list;
     }
 
     // PAGE FIELDS
