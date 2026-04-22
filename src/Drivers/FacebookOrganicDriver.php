@@ -1450,11 +1450,10 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getChanneledAccountData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
-        $dataKey = match(self::getChanneledAccountType($entityType)){
-            'instagram_account' => 'ig_data',
-            default => 'data'
+        return match(self::getChanneledAccountType($entityType)){
+            'instagram_account' => FieldsNormalizerHelper::getCleanArray($asset['data']['instagram_business_account']),
+            default => FieldsNormalizerHelper::getCleanArray($asset['data'])
         };
-        return FieldsNormalizerHelper::getCleanArray($asset[$dataKey]);
     }
 
     /**
