@@ -1230,7 +1230,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 ],
                 'page' => [
                     'canonical_id' => [
-                        'preffix' => 'fb',
+                        'prefix' => 'fb',
                         'field' => 'platformId'
                     ],
                     'platform_id' => [
@@ -1240,7 +1240,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     'title_key' => 'title',
                     'url' => [
                         'type' => 'custom',
-                        'preffix' => 'https://facebook.com/',
+                        'prefix' => 'https://facebook.com/',
                         'key' => 'id'
                     ],
                     'hostname_key' => 'hostname',
@@ -1261,7 +1261,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                 ],
                 'page' => [
                     'canonical_id' => [
-                        'preffix' => 'ig',
+                        'prefix' => 'ig',
                         'field' => 'platformId'
                     ],
                     'platform_id' => [
@@ -1271,7 +1271,7 @@ class FacebookOrganicDriver implements SyncDriverInterface
                     'title_key' => 'ig_account_name',
                     'url' => [
                         'type' => 'custom',
-                        'preffix' => 'https://instagram.com/',
+                        'prefix' => 'https://instagram.com/',
                         'key' => 'ig_account'
                     ],
                     'hostname_key' => 'ig_hostname',
