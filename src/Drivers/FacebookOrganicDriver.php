@@ -225,6 +225,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                 'title' => $pData['title'] ?? null,
                 'url' => $pData['url'] ?? null,
                 'hostname' => $pData['hostname'] ?? null,
+                'link' => $pData['link'] ?? null,
                 'enabled' => filter_var($pData['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'exclude_from_caching' => filter_var($pData['exclude_from_caching'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'ig_account' => $pData['ig_account'] ?? null,
@@ -272,7 +273,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             
             $pagesData = $api->getPages(
                 userId: $userId,
-                fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
+                fields: 'id,name,link,website,created_time,instagram_business_account{id,name,username,website}'
             );
 
             $this->logger?->info("DEBUG: Facebook Organic raw pages response",
@@ -286,6 +287,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                         'id' => $page['id'],
                         'title' => $page['name'],
                         'hostname' => $page['website'] ?? null,
+                        'link' => $page['link'],
                         'created_time' => $page['created_time'] ?? null,
                         'data' => $page,
                         'ig_account' => $page['instagram_business_account']['id'] ?? null,
@@ -876,6 +878,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                 'url' => '',
                 'title' => '',
                 'hostname' => '',
+                'link' => '',
                 'enabled' => true,
                 'exclude_from_caching' => false,
                 'ig_account' => null,
@@ -1406,10 +1409,11 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getPageUrl(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        return match(self::getChanneledAccountType($entityType)){
-                'instagram_account' => 'https://instagram.com/',
-                default => 'https://facebook.com/:'
-            }.self::getPagePlatformId($asset);
+        return match(self::getChanneledAccountType($entityType)) {
+                'instagram_account' => (isset($asset['instagram_business_account']['username']) && $asset['instagram_business_account']['username'] ?
+                    'https://www.instagram.com/'.FieldsNormalizerHelper::getCleanString($asset['instagram_business_account']['username']) : ''),
+                default => isset($asset['link']) && ($asset['link']) ? FieldsNormalizerHelper::getCleanString($asset['link']) : ''
+            };
     }
 
     public static function getPageData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
