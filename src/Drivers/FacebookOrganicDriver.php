@@ -1314,15 +1314,19 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getPages(array $asset): array {
-        $fbPage = [
-            'platformId' => self::getPagePlatformId(asset: $asset),
-            'canonicalId' => self::getPageCanonicalId(asset: $asset),
-            'hostname' => self::getPageHostname(asset: $asset),
-            'title' => self::getPageTitle(asset: $asset),
-            'url' => self::getPageUrl(asset: $asset),
-            'data' => self::getPageData(asset: $asset)
-        ];
-        $list = [$fbPage];
+        $list = [];
+        $fbPageId = self::getPagePlatformId(asset: $asset);
+        if (!empty($fbPageId)) {
+            $fbPage = [
+                'platformId' => $fbPageId,
+                'canonicalId' => self::getPageCanonicalId(asset: $asset),
+                'hostname' => self::getPageHostname(asset: $asset),
+                'title' => self::getPageTitle(asset: $asset),
+                'url' => self::getPageUrl(asset: $asset),
+                'data' => self::getPageData(asset: $asset)
+            ];
+            $list[] = $fbPage;
+        }
         $igPlatformId = self::getPageCanonicalId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT);
         if ($igPlatformId) {
             $igAccount = [
@@ -1339,14 +1343,18 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     }
 
     public static function getChanneledAccounts(array $asset): array {
-        $fbPage = [
-            'platformId' => self::getChanneledAccountPlatformId(asset: $asset),
-            'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
-            'name' => self::getChanneledAccountName(asset: $asset),
-            'type' => self::getChanneledAccountType(),
-            'data' => self::getChanneledAccountData(asset: $asset)
-        ];
-        $list = [$fbPage];
+        $list = [];
+        $fbPageId = self::getChanneledAccountPlatformId(asset: $asset);
+        if (!empty($fbPageId)) {
+            $fbPage = [
+                'platformId' => $fbPageId,
+                'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
+                'name' => self::getChanneledAccountName(asset: $asset),
+                'type' => self::getChanneledAccountType(),
+                'data' => self::getChanneledAccountData(asset: $asset)
+            ];
+            $list[] = $fbPage;
+        }
         $igPlatformId = self::getChanneledAccountPlatformId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT);
         if ($igPlatformId) {
             $igAccount = [
@@ -1391,7 +1399,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             'instagram_account' => 'ig_account_name',
             default => 'title'
         };
-        return FieldsNormalizerHelper::getCleanString($asset[$titleKey]);
+        return isset($asset[$titleKey]) && ($asset[$titleKey]) ? FieldsNormalizerHelper::getCleanString($asset[$titleKey]) : '';
     }
 
     public static function getPageUrl(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
