@@ -1379,7 +1379,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             'instagram_account' => 'ig_hostname',
             default => 'hostname'
         };
-        return FieldsNormalizerHelper::getCleanString($asset[$hostnameKey]);
+        return isset($asset[$hostnameKey]) && $asset[$hostnameKey] ? FieldsNormalizerHelper::getCleanString($asset[$hostnameKey]) : '';
     }
 
     public static function getPageTitle(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
