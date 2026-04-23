@@ -1376,4 +1376,20 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             'recent_cron_minute' => 30,
         ];
     }
+
+    /**
+     * @inheritdoc
+     */
+    public static function getEnvMapping(): array
+    {
+        return [
+            'facebook' => [
+                'FACEBOOK_APP_ID' => 'app_id',
+                'FACEBOOK_APP_SECRET' => 'app_secret',
+                'FACEBOOK_USER_ID' => 'user_id',
+                'FACEBOOK_REDIRECT_URI' => 'redirect_uri',
+                'FACEBOOK_TOKEN_PATH' => 'token_path',
+            ]
+        ];
+    }
 }
