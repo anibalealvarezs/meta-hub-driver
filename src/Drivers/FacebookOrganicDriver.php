@@ -45,7 +45,6 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
 {
     use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
-    use HasUpdatableCredentials;
 
     public array $updatableCredentials = [
         'FACEBOOK_USER_TOKEN',
