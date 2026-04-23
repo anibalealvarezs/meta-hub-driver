@@ -173,8 +173,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             );
 
             $assets = [
-                'facebook_pages' => [],
-                'facebook_ad_accounts' => []
+                'ad_accounts' => []
             ];
 
             if (!empty($pagesData['data'])) {
@@ -200,7 +199,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
             if (!empty($adAccountsData['data'])) {
                 foreach ($adAccountsData['data'] as $acc) {
-                    $assets['facebook_ad_accounts'][] = [
+                    $assets['ad_accounts'][] = [
                         'id' => $acc['id'],
                         'name' => $acc['name'] ?? ('Ad Account ' . $acc['id']),
                         'created_time' => $acc['created_time'] ?? null,
@@ -313,9 +312,9 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             }
         }
 
-        $existingIds = array_map('strval', array_column($currentAccs, 'id'));
+        $existingIds = array_column($currentAccs, 'id');
         foreach ($selectedAssets as $newAcc) {
-            $accId = (string) $newAcc['id'];
+            $accId = $newAcc['id'];
             $isLostAccess = filter_var($newAcc['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN);
             
             if (!in_array($accId, $existingIds)) {

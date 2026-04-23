@@ -279,11 +279,11 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             $this->logger?->info("DEBUG: Facebook Organic raw pages response",
                 ['data_keys' => !empty($pagesData['data']) ? array_keys(reset($pagesData['data'])) : 'empty']);
 
-            $assets = ['facebook_pages' => []];
+            $assets = ['pages' => []];
 
             if (!empty($pagesData['data'])) {
                 foreach ($pagesData['data'] as $page) {
-                    $assets['facebook_pages'][] = [
+                    $assets['pages'][] = [
                         'id' => $page['id'],
                         'title' => $page['name'],
                         'hostname' => $page['website'] ?? null,
