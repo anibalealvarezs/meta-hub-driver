@@ -1166,24 +1166,29 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
     // CHANNELED ACCOUNT FIELDS
 
-    public static function getChanneledAccountPlatformId(array $asset): string {
-        return FieldsNormalizerHelper::getCleanString($asset['id']);
+    public static function getChanneledAccountPlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
+        $idKey = $key ?: 'id';
+        $pId = isset($asset[$idKey]) ? FieldsNormalizerHelper::getCleanString($asset[$idKey]) : '';
+        return $pId ? str_replace('act_', '', $pId) : '';
     }
 
-    public static function getChanneledAccountPlatformCreatedAt(array $asset): string {
-        return FieldsNormalizerHelper::getCleanString($asset['created_time']);
+    public static function getChanneledAccountPlatformCreatedAt(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
+        $idKey = $key ?: 'created_time';
+        return isset($asset[$idKey]) ? FieldsNormalizerHelper::getCleanString($asset[$idKey]) : '';
     }
 
-    public static function getChanneledAccountName(array $asset): string {
-        return FieldsNormalizerHelper::getCleanString($asset['name']);
+    public static function getChanneledAccountName(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
+        $idKey = $key ?: 'name';
+        return isset($asset[$idKey]) ? FieldsNormalizerHelper::getCleanString($asset[$idKey]) : '';
     }
 
     public static function getChanneledAccountType(string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
         return $entityType instanceof MetaEntityType ? $entityType->value : $entityType;
     }
 
-    public static function getChanneledAccountData(array $asset): array {
-        return FieldsNormalizerHelper::getCleanArray($asset['data']);
+    public static function getChanneledAccountData(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): array {
+        $idKey = $key ?: 'data';
+        return isset($asset[$idKey]) ? FieldsNormalizerHelper::getCleanArray($asset[$idKey]) : [];
     }
 
     public function getCleanHostname(string $hostname): string

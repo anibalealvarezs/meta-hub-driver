@@ -1374,38 +1374,41 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
 
     // PAGE FIELDS
 
-    public static function getPagePlatformId(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        $platformIdKey = match(self::getChanneledAccountType($entityType)){
+    public static function getPagePlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $platformIdKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_account',
             default => 'id'
         };
         return isset($asset[$platformIdKey]) && $asset[$platformIdKey] ? FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]) : '';
     }
 
-    public static function getPageCanonicalId(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+    public static function getPageCanonicalId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
         return match(self::getChanneledAccountType($entityType)){
                 'instagram_account' => 'ig:',
                     default => 'fb:'
-            }.self::getPagePlatformId($asset);
+            }.self::getPagePlatformId($asset, $key, $entityType);
     }
 
-    public static function getPageHostname(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        $hostnameKey = match(self::getChanneledAccountType($entityType)){
+    public static function getPageHostname(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $hostnameKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_hostname',
             default => 'hostname'
         };
         return isset($asset[$hostnameKey]) && ($asset[$hostnameKey]) ? FieldsNormalizerHelper::getCleanString($asset[$hostnameKey]) : '';
     }
 
-    public static function getPageTitle(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        $titleKey = match(self::getChanneledAccountType($entityType)){
+    public static function getPageTitle(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $titleKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_account_name',
             default => 'title'
         };
         return isset($asset[$titleKey]) && ($asset[$titleKey]) ? FieldsNormalizerHelper::getCleanString($asset[$titleKey]) : '';
     }
 
-    public static function getPageUrl(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+    public static function getPageUrl(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        if ($key && isset($asset[$key])) {
+            return FieldsNormalizerHelper::getCleanString($asset[$key]);
+        }
         return match(self::getChanneledAccountType($entityType)) {
                 'instagram_account' => (isset($asset['ig_data']['username']) && $asset['ig_data']['username'] ?
                     'https://www.instagram.com/'.FieldsNormalizerHelper::getCleanString($asset['ig_data']['username']) : ''),
@@ -1413,8 +1416,8 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             };
     }
 
-    public static function getPageData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
-        $dataKey = match(self::getChanneledAccountType($entityType)){
+    public static function getPageData(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
+        $dataKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_data',
             default => 'data'
         };
@@ -1423,24 +1426,24 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
 
     // CHANNELED ACCOUNT FIELDS
 
-    public static function getChanneledAccountPlatformId(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        $platformIdKey = match(self::getChanneledAccountType($entityType)){
+    public static function getChanneledAccountPlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $platformIdKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_account',
             default => 'id'
         };
         return isset($asset[$platformIdKey]) && ($asset[$platformIdKey]) ? FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]) : '';
     }
 
-    public static function getChanneledAccountPlatformCreatedAt(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        $platformCreatedAtKey = match(self::getChanneledAccountType($entityType)){
+    public static function getChanneledAccountPlatformCreatedAt(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $platformCreatedAtKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_created_time',
             default => 'created_time'
         };
         return isset($asset[$platformCreatedAtKey]) && $asset[$platformCreatedAtKey] ? FieldsNormalizerHelper::getCleanString($asset[$platformCreatedAtKey]) : '';
     }
 
-    public static function getChanneledAccountName(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        $nameKey = match(self::getChanneledAccountType($entityType)){
+    public static function getChanneledAccountName(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        $nameKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_account_name',
             default => 'title'
         };
@@ -1451,8 +1454,8 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
         return $entityType instanceof MetaEntityType ? $entityType->value : $entityType;
     }
 
-    public static function getChanneledAccountData(array $asset, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
-        $dataKey = match(self::getChanneledAccountType($entityType)){
+    public static function getChanneledAccountData(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): array {
+        $dataKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_data',
             default => 'data'
         };
