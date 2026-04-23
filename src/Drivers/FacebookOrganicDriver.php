@@ -5,6 +5,7 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 use Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider;
 use Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry;
 use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
+use Anibalealvarezs\ApiDriverCore\Enums\AssetCategory;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
@@ -1252,6 +1253,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     {
         return [
             'facebook_page' => [
+                'category' => [AssetCategory::IDENTITY, AssetCategory::PAGEABLE],
                 'key' => 'pages',
                 'channeled_account' => [
                     'platform_id' => [
@@ -1283,6 +1285,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                 ]
             ],
             'instagram_account' => [
+                'category' => [AssetCategory::IDENTITY, AssetCategory::PAGEABLE],
                 'key' => 'pages',
                 'channeled_account' => [
                     'platform_id' => [
@@ -1319,11 +1322,11 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
 
     public static function getPages(array $asset): array {
         $list = [];
-        $fbPageId = self::getPagePlatformId(asset: $asset);
+        $fbPageId = self::getPlatformId($asset, AssetCategory::PAGEABLE, 'facebook_page');
         if (!empty($fbPageId)) {
             $fbPage = [
                 'platformId' => $fbPageId,
-                'canonicalId' => self::getPageCanonicalId(asset: $asset),
+                'canonicalId' => self::getCanonicalId($asset, AssetCategory::PAGEABLE, 'facebook_page'),
                 'hostname' => self::getPageHostname(asset: $asset),
                 'title' => self::getPageTitle(asset: $asset),
                 'url' => self::getPageUrl(asset: $asset),
@@ -1332,11 +1335,11 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             ];
             $list[] = $fbPage;
         }
-        $igPlatformId = self::getPagePlatformId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT);
+        $igPlatformId = self::getPlatformId($asset, AssetCategory::PAGEABLE, 'instagram_account');
         if ($igPlatformId) {
             $igAccount = [
                 'platformId' => $igPlatformId,
-                'canonicalId' => self::getPageCanonicalId(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'canonicalId' => self::getCanonicalId($asset, AssetCategory::PAGEABLE, 'instagram_account'),
                 'hostname' => self::getPageHostname(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'title' => self::getPageTitle(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'url' => self::getPageUrl(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
@@ -1379,19 +1382,33 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
 
     // PAGE FIELDS
 
-    public static function getPagePlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        $platformIdKey = $key ?: match(self::getChanneledAccountType($entityType)){
-            'instagram_account' => 'ig_account',
-            default => 'id'
+    public static function getPlatformId(array $asset, AssetCategory $category, string $context = ''): string
+    {
+        return match ($category) {
+            AssetCategory::IDENTITY, AssetCategory::PAGEABLE => match ($context) {
+                'instagram_account' => self::deriveMetaId($asset, 'ig_account'),
+                'facebook_page' => self::deriveMetaId($asset, 'id'),
+                default => self::deriveMetaId($asset, 'ig_account') ?: self::deriveMetaId($asset, 'id')
+            },
+            AssetCategory::UNIT => self::deriveMetaId($asset, 'id'),
+            default => (string) ($asset['id'] ?? '')
         };
-        return isset($asset[$platformIdKey]) && $asset[$platformIdKey] ? FieldsNormalizerHelper::getCleanString($asset[$platformIdKey]) : '';
     }
 
-    public static function getPageCanonicalId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
-        return match(self::getChanneledAccountType($entityType)){
-                'instagram_account' => 'ig:',
-                    default => 'fb:'
-            }.self::getPagePlatformId($asset, $key, $entityType);
+    public static function getCanonicalId(array $asset, AssetCategory $category, string $context): string
+    {
+        return match ($category) {
+            AssetCategory::PAGEABLE => match ($context) {
+                'instagram_account' => 'ig:' . self::getPlatformId($asset, $category, $context),
+                default => 'fb:' . self::getPlatformId($asset, $category, $context)
+            },
+            default => self::getPlatformId($asset, $category, $context)
+        };
+    }
+
+    private static function deriveMetaId(array $asset, string $key): string
+    {
+        return isset($asset[$key]) && $asset[$key] ? FieldsNormalizerHelper::getCleanString($asset[$key]) : '';
     }
 
     public static function getPageHostname(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {

@@ -4,6 +4,7 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry;
 use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
+use Anibalealvarezs\ApiDriverCore\Enums\AssetCategory;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
@@ -1142,6 +1143,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     {
         return [
             'facebook_ad_account' => [
+                'category' => AssetCategory::IDENTITY,
                 'key' => 'ad_accounts',
                 'channeled_account' => [
                     'platform_id' => [
@@ -1161,7 +1163,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         return [
             // Ad account
             [
-                'platformId' => self::getChanneledAccountPlatformId(asset: $asset),
+                'platformId' => self::getPlatformId($asset, AssetCategory::IDENTITY, 'facebook_ad_account'),
                 'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
                 'name' => self::getChanneledAccountName(asset: $asset),
                 'type' => self::getChanneledAccountType(),
@@ -1171,13 +1173,34 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         ];
     }
 
-    // CHANNELED ACCOUNT FIELDS
+    public static function getPlatformId(array $asset, AssetCategory $category, string $context): string
+    {
+        return match ($category) {
+            AssetCategory::IDENTITY => self::deriveAdAccountId($asset, 'id'),
+            AssetCategory::CAMPAIGN => self::deriveMarketingId($asset, 'id'),
+            AssetCategory::GROUPING => self::deriveMarketingId($asset, 'id'),
+            AssetCategory::UNIT => self::deriveMarketingId($asset, 'id'),
+            default => (string) ($asset['id'] ?? '')
+        };
+    }
 
-    public static function getChanneledAccountPlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
-        $idKey = $key ?: 'id';
-        $pId = isset($asset[$idKey]) ? FieldsNormalizerHelper::getCleanString($asset[$idKey]) : '';
+    public static function getCanonicalId(array $asset, AssetCategory $category, string $context): string
+    {
+        return self::getPlatformId($asset, $category, $context);
+    }
+
+    private static function deriveAdAccountId(array $asset, string $key): string
+    {
+        $pId = isset($asset[$key]) ? FieldsNormalizerHelper::getCleanString($asset[$key]) : '';
         return $pId ? str_replace('act_', '', $pId) : '';
     }
+
+    private static function deriveMarketingId(array $asset, string $key): string
+    {
+        return isset($asset[$key]) ? FieldsNormalizerHelper::getCleanString($asset[$key]) : '';
+    }
+
+    // CHANNELED ACCOUNT FIELDS
 
     public static function getChanneledAccountPlatformCreatedAt(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
         $idKey = $key ?: 'created_time';
