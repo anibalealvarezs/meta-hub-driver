@@ -301,9 +301,14 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 }
                 $acc['lost_access'] = $lostAccess;
                 if ($matchingSelected) {
+                    $acc['enabled'] = filter_var($matchingSelected['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN);
                     $acc['created_time'] = $matchingSelected['created_time'] ?? $acc['created_time'] ?? null;
                     $acc['data'] = $matchingSelected['data'] ?? $acc['data'] ?? [];
                 }
+                $newAccsList[] = $acc;
+            } else {
+                // Keep it in the list but disabled if it was there before (Status Toggling Support)
+                $acc['enabled'] = false;
                 $newAccsList[] = $acc;
             }
         }
@@ -318,6 +323,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                     'id' => $accId,
                     'name' => $newAcc['name'] ?? ("Ad Account " . $accId),
                     'hostname' => $newAcc['hostname'] ?? null,
+                    'enabled' => filter_var($newAcc['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN),
                     'created_time' => $newAcc['created_time'] ?? null,
                     'data' => $newAcc['data'] ?? [],
                     'lost_access' => $isLostAccess
@@ -1159,6 +1165,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
                 'name' => self::getChanneledAccountName(asset: $asset),
                 'type' => self::getChanneledAccountType(),
+                'enabled' => filter_var($asset['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN),
                 'data' => self::getChanneledAccountData(asset: $asset)
             ]
         ];
@@ -1256,7 +1263,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
         $ui['fb_cache_chunk_size'] = $channelConfig['cache_chunk_size'] ?? '1 week';
         $ui['fb_ad_account_ids'] = [];
-        foreach (($channelConfig['ad_accounts'] ?? []) as $a) {
+        $ui['fb_ad_accounts_full_config'] = $channelConfig['ad_accounts'] ?? [];
+        foreach ($ui['fb_ad_accounts_full_config'] as $a) {
             if (!empty($a['enabled'])) {
                 $ui['fb_ad_account_ids'][] = (string)$a['id'];
             }
