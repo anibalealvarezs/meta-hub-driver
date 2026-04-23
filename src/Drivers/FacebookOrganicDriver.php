@@ -1411,6 +1411,14 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
         return isset($asset[$key]) && $asset[$key] ? FieldsNormalizerHelper::getCleanString($asset[$key]) : '';
     }
 
+    public static function getPagePlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        return self::getPlatformId($asset, AssetCategory::PAGEABLE, self::getChanneledAccountType($entityType));
+    }
+
+    public static function getPageCanonicalId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
+        return self::getCanonicalId($asset, AssetCategory::PAGEABLE, self::getChanneledAccountType($entityType));
+    }
+
     public static function getPageHostname(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string {
         $hostnameKey = $key ?: match(self::getChanneledAccountType($entityType)){
             'instagram_account' => 'ig_hostname',
