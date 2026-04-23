@@ -587,9 +587,9 @@ class FacebookEntitySync
                             'id' => $pId,
                             'title' => $pageCfg['title'] ?? $pageCfg['name'] ?? null,
                             'name' => $pageCfg['name'] ?? $pageCfg['title'] ?? null,
-                            'url' => $pageCfg['url'] ?? (\Helpers\AssetsPatternsHelpers\PagePatternsHelper::getUrl('facebook_organic', $pId, null)),
-                            'hostname' => $pageCfg['hostname'] ?? (\Helpers\AssetsPatternsHelpers\PagePatternsHelper::getHostname('facebook_organic', $pageCfg['url'] ?? $pId)),
-                            'canonicalId' => \Helpers\AssetsPatternsHelpers\PagePatternsHelper::getCanonicalId('facebook_organic', $pId, $pageCfg['url'] ?? null),
+                            'url' => $pageCfg['url'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getPageUrl(['id' => $pId])),
+                            'hostname' => $pageCfg['hostname'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getPageHostname(['id' => $pId, 'url' => $pageCfg['url'] ?? null])),
+                            'canonicalId' => \Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getCanonicalId(['id' => $pId, 'url' => $pageCfg['url'] ?? null], \Anibalealvarezs\ApiDriverCore\Enums\AssetCategory::PAGEABLE, 'facebook_page'),
                         ];
 
                         $converted = FacebookOrganicConvert::pages([$pageData]);

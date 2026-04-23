@@ -48,8 +48,8 @@ class FacebookOrganicConvert
             'mapping' => [
                 'url' => fn ($r) => $r['url'] ?? $r['id'] ?? null,
                 'title' => fn ($r) => $r['title'] ?? $r['name'] ?? $r['id'] ?? '',
-                'hostname' => fn ($r) => $r['hostname'] ?? (\Helpers\AssetsPatternsHelpers\PagePatternsHelper::getHostname('facebook_organic', $r['url'] ?? $r['id'] ?? null)),
-                'canonicalId' => fn ($r) => $r['canonicalId'] ?? (\Helpers\AssetsPatternsHelpers\PagePatternsHelper::getCanonicalId('facebook_organic', $r['id'] ?? null, $r['url'] ?? null)),
+                'hostname' => fn ($r) => $r['hostname'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getPageHostname($r)),
+                'canonicalId' => fn ($r) => $r['canonicalId'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getCanonicalId($r, \Anibalealvarezs\ApiDriverCore\Enums\AssetCategory::PAGEABLE, 'facebook_page')),
             ],
             'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'accountPlatformId' => $accountId,
