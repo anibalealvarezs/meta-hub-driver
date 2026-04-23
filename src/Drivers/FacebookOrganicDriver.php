@@ -355,7 +355,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
 
     public static function getProviderName(): string
     {
-        return 'meta';
+        return 'facebook';
     }
 
     public function setAuthProvider(AuthProviderInterface $provider): void

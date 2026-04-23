@@ -390,7 +390,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
     public static function getProviderName(): string
     {
-        return 'meta';
+        return 'facebook';
     }
 
     public function setAuthProvider(AuthProviderInterface $provider): void
