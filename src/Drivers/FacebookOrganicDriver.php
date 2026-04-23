@@ -1326,6 +1326,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                 'hostname' => self::getPageHostname(asset: $asset),
                 'title' => self::getPageTitle(asset: $asset),
                 'url' => self::getPageUrl(asset: $asset),
+                'enabled' => $asset['enabled'] ?? true,
                 'data' => self::getPageData(asset: $asset)
             ];
             $list[] = $fbPage;
@@ -1338,6 +1339,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                 'hostname' => self::getPageHostname(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'title' => self::getPageTitle(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'url' => self::getPageUrl(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'enabled' => $asset['ig_accounts'] ?? true,
                 'data' => self::getPageData(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT)
             ];
             $list[] = $igAccount;
@@ -1354,6 +1356,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                 'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
                 'name' => self::getChanneledAccountName(asset: $asset),
                 'type' => self::getChanneledAccountType(),
+                'enabled' => $asset['enabled'] ?? true,
                 'data' => self::getChanneledAccountData(asset: $asset)
             ];
             $list[] = $fbPage;
@@ -1365,6 +1368,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                 'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'name' => self::getChanneledAccountName(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                 'type' => self::getChanneledAccountType(entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
+                'enabled' => $asset['ig_accounts'] ?? true,
                 'data' => self::getChanneledAccountData(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT)
             ];
             $list[] = $igAccount;
