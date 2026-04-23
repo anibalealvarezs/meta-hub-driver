@@ -1397,13 +1397,17 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
 
     public static function getCanonicalId(array $asset, AssetCategory $category, string $context): string
     {
-        return match ($category) {
-            AssetCategory::PAGEABLE => match ($context) {
-                'instagram_account' => 'ig:' . self::getPlatformId($asset, $category, $context),
-                default => 'fb:' . self::getPlatformId($asset, $category, $context)
-            },
-            default => self::getPlatformId($asset, $category, $context)
-        };
+        $pId = self::getPlatformId($asset, $category, $context);
+        if (!$pId) return '';
+        
+        $patterns = self::getAssetPatterns();
+        $prefix = $patterns[$context]['page']['canonical_id']['prefix'] ?? null;
+
+        if ($category === AssetCategory::PAGEABLE && $prefix) {
+            return str_starts_with($pId, $prefix . ':') ? $pId : $prefix . ':' . $pId;
+        }
+
+        return $pId;
     }
 
     private static function deriveMetaId(array $asset, string $key): string
