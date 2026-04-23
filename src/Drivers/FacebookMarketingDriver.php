@@ -1202,6 +1202,11 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
     // CHANNELED ACCOUNT FIELDS
 
+    public static function getChanneledAccountPlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
+        $idKey = $key ?: 'id';
+        return isset($asset[$idKey]) && ($asset[$idKey]) ? self::getPlatformId($asset, AssetCategory::IDENTITY, 'facebook_ad_account') : '';
+    }
+
     public static function getChanneledAccountPlatformCreatedAt(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
         $idKey = $key ?: 'created_time';
         return isset($asset[$idKey]) ? FieldsNormalizerHelper::getCleanString($asset[$idKey]) : '';
