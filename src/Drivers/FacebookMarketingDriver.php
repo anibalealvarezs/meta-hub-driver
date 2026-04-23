@@ -1139,7 +1139,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         ]);
     }
 
-    public function getAssetPatterns(): array
+    public static function getAssetPatterns(): array
     {
         return [
             'facebook_ad_account' => [

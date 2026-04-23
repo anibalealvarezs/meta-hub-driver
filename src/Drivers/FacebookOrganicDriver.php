@@ -1249,7 +1249,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     /**
      * @inheritdoc
      */
-    public function getAssetPatterns(): array
+    public static function getAssetPatterns(): array
     {
         return [
             'facebook_page' => [
