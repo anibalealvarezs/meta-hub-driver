@@ -287,6 +287,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                         'id' => $page['id'],
                         'title' => $page['name'],
                         'hostname' => $page['website'] ?? null,
+                        'url' => $page['link'],
                         'link' => $page['link'],
                         'created_time' => $page['created_time'] ?? null,
                         'data' => $page,
