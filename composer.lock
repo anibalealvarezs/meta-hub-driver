@@ -12,13 +12,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "2539607f24d21f2684d3e7baa7a01e9e8144fc91"
+                "reference": "d0c0ddb0f1f66680f896a1da7c96417a806c64eb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-2539607f24d21f2684d3e7baa7a01e9e8144fc91-zip-5d0272.zip",
-                "reference": "2539607f24d21f2684d3e7baa7a01e9e8144fc91",
-                "shasum": "b640d2460e5d16cd818a36afa155d33a47b01854"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-d0c0ddb0f1f66680f896a1da7c96417a806c64eb-zip-ff7de6.zip",
+                "reference": "d0c0ddb0f1f66680f896a1da7c96417a806c64eb",
+                "shasum": "d93095f7d2d51c32736711c34e7e90aace0eaa80"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "@dev",
@@ -67,7 +67,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-04-19T23:14:45+00:00"
+            "time": "2026-04-25T01:16:17+00:00"
         },
         {
             "name": "anibalealvarezs/api-driver-core",
@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "b5603dd1c6c3ffd12e896b43e376b1b627a32aa2"
+                "reference": "2f895d57097179ec461c7f12fac7e5d5a87cf63d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-b5603dd1c6c3ffd12e896b43e376b1b627a32aa2-zip-066240.zip",
-                "reference": "b5603dd1c6c3ffd12e896b43e376b1b627a32aa2",
-                "shasum": "bfe9d28b8f92ad56eb70e4f7d52d363097e964fd"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-2f895d57097179ec461c7f12fac7e5d5a87cf63d-zip-8e251e.zip",
+                "reference": "2f895d57097179ec461c7f12fac7e5d5a87cf63d",
+                "shasum": "c1db7b15a76607271dacd075b42efc993d78982a"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -111,7 +111,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-23T15:01:20+00:00"
+            "time": "2026-04-25T01:14:37+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
