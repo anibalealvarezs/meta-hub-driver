@@ -15,6 +15,24 @@ use Symfony\Component\HttpFoundation\Response;
 class FacebookEntitySync
 {
     /**
+     * Keep entity cache coverage aligned with insights rows (ad-level metrics can include paused/review/policy states).
+     */
+    private const EFFECTIVE_STATUSES = [
+        'ACTIVE',
+        'PAUSED',
+        'ARCHIVED',
+        'DELETED',
+        'IN_PROCESS',
+        'WITH_ISSUES',
+        'PENDING_REVIEW',
+        'PREAPPROVED',
+        'DISAPPROVED',
+        'PENDING_BILLING_INFO',
+        'CAMPAIGN_PAUSED',
+        'ADSET_PAUSED',
+    ];
+
+    /**
      * @param array $config
      * @param string $entityKey
      * @param string $filterType
@@ -151,7 +169,7 @@ class FacebookEntitySync
                                 'filtering' => json_encode([[
                                     'field' => 'effective_status',
                                     'operator' => 'IN',
-                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
+                                    'value' => self::EFFECTIVE_STATUSES
                                 ]])
                             ]
                         );
@@ -249,14 +267,14 @@ class FacebookEntitySync
                                 [
                                     'field' => 'effective_status',
                                     'operator' => 'IN',
-                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
+                                    'value' => self::EFFECTIVE_STATUSES
                                 ]
                             ]);
                         } else {
                             $additionalParams['filtering'] = json_encode([[
                                 'field' => 'effective_status',
                                 'operator' => 'IN',
-                                'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
+                                'value' => self::EFFECTIVE_STATUSES
                             ]]);
                         }
 
@@ -384,14 +402,14 @@ class FacebookEntitySync
                                 [
                                     'field' => 'effective_status',
                                     'operator' => 'IN',
-                                    'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
+                                    'value' => self::EFFECTIVE_STATUSES
                                 ]
                             ]);
                         } else {
                             $additionalParams['filtering'] = json_encode([[
                                 'field' => 'effective_status',
                                 'operator' => 'IN',
-                                'value' => ["ACTIVE", "PAUSED", "ARCHIVED", "DELETED", "IN_PROCESS", "WITH_ISSUES"]
+                                'value' => self::EFFECTIVE_STATUSES
                             ]]);
                         }
 
