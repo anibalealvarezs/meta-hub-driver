@@ -15,6 +15,8 @@ const HIERARCHY = {
     content: { next: null, label: 'Content Breakdown', icon: 'image', color: '#8b5cf6', idField: 'post_id', nameField: 'caption' }
 };
 
+const INSTAGRAM_ACCOUNT_TYPE = 'instagram_account';
+
 // --- Initialization ---
 async function initDashboard() {
     lucide.createIcons();
@@ -105,8 +107,8 @@ async function loadReport() {
         // 1. Fetch IG Master Accounts
         const payload = { 
             aggregations: aggs, 
-            filters: { account_type: 'instagram' },
-            groupBy: ["channeledAccount", "channeled_account_id", "page_id"], 
+            filters: { account_type: INSTAGRAM_ACCOUNT_TYPE },
+            groupBy: ["channeledAccount", "channeled_account_id", "page_id"],
             startDate: start, endDate: end 
         };
         const resMain = await fetch('/facebook_organic/metric/aggregate', { method: 'POST', headers, body: JSON.stringify(payload) }).then(r => r.json());
@@ -123,8 +125,8 @@ async function loadReport() {
                 method: 'POST', headers, 
                 body: JSON.stringify({ 
                     aggregations: trendAggs, 
-                    filters: { account_type: 'instagram' },
-                    groupBy: ['daily', 'channeledAccount', 'channeled_account_id'], 
+                    filters: { account_type: INSTAGRAM_ACCOUNT_TYPE },
+                    groupBy: ['daily', 'channeledAccount', 'channeled_account_id'],
                     startDate: start, endDate: end 
                 }) 
             }).then(r => r.json());
@@ -279,8 +281,8 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
             // parentId is either a FB Page URL/ID or an IG Account ID
             const isFromFb = rowId.includes('-fb-'); 
             const groupBy = ["post", "post_id", "caption", "message", "media_type", "permalink", "permalink_url", "timestamp", "created_time"]; 
-            const filters = isFromFb ? { page: parentId, account_type: 'facebook_page', post: 'NOT_NULL' } : { channeledAccount: parentId, account_type: 'instagram', post: 'NOT_NULL' };
-            
+            const filters = isFromFb ? { page: parentId, account_type: 'facebook_page', post: 'NOT_NULL' } : { channeledAccount: parentId, account_type: INSTAGRAM_ACCOUNT_TYPE, post: 'NOT_NULL' };
+
             const metrics = getActiveMetrics('content', isFromFb);
             const aggs = {}; metrics.forEach(m => aggs[m.key] = m.original);
 
