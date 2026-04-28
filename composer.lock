@@ -4,21 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2245914b92d170d45e5e411f43fdad5a",
+    "content-hash": "d3a62bc1132d65e4637312a793ff4645",
     "packages": [
         {
             "name": "anibalealvarezs/api-client-skeleton",
             "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "d0c0ddb0f1f66680f896a1da7c96417a806c64eb"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-d0c0ddb0f1f66680f896a1da7c96417a806c64eb-zip-ff7de6.zip",
-                "reference": "d0c0ddb0f1f66680f896a1da7c96417a806c64eb",
-                "shasum": "d93095f7d2d51c32736711c34e7e90aace0eaa80"
+                "type": "path",
+                "url": "../api-client-skeleton",
+                "reference": "d0c0ddb0f1f66680f896a1da7c96417a806c64eb"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "@dev",
@@ -33,7 +27,6 @@
                 "phpstan/phpstan": "^1.10",
                 "phpunit/phpunit": "^9"
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -67,21 +60,18 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-04-25T01:16:17+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "anibalealvarezs/api-driver-core",
             "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "2f895d57097179ec461c7f12fac7e5d5a87cf63d"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-2f895d57097179ec461c7f12fac7e5d5a87cf63d-zip-8e251e.zip",
-                "reference": "2f895d57097179ec461c7f12fac7e5d5a87cf63d",
-                "shasum": "c1db7b15a76607271dacd075b42efc993d78982a"
+                "type": "path",
+                "url": "../api-driver-core",
+                "reference": "30a095a7808ad819486ca60c7c39ef3f8415258c"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -94,7 +84,6 @@
                 "symfony/http-foundation": "^6.0 || ^7.0",
                 "symfony/yaml": "^6.0 || ^7.0"
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -111,21 +100,18 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-04-25T01:14:37+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
             "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "9c44710c7561bdf0df335535fffec27ca62c278a"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-9c44710c7561bdf0df335535fffec27ca62c278a-zip-62e48f.zip",
-                "reference": "9c44710c7561bdf0df335535fffec27ca62c278a",
-                "shasum": "965cf3ed7beb7d44b1adef7f584be669c4cf0da8"
+                "type": "path",
+                "url": "../facebook-graph-api",
+                "reference": "80f054813d9a7018f46a71215414fe4b35f8376b"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "dev-main",
@@ -142,7 +128,6 @@
                 "phpstan/phpstan": "^1.10",
                 "phpunit/phpunit": "^9"
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -176,21 +161,18 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-04-21T02:11:11+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "anibalealvarezs/oauth-v1",
             "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "git@github.com:anibalealvarezs/oauth-v1.git",
-                "reference": "5ddf53cc7dc2265d3e3979838d974c931b2a30bf"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/oauth-v1/anibalealvarezs-oauth-v1-5ddf53cc7dc2265d3e3979838d974c931b2a30bf-zip-435722.zip",
-                "reference": "5ddf53cc7dc2265d3e3979838d974c931b2a30bf",
-                "shasum": "d3647ffc1ed75978a6731d421c5c6248867c3309"
+                "type": "path",
+                "url": "../OAuth-v1",
+                "reference": "5ddf53cc7dc2265d3e3979838d974c931b2a30bf"
             },
             "require": {
                 "php": ">=8.1"
@@ -200,7 +182,6 @@
                 "phpstan/phpstan": "^1.10",
                 "phpunit/phpunit": "^9"
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -234,7 +215,10 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/OAuth-v1/issues"
             },
-            "time": "2026-04-17T22:37:20+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "carbonphp/carbon-doctrine-types",

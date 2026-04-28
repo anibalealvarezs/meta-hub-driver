@@ -1,0 +1,198 @@
+﻿[
+    {
+        "type":  "path",
+        "url":  "../api-client-skeleton",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "../api-driver-core",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "../facebook-graph-api",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\amazon-api-anibal",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\amazon-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\api-client-skeleton",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\api-driver-core",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\apis-hub",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\apis-hub-api",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\bigcommerce-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\facebook-graph-api",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\google-api-anibal",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\google-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\klaviyo-api-anibal",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\klaviyo-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\linkedin-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\mailchimp-api-anibal",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\netsuite-api-anibal",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\netsuite-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\OAuth-v1",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\pinterest-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\shipstation-api-anibal",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\shopify-api-anibal",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\shopify-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\tiktok-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\triple-whale-api-anibal",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\triple-whale-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    },
+    {
+        "type":  "path",
+        "url":  "..\\x-hub-driver",
+        "options":  {
+                        "symlink":  true
+                    }
+    }
+]

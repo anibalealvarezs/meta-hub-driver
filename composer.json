@@ -27,6 +27,7 @@
     "minimum-stability": "dev",
     "prefer-stable": false,
     "require-dev": {
+        "doctrine/instantiator": "^1.5",
         "phpunit/phpunit": "9.6"
     }
 }

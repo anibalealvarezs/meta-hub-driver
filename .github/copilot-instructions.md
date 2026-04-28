@@ -1,0 +1,1 @@
+Lee el ../AGENTS.md local y sigue las instrucciones que allí veas
