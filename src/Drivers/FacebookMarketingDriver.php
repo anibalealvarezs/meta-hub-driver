@@ -3,10 +3,12 @@
 namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry;
+use Anibalealvarezs\ApiDriverCore\Classes\MetricProfileTemplates;
 use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
 use Anibalealvarezs\ApiDriverCore\Enums\AssetCategory;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\MetricProfileProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
 use Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes;
 use Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService;
@@ -35,7 +37,7 @@ use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
 
-class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface
+class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface
 {
     use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
@@ -56,6 +58,27 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     public static function getCommonConfigKey(): ?string
     {
         return 'facebook';
+    }
+
+    public static function getMetricProfiles(): array
+    {
+        return [
+            MetricProfileTemplates::campaignBreakdown(
+                channel: 'facebook_marketing',
+                key: 'facebook_marketing_campaign',
+                label: 'Facebook Marketing Campaign'
+            ),
+            MetricProfileTemplates::adGroupBreakdown(
+                channel: 'facebook_marketing',
+                key: 'facebook_marketing_ad_group',
+                label: 'Facebook Marketing Ad Group'
+            ),
+            MetricProfileTemplates::adCreativeBreakdown(
+                channel: 'facebook_marketing',
+                key: 'facebook_marketing_ad',
+                label: 'Facebook Marketing Ad'
+            ),
+        ];
     }
 
     /**

@@ -4,10 +4,12 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider;
 use Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry;
+use Anibalealvarezs\ApiDriverCore\Classes\MetricProfileTemplates;
 use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
 use Anibalealvarezs\ApiDriverCore\Enums\AssetCategory;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\MetricProfileProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
 use Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes;
 use Anibalealvarezs\ApiDriverCore\Services\CacheStrategyService;
@@ -41,7 +43,7 @@ use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
 use Doctrine\Common\Collections\ArrayCollection;
 
-class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, ChanneledAccountableInterface
+class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, ChanneledAccountableInterface, MetricProfileProviderInterface
 {
     use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
@@ -62,6 +64,22 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
     public static function getCommonConfigKey(): ?string
     {
         return 'facebook';
+    }
+
+    public static function getMetricProfiles(): array
+    {
+        return [
+            MetricProfileTemplates::pageTotals(
+                channel: 'facebook_organic',
+                key: 'facebook_organic_page',
+                label: 'Facebook Organic Page'
+            ),
+            MetricProfileTemplates::pagePostBreakdown(
+                channel: 'facebook_organic',
+                key: 'facebook_organic_post',
+                label: 'Facebook Organic Post'
+            ),
+        ];
     }
 
     /**
