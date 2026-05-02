@@ -564,30 +564,25 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
 }
 
 async function fetchLatestStockSnapshot({headers, aggregations, filters, groupBy, startDate, endDate}) {
-    let cursor = dayjs(endDate);
-    const floor = dayjs(startDate);
+    const payload = {
+        aggregations,
+        filters: {
+            ...filters,
+            latest_snapshot: true,
+        },
+        groupBy,
+        startDate,
+        endDate,
+    };
 
-    while (cursor.isAfter(floor) || cursor.isSame(floor, 'day')) {
-        const date = cursor.format('YYYY-MM-DD');
-        const payload = {
-            aggregations,
-            filters,
-            groupBy,
-            startDate: date,
-            endDate: date,
-        };
+    const res = await fetch('/facebook_organic/metric/aggregate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+    }).then(r => r.json());
 
-        const res = await fetch('/facebook_organic/metric/aggregate', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-        }).then(r => r.json());
-
-        if (res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
-            return {data: res.data, snapshotDate: date};
-        }
-
-        cursor = cursor.subtract(1, 'day');
+    if (res.status === 'success' && Array.isArray(res.data)) {
+        return {data: res.data, snapshotDate: endDate};
     }
 
     return {data: [], snapshotDate: null};
