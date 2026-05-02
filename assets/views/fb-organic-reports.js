@@ -39,6 +39,15 @@ const HIERARCHY = {
 };
 
 const INSTAGRAM_ACCOUNT_TYPE = 'instagram_account';
+const POSTS_AGGREGATE_MODES = {
+    DAILY: 'daily',
+    SNAPSHOT: 'snapshot',
+    SNAPSHOT_DELTA: 'snapshot_delta'
+};
+const SNAPSHOT_FALLBACK_MODES = {
+    RESILIENT: 'resilient',
+    STRICT: 'strict'
+};
 
 // --- Initialization ---
 async function initDashboard() {
@@ -72,10 +81,59 @@ async function initDashboard() {
     flatpickr("#startDate", {...flatpickrConfig, defaultDate: lastWeek > minStoredDate ? lastWeek : minStoredDate});
     flatpickr("#endDate", {...flatpickrConfig, defaultDate: yesterday, maxDate: yesterday});
 
+    bindPostsAggregateControls();
+
     loadReport();
 }
 
-function getActiveMetrics(level = 'instagram', isFb = false) {
+function bindPostsAggregateControls() {
+    const modeEl = document.getElementById('postsAggregateMode');
+    const fallbackEl = document.getElementById('postsSnapshotFallbackMode');
+    if (!modeEl || !fallbackEl) return;
+
+    const syncFallbackEnabledState = () => {
+        const mode = modeEl.value;
+        const enabled = mode !== POSTS_AGGREGATE_MODES.DAILY;
+        fallbackEl.disabled = !enabled;
+        fallbackEl.style.opacity = enabled ? '1' : '0.55';
+    };
+
+    modeEl.addEventListener('change', syncFallbackEnabledState);
+    syncFallbackEnabledState();
+}
+
+function getPostsAggregateConfig() {
+    const modeEl = document.getElementById('postsAggregateMode');
+    const fallbackEl = document.getElementById('postsSnapshotFallbackMode');
+    const modeValue = modeEl?.value || POSTS_AGGREGATE_MODES.SNAPSHOT;
+    const fallbackValue = fallbackEl?.value || SNAPSHOT_FALLBACK_MODES.RESILIENT;
+
+    const mode = Object.values(POSTS_AGGREGATE_MODES).includes(modeValue)
+        ? modeValue
+        : POSTS_AGGREGATE_MODES.SNAPSHOT;
+    const fallbackMode = Object.values(SNAPSHOT_FALLBACK_MODES).includes(fallbackValue)
+        ? fallbackValue
+        : SNAPSHOT_FALLBACK_MODES.RESILIENT;
+
+    return {mode, fallbackMode};
+}
+
+function toDailyMetricName(metricName) {
+    if (!metricName || metricName.endsWith('_daily')) return metricName;
+    return `${metricName}_daily`;
+}
+
+function buildContentMetricsByMode(baseMetrics, mode) {
+    if (mode !== POSTS_AGGREGATE_MODES.DAILY) return baseMetrics;
+
+    return baseMetrics.map(metric => ({
+        ...metric,
+        original: toDailyMetricName(metric.original),
+        mode: 'daily'
+    }));
+}
+
+function getActiveMetrics(level = 'instagram', isFb = false, postsAggregateMode = POSTS_AGGREGATE_MODES.SNAPSHOT) {
     // Config based on level
     if (level === 'instagram') {
         return [
@@ -199,7 +257,7 @@ function getActiveMetrics(level = 'instagram', isFb = false) {
     // Level Content
     if (level === 'content') {
         if (isFb) {
-            return [
+            const baseMetrics = [
                 // FB post-level report must consume non-daily metrics only.
                 {key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments'},
                 {key: 'follows', label: 'FOL', format: 'number', precision: 0, original: 'follows'},
@@ -282,8 +340,9 @@ function getActiveMetrics(level = 'instagram', isFb = false) {
                 },
                 {key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views'}
             ];
+            return buildContentMetricsByMode(baseMetrics, postsAggregateMode);
         }
-        return [
+        const baseMetrics = [
             {key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments'},
             {key: 'follows', label: 'FOL', format: 'number', precision: 0, original: 'follows'},
             {
@@ -310,6 +369,7 @@ function getActiveMetrics(level = 'instagram', isFb = false) {
             {key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions'},
             {key: 'views', label: 'VIEW', format: 'number', precision: 0, original: 'views'}
         ];
+        return buildContentMetricsByMode(baseMetrics, postsAggregateMode);
     }
     return [];
 }
@@ -521,37 +581,38 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
             // Level content is reached from a FB row (row.page) or IG row (row.channeledAccount)
             // parentId is either a FB Page URL/ID or an IG Account ID
             const isFromFb = rowId.includes('-fb-');
+            const postsAggregateConfig = getPostsAggregateConfig();
             const groupBy = ["post", "post_id", "caption", "message", "media_type", "permalink", "permalink_url", "timestamp", "created_time"];
             const filters = isFromFb
-                ? {page: parentId, account_type: 'facebook_page', post: 'NOT_NULL', period: 'lifetime'}
+                ? {page: parentId, account_type: 'facebook_page', post: 'NOT_NULL'}
                 : {
                     channeledAccount: parentId,
                     account_type: INSTAGRAM_ACCOUNT_TYPE,
-                    post: 'NOT_NULL',
-                    period: 'lifetime'
+                    post: 'NOT_NULL'
                 };
 
-            const metrics = getActiveMetrics('content', isFromFb);
+            const metrics = getActiveMetrics('content', isFromFb, postsAggregateConfig.mode);
             const aggs = {};
             metrics.forEach(m => aggs[m.key] = m.original);
 
-            // Post/media metrics are lifetime stocks. We need the latest available
-            // snapshot date in the selected window instead of summing across dates.
-            const latestResult = await fetchLatestStockSnapshot({
+            const aggregateResult = await fetchContentAggregate({
                 headers,
                 aggregations: aggs,
                 filters,
                 groupBy,
                 startDate: start,
                 endDate: end,
+                mode: postsAggregateConfig.mode,
+                fallbackMode: postsAggregateConfig.fallbackMode,
             });
             const res = {
                 status: 'success',
-                data: latestResult.data,
+                data: aggregateResult.data,
+                meta: aggregateResult.meta || {},
             };
 
             if (res.status === 'success' && res.data) {
-                renderContentSubtable(container, res.data, isFromFb);
+                renderContentSubtable(container, res.data, isFromFb, postsAggregateConfig, res.meta);
             } else {
                 container.innerHTML = `<div class="empty-state">No organic content found for this period.</div>`;
             }
@@ -563,13 +624,25 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
     lucide.createIcons();
 }
 
-async function fetchLatestStockSnapshot({headers, aggregations, filters, groupBy, startDate, endDate}) {
+async function fetchContentAggregate({headers, aggregations, filters, groupBy, startDate, endDate, mode, fallbackMode}) {
+    const modeFilters = {
+        ...filters,
+        snapshot_fallback_mode: fallbackMode,
+    };
+
+    if (mode === POSTS_AGGREGATE_MODES.DAILY) {
+        modeFilters.period = 'daily';
+    } else if (mode === POSTS_AGGREGATE_MODES.SNAPSHOT_DELTA) {
+        modeFilters.period = 'lifetime';
+        modeFilters.snapshot_delta = true;
+    } else {
+        modeFilters.period = 'lifetime';
+        modeFilters.latest_snapshot = true;
+    }
+
     const payload = {
         aggregations,
-        filters: {
-            ...filters,
-            latest_snapshot: true,
-        },
+        filters: modeFilters,
         groupBy,
         startDate,
         endDate,
@@ -582,10 +655,10 @@ async function fetchLatestStockSnapshot({headers, aggregations, filters, groupBy
     }).then(r => r.json());
 
     if (res.status === 'success' && Array.isArray(res.data)) {
-        return {data: res.data, snapshotDate: endDate};
+        return {data: res.data, meta: res.meta || {}};
     }
 
-    return {data: [], snapshotDate: null};
+    return {data: [], meta: {}};
 }
 
 function renderFacebookSubtable(container, data, parentRowId) {
@@ -628,10 +701,23 @@ function renderFacebookSubtable(container, data, parentRowId) {
     container.innerHTML = html;
 }
 
-function renderContentSubtable(container, data, isFb = false) {
-    const metrics = getActiveMetrics('content', isFb);
+function renderContentSubtable(container, data, isFb = false, postsAggregateConfig = {mode: POSTS_AGGREGATE_MODES.SNAPSHOT, fallbackMode: SNAPSHOT_FALLBACK_MODES.RESILIENT}, responseMeta = {}) {
+    const metrics = getActiveMetrics('content', isFb, postsAggregateConfig.mode);
+    const modeLabelMap = {
+        [POSTS_AGGREGATE_MODES.DAILY]: 'Daily metrics',
+        [POSTS_AGGREGATE_MODES.SNAPSHOT]: 'Latest snapshot',
+        [POSTS_AGGREGATE_MODES.SNAPSHOT_DELTA]: 'Snapshot delta'
+    };
+    const modeLabel = modeLabelMap[postsAggregateConfig.mode] || modeLabelMap[POSTS_AGGREGATE_MODES.SNAPSHOT];
+    const fallbackHint = postsAggregateConfig.mode === POSTS_AGGREGATE_MODES.DAILY
+        ? ''
+        : ` (${(postsAggregateConfig.fallbackMode || SNAPSHOT_FALLBACK_MODES.RESILIENT).toUpperCase()})`;
+    const fallbackDate = responseMeta?.fallback_end_date;
+    const fallbackMeta = fallbackDate
+        ? `<span class="badge-dim" style="margin-left:8px; font-size:.72rem;">fallback_end_date: ${Array.isArray(fallbackDate) ? fallbackDate.join(', ') : fallbackDate}</span>`
+        : '';
     let html = `
-        <div class="breakdown-title" style="color:#8b5cf6;"><i data-lucide="image"></i> Organic Content Performance</div>
+        <div class="breakdown-title" style="color:#8b5cf6;"><i data-lucide="image"></i> Organic Content Performance <span class="badge-dim" style="margin-left:8px; font-size:.72rem;">${modeLabel}${fallbackHint}</span>${fallbackMeta}</div>
         <table class="nested-table">
             <thead>
                 <tr>

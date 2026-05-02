@@ -76,6 +76,23 @@
                     <i data-lucide="layers" class="meta-blue-icon" style="color: #8b5cf6;"></i>
                     Organic Accounts Hierarchy
                 </div>
+                <div class="table-meta" style="gap:12px; align-items:center;">
+                    <div class="control-group" style="margin:0; gap:8px;">
+                        <label for="postsAggregateMode" style="font-size:.78rem; opacity:.8;">Posts aggregate</label>
+                        <select id="postsAggregateMode" class="date-input" style="min-width:170px; height:34px;">
+                            <option value="daily">Daily</option>
+                            <option value="snapshot" selected>Snapshot</option>
+                            <option value="snapshot_delta">Snapshot delta</option>
+                        </select>
+                    </div>
+                    <div class="control-group" style="margin:0; gap:8px;">
+                        <label for="postsSnapshotFallbackMode" style="font-size:.78rem; opacity:.8;">Snapshot fallback</label>
+                        <select id="postsSnapshotFallbackMode" class="date-input" style="min-width:140px; height:34px;">
+                            <option value="resilient" selected>Resilient</option>
+                            <option value="strict">Strict</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-meta">
                     <span id="cache-badge" style="display: none;">
                         <i data-lucide="database" size="12"></i> CACHED
