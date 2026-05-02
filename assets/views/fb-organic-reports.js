@@ -61,10 +61,20 @@ function getActiveMetrics(level = 'instagram', isFb = false) {
     }
     if (level === 'facebook') {
         return [
-            { key: 'page_impressions', label: 'IMPR', format: 'number', precision: 0, original: 'page_impressions', sparkline: false },
-            { key: 'page_post_engagements', label: 'ENGAG', format: 'number', precision: 0, original: 'page_post_engagements', sparkline: true },
-            { key: 'page_views_total', label: 'VIEWS', format: 'number', precision: 0, original: 'page_views_total', sparkline: false },
-            { key: 'page_fans', label: 'LIKES', format: 'number', precision: 0, original: 'page_fans', sparkline: true }
+            // FB page-level metrics persisted with post_id = NULL
+            { key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false },
+            { key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false },
+            { key: 'profile_views', label: 'PRF VIEW', format: 'number', precision: 0, original: 'profile_views', sparkline: false },
+            { key: 'website_clicks', label: 'WEB CLK', format: 'number', precision: 0, original: 'website_clicks', sparkline: false },
+            { key: 'profile_links_taps', label: 'LNK TAPS', format: 'number', precision: 0, original: 'profile_links_taps', sparkline: false },
+            { key: 'follows_and_unfollows', label: 'FOLLOWS', format: 'number', precision: 0, original: 'follows_and_unfollows', sparkline: true },
+            { key: 'replies', label: 'REPLIES', format: 'number', precision: 0, original: 'replies', sparkline: false },
+            { key: 'accounts_engaged', label: 'ENGAGED', format: 'number', precision: 0, original: 'accounts_engaged', sparkline: false },
+            { key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions', sparkline: true },
+            { key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes', sparkline: false },
+            { key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments', sparkline: false },
+            { key: 'shares', label: 'SHAR', format: 'number', precision: 0, original: 'shares', sparkline: false },
+            { key: 'saves', label: 'SAVES', format: 'number', precision: 0, original: 'saves', sparkline: false }
         ];
     }
     // Level Content
