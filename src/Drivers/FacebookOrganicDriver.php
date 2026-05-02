@@ -451,7 +451,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                 if ($pId = (string)($page['id'] ?? $page)) $fbPIds[] = $pId;
                 if ($igId = (string)($page['ig_account'] ?? null)) $igPIds[] = $igId;
             }
-            $pageMap = $identityMapper('pages', ['platform_ids' => $fbPIds]) ?? [];
+            $pageMap = $identityMapper('pages', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
             // We resolve BOTH FB and IG accounts under 'channeled_accounts'
             $caMap = $identityMapper('channeled_accounts', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
         }
@@ -466,6 +466,7 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
             
             // Resolve Internal Identities from pre-loaded maps
             $pageObj = $pageMap[$pagePlatformId] ?? (new UniversalEntity())->setPlatformId($pagePlatformId);
+            $igPageObj = $igPlatformId ? ($pageMap[$igPlatformId] ?? (new UniversalEntity())->setPlatformId($igPlatformId)) : null;
             $caObj = $caMap[$pagePlatformId] ?? (new UniversalEntity())->setPlatformId($pagePlatformId);
             $igCaObj = $igPlatformId ? ($caMap[$igPlatformId] ?? (new UniversalEntity())->setPlatformId($igPlatformId)) : null;
 
@@ -525,8 +526,8 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                         $igCollection = FacebookOrganicMetricConvert::igAccountMetrics(
                             rows: $insight['data'],
                             date: $chunk['start'],
-                            page: $pageObj,
-                            account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
+                            page: $igPageObj ?? $pageObj,
+                            account: ($igCaObj && method_exists($igCaObj, 'getAccount')) ? $igCaObj->getAccount() : (($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')),
                             channeledAccount: $igCaObj ?? $igPlatformId,
                             logger: $this->logger,
                             period: Period::Daily
@@ -558,9 +559,9 @@ class FacebookOrganicDriver implements SyncDriverInterface, PageableInterface, C
                         $igMediaCollection = FacebookOrganicMetricConvert::igMediaMetrics(
                             rows: $mediaInsight['data'],
                             date: date('Y-m-d'), // Lifetime metrics must be stamped with 'today'
-                            page: $pageObj,
+                            page: $igPageObj ?? $pageObj,
                             post: $mediaInsight['instance'] ?? $mediaInsight['id'],
-                            account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
+                            account: ($igCaObj && method_exists($igCaObj, 'getAccount')) ? $igCaObj->getAccount() : (($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')),
                             channeledAccount: $igCaObj ?? $igPlatformId,
                             logger: $this->logger
                         );

@@ -49,12 +49,17 @@ function getActiveMetrics(level = 'instagram', isFb = false) {
     // Config based on level
     if (level === 'instagram') {
         return [
+            { key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes', sparkline: false },
+            { key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments', sparkline: false },
             { key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false },
-            { key: 'impressions', label: 'IMPR', format: 'number', precision: 0, original: 'impressions', sparkline: false },
+            { key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false },
             { key: 'profile_views', label: 'PRF VIEW', format: 'number', precision: 0, original: 'profile_views', sparkline: false },
             { key: 'website_clicks', label: 'WEB CLK', format: 'number', precision: 0, original: 'website_clicks', sparkline: false },
             { key: 'profile_links_taps', label: 'LNK TAPS', format: 'number', precision: 0, original: 'profile_links_taps', sparkline: false },
             { key: 'follows_and_unfollows', label: 'FOLLOWS', format: 'number', precision: 0, original: 'follows_and_unfollows', sparkline: true },
+            { key: 'saves', label: 'SAVES', format: 'number', precision: 0, original: 'saves', sparkline: false },
+            { key: 'shares', label: 'SHARES', format: 'number', precision: 0, original: 'shares', sparkline: false },
+            { key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions', sparkline: false },
             { key: 'replies', label: 'REPLIES', format: 'number', precision: 0, original: 'replies', sparkline: false },
             { key: 'accounts_engaged', label: 'ENGAGED', format: 'number', precision: 0, original: 'accounts_engaged', sparkline: false }
         ];
@@ -81,20 +86,43 @@ function getActiveMetrics(level = 'instagram', isFb = false) {
     if (level === 'content') {
         if (isFb) {
             return [
-                { key: 'impressions', label: 'IMPR', format: 'number', precision: 0, original: 'impressions' },
-                { key: 'total_interactions', label: 'ENGAG', format: 'number', precision: 0, original: 'total_interactions' },
-                { key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes' }
+                // FB post-level report must consume *_daily metrics only.
+                { key: 'comments_daily', label: 'COMM', format: 'number', precision: 0, original: 'comments_daily' },
+                { key: 'follows_daily', label: 'FOL', format: 'number', precision: 0, original: 'follows_daily' },
+                { key: 'ig_reels_avg_watch_time_daily', label: 'REEL AVG WT', format: 'number', precision: 0, original: 'ig_reels_avg_watch_time_daily' },
+                { key: 'ig_reels_video_view_total_time_daily', label: 'REEL TOT WT', format: 'number', precision: 0, original: 'ig_reels_video_view_total_time_daily' },
+                { key: 'likes_daily', label: 'LIKES', format: 'number', precision: 0, original: 'likes_daily' },
+                { key: 'post_clicks_daily', label: 'PST CLK', format: 'number', precision: 0, original: 'post_clicks_daily' },
+                { key: 'post_engagements_daily', label: 'PST ENG', format: 'number', precision: 0, original: 'post_engagements_daily' },
+                { key: 'post_impressions_unique_daily', label: 'PST U IMPR', format: 'number', precision: 0, original: 'post_impressions_unique_daily' },
+                { key: 'post_media_view_daily', label: 'PST VIEW', format: 'number', precision: 0, original: 'post_media_view_daily' },
+                { key: 'post_reactions_by_type_total_daily', label: 'PST REACT', format: 'number', precision: 0, original: 'post_reactions_by_type_total_daily' },
+                { key: 'post_video_avg_time_watched_daily', label: 'VID AVG WT', format: 'number', precision: 0, original: 'post_video_avg_time_watched_daily' },
+                { key: 'post_video_views_daily', label: 'VID VIEWS', format: 'number', precision: 0, original: 'post_video_views_daily' },
+                { key: 'profile_activity_daily', label: 'PRF ACT', format: 'number', precision: 0, original: 'profile_activity_daily' },
+                { key: 'profile_visits_daily', label: 'PRF VIS', format: 'number', precision: 0, original: 'profile_visits_daily' },
+                { key: 'reach_daily', label: 'REACH', format: 'number', precision: 0, original: 'reach_daily' },
+                { key: 'reposts_daily', label: 'REPOST', format: 'number', precision: 0, original: 'reposts_daily' },
+                { key: 'saved_daily', label: 'SAVED', format: 'number', precision: 0, original: 'saved_daily' },
+                { key: 'shares_daily', label: 'SHARES', format: 'number', precision: 0, original: 'shares_daily' },
+                { key: 'total_interactions_daily', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions_daily' },
+                { key: 'views_daily', label: 'VIEWS', format: 'number', precision: 0, original: 'views_daily' }
             ];
         }
         return [
-            { key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach_daily' },
-            { key: 'impressions', label: 'IMPR', format: 'number', precision: 0, original: 'impressions_daily' },
+            { key: 'comments_daily', label: 'COMM', format: 'number', precision: 0, original: 'comments_daily' },
+            { key: 'follows_daily', label: 'FOL', format: 'number', precision: 0, original: 'follows_daily' },
+            { key: 'ig_reels_avg_watch_time_daily', label: 'REEL AVG WT', format: 'number', precision: 0, original: 'ig_reels_avg_watch_time_daily' },
+            { key: 'ig_reels_video_view_total_time_daily', label: 'REEL TOT WT', format: 'number', precision: 0, original: 'ig_reels_video_view_total_time_daily' },
             { key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes_daily' },
-            { key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments_daily' },
-            { key: 'shares', label: 'SHAR', format: 'number', precision: 0, original: 'shares_daily' },
-            { key: 'saved', label: 'SAVE', format: 'number', precision: 0, original: 'saved_daily' },
-            { key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions_daily' },
-            { key: 'views', label: 'VIEW', format: 'number', precision: 0, original: 'views_daily' }
+            { key: 'profile_activity_daily', label: 'PRF ACT', format: 'number', precision: 0, original: 'profile_activity_daily' },
+            { key: 'profile_visits_daily', label: 'PRF VIS', format: 'number', precision: 0, original: 'profile_visits_daily' },
+            { key: 'reach_daily', label: 'REACH', format: 'number', precision: 0, original: 'reach_daily' },
+            { key: 'reposts_daily', label: 'REPOST', format: 'number', precision: 0, original: 'reposts_daily' },
+            { key: 'saved_daily', label: 'SAVE', format: 'number', precision: 0, original: 'saved_daily' },
+            { key: 'shares_daily', label: 'SHAR', format: 'number', precision: 0, original: 'shares_daily' },
+            { key: 'total_interactions_daily', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions_daily' },
+            { key: 'views_daily', label: 'VIEW', format: 'number', precision: 0, original: 'views_daily' }
         ];
     }
     return [];
