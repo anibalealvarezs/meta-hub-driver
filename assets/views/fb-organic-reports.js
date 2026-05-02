@@ -1,18 +1,41 @@
-/** 
+/**
  * APIs Hub | Facebook Organic Reports View Logic 🛡️📱
  * Specialized Metrics Analytics Engine for Organic Meta Channels (IG & FB).
  */
 
 // Global state
 let currentData = [];
-let sortConfig = { key: 'account', dir: 'asc' };
-const TREND_DATA_CACHE = {}; 
-const NESTED_DATA_CACHE = {}; 
+let sortConfig = {key: 'account', dir: 'asc'};
+const TREND_DATA_CACHE = {};
+const NESTED_DATA_CACHE = {};
 
 const HIERARCHY = {
-    instagram: { next: 'facebook', label: 'Instagram Account', icon: 'instagram', color: '#E1306C', idField: 'channeledAccount_id', nameField: 'account', filterKey: 'channeledAccount' },
-    facebook: { next: 'content', label: 'Facebook Page', icon: 'facebook', color: '#1877F2', idField: 'page_id', nameField: 'page_title', filterKey: 'page' },
-    content: { next: null, label: 'Content Breakdown', icon: 'image', color: '#8b5cf6', idField: 'post_id', nameField: 'caption' }
+    instagram: {
+        next: 'facebook',
+        label: 'Instagram Account',
+        icon: 'instagram',
+        color: '#E1306C',
+        idField: 'channeledAccount_id',
+        nameField: 'account',
+        filterKey: 'channeledAccount'
+    },
+    facebook: {
+        next: 'content',
+        label: 'Facebook Page',
+        icon: 'facebook',
+        color: '#1877F2',
+        idField: 'page_id',
+        nameField: 'page_title',
+        filterKey: 'page'
+    },
+    content: {
+        next: null,
+        label: 'Content Breakdown',
+        icon: 'image',
+        color: '#8B5CF6',
+        idField: 'post_id',
+        nameField: 'caption'
+    }
 };
 
 const INSTAGRAM_ACCOUNT_TYPE = 'instagram_account';
@@ -20,27 +43,34 @@ const INSTAGRAM_ACCOUNT_TYPE = 'instagram_account';
 // --- Initialization ---
 async function initDashboard() {
     lucide.createIcons();
-    
+
     const headers = getAdminHeaders();
     if (!headers || !headers.Authorization) return;
 
-    let minStoredDate = dayjs().subtract(1, 'year').format('YYYY-MM-DD'); 
+    let minStoredDate = dayjs().subtract(1, 'year').format('YYYY-MM-DD');
     try {
-        const rangeRes = await fetch('/facebook_organic/metric/range', { headers }).then(r => r.json());
+        const rangeRes = await fetch('/facebook_organic/metric/range', {headers}).then(r => r.json());
         if (rangeRes.status === 'success' && rangeRes.data.minDate) {
             minStoredDate = rangeRes.data.minDate;
         }
-    } catch(e) { console.error("Range fetch error:", e); }
+    } catch (e) {
+        console.error("Range fetch error:", e);
+    }
 
     const flatpickrConfig = {
-        dateFormat: "Y-m-d", altInput: true, altFormat: "F j, Y", animate: true, disableMobile: "true", minDate: minStoredDate
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "F j, Y",
+        animate: true,
+        disableMobile: "true",
+        minDate: minStoredDate
     };
 
     const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
     const lastWeek = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
 
-    flatpickr("#startDate", { ...flatpickrConfig, defaultDate: lastWeek > minStoredDate ? lastWeek : minStoredDate });
-    flatpickr("#endDate", { ...flatpickrConfig, defaultDate: yesterday, maxDate: yesterday });
+    flatpickr("#startDate", {...flatpickrConfig, defaultDate: lastWeek > minStoredDate ? lastWeek : minStoredDate});
+    flatpickr("#endDate", {...flatpickrConfig, defaultDate: yesterday, maxDate: yesterday});
 
     loadReport();
 }
@@ -49,80 +79,236 @@ function getActiveMetrics(level = 'instagram', isFb = false) {
     // Config based on level
     if (level === 'instagram') {
         return [
-            { key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes', sparkline: false },
-            { key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments', sparkline: false },
-            { key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false },
-            { key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false },
-            { key: 'profile_views', label: 'PRF VIEW', format: 'number', precision: 0, original: 'profile_views', sparkline: false },
-            { key: 'website_clicks', label: 'WEB CLK', format: 'number', precision: 0, original: 'website_clicks', sparkline: false },
-            { key: 'profile_links_taps', label: 'LNK TAPS', format: 'number', precision: 0, original: 'profile_links_taps', sparkline: false },
-            { key: 'follows_and_unfollows', label: 'FOLLOWS', format: 'number', precision: 0, original: 'follows_and_unfollows', sparkline: true },
-            { key: 'saves', label: 'SAVES', format: 'number', precision: 0, original: 'saves', sparkline: false },
-            { key: 'shares', label: 'SHARES', format: 'number', precision: 0, original: 'shares', sparkline: false },
-            { key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions', sparkline: false },
-            { key: 'replies', label: 'REPLIES', format: 'number', precision: 0, original: 'replies', sparkline: false },
-            { key: 'accounts_engaged', label: 'ENGAGED', format: 'number', precision: 0, original: 'accounts_engaged', sparkline: false }
+            {key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes', sparkline: false},
+            {key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments', sparkline: false},
+            {key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false},
+            {key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false},
+            {
+                key: 'profile_views',
+                label: 'PRF VIEW',
+                format: 'number',
+                precision: 0,
+                original: 'profile_views',
+                sparkline: false
+            },
+            {
+                key: 'website_clicks',
+                label: 'WEB CLK',
+                format: 'number',
+                precision: 0,
+                original: 'website_clicks',
+                sparkline: false
+            },
+            {
+                key: 'profile_links_taps',
+                label: 'LNK TAPS',
+                format: 'number',
+                precision: 0,
+                original: 'profile_links_taps',
+                sparkline: false
+            },
+            {
+                key: 'follows_and_unfollows',
+                label: 'FOLLOWS',
+                format: 'number',
+                precision: 0,
+                original: 'follows_and_unfollows',
+                sparkline: true
+            },
+            {key: 'saves', label: 'SAVES', format: 'number', precision: 0, original: 'saves', sparkline: false},
+            {key: 'shares', label: 'SHARES', format: 'number', precision: 0, original: 'shares', sparkline: false},
+            {
+                key: 'total_interactions',
+                label: 'INTER',
+                format: 'number',
+                precision: 0,
+                original: 'total_interactions',
+                sparkline: false
+            },
+            {key: 'replies', label: 'REPLIES', format: 'number', precision: 0, original: 'replies', sparkline: false},
+            {
+                key: 'accounts_engaged',
+                label: 'ENGAGED',
+                format: 'number',
+                precision: 0,
+                original: 'accounts_engaged',
+                sparkline: false
+            }
         ];
     }
     if (level === 'facebook') {
         return [
             // FB page-level metrics persisted with post_id = NULL
-            { key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false },
-            { key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false },
-            { key: 'profile_views', label: 'PRF VIEW', format: 'number', precision: 0, original: 'profile_views', sparkline: false },
-            { key: 'website_clicks', label: 'WEB CLK', format: 'number', precision: 0, original: 'website_clicks', sparkline: false },
-            { key: 'profile_links_taps', label: 'LNK TAPS', format: 'number', precision: 0, original: 'profile_links_taps', sparkline: false },
-            { key: 'follows_and_unfollows', label: 'FOLLOWS', format: 'number', precision: 0, original: 'follows_and_unfollows', sparkline: true },
-            { key: 'replies', label: 'REPLIES', format: 'number', precision: 0, original: 'replies', sparkline: false },
-            { key: 'accounts_engaged', label: 'ENGAGED', format: 'number', precision: 0, original: 'accounts_engaged', sparkline: false },
-            { key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions', sparkline: true },
-            { key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes', sparkline: false },
-            { key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments', sparkline: false },
-            { key: 'shares', label: 'SHAR', format: 'number', precision: 0, original: 'shares', sparkline: false },
-            { key: 'saves', label: 'SAVES', format: 'number', precision: 0, original: 'saves', sparkline: false }
+            {key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false},
+            {key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false},
+            {
+                key: 'profile_views',
+                label: 'PRF VIEW',
+                format: 'number',
+                precision: 0,
+                original: 'profile_views',
+                sparkline: false
+            },
+            {
+                key: 'website_clicks',
+                label: 'WEB CLK',
+                format: 'number',
+                precision: 0,
+                original: 'website_clicks',
+                sparkline: false
+            },
+            {
+                key: 'profile_links_taps',
+                label: 'LNK TAPS',
+                format: 'number',
+                precision: 0,
+                original: 'profile_links_taps',
+                sparkline: false
+            },
+            {
+                key: 'follows_and_unfollows',
+                label: 'FOLLOWS',
+                format: 'number',
+                precision: 0,
+                original: 'follows_and_unfollows',
+                sparkline: true
+            },
+            {key: 'replies', label: 'REPLIES', format: 'number', precision: 0, original: 'replies', sparkline: false},
+            {
+                key: 'accounts_engaged',
+                label: 'ENGAGED',
+                format: 'number',
+                precision: 0,
+                original: 'accounts_engaged',
+                sparkline: false
+            },
+            {
+                key: 'total_interactions',
+                label: 'INTER',
+                format: 'number',
+                precision: 0,
+                original: 'total_interactions',
+                sparkline: true
+            },
+            {key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes', sparkline: false},
+            {key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments', sparkline: false},
+            {key: 'shares', label: 'SHAR', format: 'number', precision: 0, original: 'shares', sparkline: false},
+            {key: 'saves', label: 'SAVES', format: 'number', precision: 0, original: 'saves', sparkline: false}
         ];
     }
     // Level Content
     if (level === 'content') {
         if (isFb) {
             return [
-                // FB post-level report must consume *_daily metrics only.
-                { key: 'comments_daily', label: 'COMM', format: 'number', precision: 0, original: 'comments_daily' },
-                { key: 'follows_daily', label: 'FOL', format: 'number', precision: 0, original: 'follows_daily' },
-                { key: 'ig_reels_avg_watch_time_daily', label: 'REEL AVG WT', format: 'number', precision: 0, original: 'ig_reels_avg_watch_time_daily' },
-                { key: 'ig_reels_video_view_total_time_daily', label: 'REEL TOT WT', format: 'number', precision: 0, original: 'ig_reels_video_view_total_time_daily' },
-                { key: 'likes_daily', label: 'LIKES', format: 'number', precision: 0, original: 'likes_daily' },
-                { key: 'post_clicks_daily', label: 'PST CLK', format: 'number', precision: 0, original: 'post_clicks_daily' },
-                { key: 'post_engagements_daily', label: 'PST ENG', format: 'number', precision: 0, original: 'post_engagements_daily' },
-                { key: 'post_impressions_unique_daily', label: 'PST U IMPR', format: 'number', precision: 0, original: 'post_impressions_unique_daily' },
-                { key: 'post_media_view_daily', label: 'PST VIEW', format: 'number', precision: 0, original: 'post_media_view_daily' },
-                { key: 'post_reactions_by_type_total_daily', label: 'PST REACT', format: 'number', precision: 0, original: 'post_reactions_by_type_total_daily' },
-                { key: 'post_video_avg_time_watched_daily', label: 'VID AVG WT', format: 'number', precision: 0, original: 'post_video_avg_time_watched_daily' },
-                { key: 'post_video_views_daily', label: 'VID VIEWS', format: 'number', precision: 0, original: 'post_video_views_daily' },
-                { key: 'profile_activity_daily', label: 'PRF ACT', format: 'number', precision: 0, original: 'profile_activity_daily' },
-                { key: 'profile_visits_daily', label: 'PRF VIS', format: 'number', precision: 0, original: 'profile_visits_daily' },
-                { key: 'reach_daily', label: 'REACH', format: 'number', precision: 0, original: 'reach_daily' },
-                { key: 'reposts_daily', label: 'REPOST', format: 'number', precision: 0, original: 'reposts_daily' },
-                { key: 'saved_daily', label: 'SAVED', format: 'number', precision: 0, original: 'saved_daily' },
-                { key: 'shares_daily', label: 'SHARES', format: 'number', precision: 0, original: 'shares_daily' },
-                { key: 'total_interactions_daily', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions_daily' },
-                { key: 'views_daily', label: 'VIEWS', format: 'number', precision: 0, original: 'views_daily' }
+                // FB post-level report must consume non-daily metrics only.
+                {key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments'},
+                {key: 'follows', label: 'FOL', format: 'number', precision: 0, original: 'follows'},
+                {
+                    key: 'ig_reels_avg_watch_time',
+                    label: 'REEL AVG WT',
+                    format: 'number',
+                    precision: 0,
+                    original: 'ig_reels_avg_watch_time'
+                },
+                {
+                    key: 'ig_reels_video_view_total_time',
+                    label: 'REEL TOT WT',
+                    format: 'number',
+                    precision: 0,
+                    original: 'ig_reels_video_view_total_time'
+                },
+                {key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes'},
+                {key: 'post_clicks', label: 'PST CLK', format: 'number', precision: 0, original: 'post_clicks'},
+                {
+                    key: 'post_engagements',
+                    label: 'PST ENG',
+                    format: 'number',
+                    precision: 0,
+                    original: 'post_engagements'
+                },
+                {
+                    key: 'post_impressions_unique',
+                    label: 'PST U IMPR',
+                    format: 'number',
+                    precision: 0,
+                    original: 'post_impressions_unique'
+                },
+                {
+                    key: 'post_media_view',
+                    label: 'PST VIEW',
+                    format: 'number',
+                    precision: 0,
+                    original: 'post_media_view'
+                },
+                {
+                    key: 'post_reactions_by_type_total',
+                    label: 'PST REACT',
+                    format: 'number',
+                    precision: 0,
+                    original: 'post_reactions_by_type_total'
+                },
+                {
+                    key: 'post_video_avg_time_watched',
+                    label: 'VID AVG WT',
+                    format: 'number',
+                    precision: 0,
+                    original: 'post_video_avg_time_watched'
+                },
+                {
+                    key: 'post_video_views',
+                    label: 'VID VIEWS',
+                    format: 'number',
+                    precision: 0,
+                    original: 'post_video_views'
+                },
+                {
+                    key: 'profile_activity',
+                    label: 'PRF ACT',
+                    format: 'number',
+                    precision: 0,
+                    original: 'profile_activity'
+                },
+                {key: 'profile_visits', label: 'PRF VIS', format: 'number', precision: 0, original: 'profile_visits'},
+                {key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach'},
+                {key: 'reposts', label: 'REPOST', format: 'number', precision: 0, original: 'reposts'},
+                {key: 'saved', label: 'SAVED', format: 'number', precision: 0, original: 'saved'},
+                {key: 'shares', label: 'SHARES', format: 'number', precision: 0, original: 'shares'},
+                {
+                    key: 'total_interactions',
+                    label: 'INTER',
+                    format: 'number',
+                    precision: 0,
+                    original: 'total_interactions'
+                },
+                {key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views'}
             ];
         }
         return [
-            { key: 'comments_daily', label: 'COMM', format: 'number', precision: 0, original: 'comments_daily' },
-            { key: 'follows_daily', label: 'FOL', format: 'number', precision: 0, original: 'follows_daily' },
-            { key: 'ig_reels_avg_watch_time_daily', label: 'REEL AVG WT', format: 'number', precision: 0, original: 'ig_reels_avg_watch_time_daily' },
-            { key: 'ig_reels_video_view_total_time_daily', label: 'REEL TOT WT', format: 'number', precision: 0, original: 'ig_reels_video_view_total_time_daily' },
-            { key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes_daily' },
-            { key: 'profile_activity_daily', label: 'PRF ACT', format: 'number', precision: 0, original: 'profile_activity_daily' },
-            { key: 'profile_visits_daily', label: 'PRF VIS', format: 'number', precision: 0, original: 'profile_visits_daily' },
-            { key: 'reach_daily', label: 'REACH', format: 'number', precision: 0, original: 'reach_daily' },
-            { key: 'reposts_daily', label: 'REPOST', format: 'number', precision: 0, original: 'reposts_daily' },
-            { key: 'saved_daily', label: 'SAVE', format: 'number', precision: 0, original: 'saved_daily' },
-            { key: 'shares_daily', label: 'SHAR', format: 'number', precision: 0, original: 'shares_daily' },
-            { key: 'total_interactions_daily', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions_daily' },
-            { key: 'views_daily', label: 'VIEW', format: 'number', precision: 0, original: 'views_daily' }
+            {key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments'},
+            {key: 'follows', label: 'FOL', format: 'number', precision: 0, original: 'follows'},
+            {
+                key: 'ig_reels_avg_watch_time',
+                label: 'REEL AVG WT',
+                format: 'number',
+                precision: 0,
+                original: 'ig_reels_avg_watch_time'
+            },
+            {
+                key: 'ig_reels_video_view_total_time',
+                label: 'REEL TOT WT',
+                format: 'number',
+                precision: 0,
+                original: 'ig_reels_video_view_total_time'
+            },
+            {key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes'},
+            {key: 'profile_activity', label: 'PRF ACT', format: 'number', precision: 0, original: 'profile_activity'},
+            {key: 'profile_visits', label: 'PRF VIS', format: 'number', precision: 0, original: 'profile_visits'},
+            {key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach'},
+            {key: 'reposts', label: 'REPOST', format: 'number', precision: 0, original: 'reposts'},
+            {key: 'saved', label: 'SAVE', format: 'number', precision: 0, original: 'saved'},
+            {key: 'shares', label: 'SHAR', format: 'number', precision: 0, original: 'shares'},
+            {key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions'},
+            {key: 'views', label: 'VIEW', format: 'number', precision: 0, original: 'views'}
         ];
     }
     return [];
@@ -133,40 +319,46 @@ async function loadReport() {
     const end = document.getElementById('endDate').value;
     const loader = document.getElementById('loader');
     const emptyMsg = document.getElementById('empty-msg');
-    
+
     if (loader) loader.style.display = 'flex';
     if (emptyMsg) emptyMsg.style.display = 'none';
 
     try {
         const headers = getAdminHeaders();
         const metrics = getActiveMetrics('instagram');
-        const aggs = {}; metrics.forEach(m => aggs[m.key] = m.original);
-        
+        const aggs = {};
+        metrics.forEach(m => aggs[m.key] = m.original);
+
         // 1. Fetch IG Master Accounts
-        const payload = { 
-            aggregations: aggs, 
-            filters: { account_type: INSTAGRAM_ACCOUNT_TYPE },
+        const payload = {
+            aggregations: aggs,
+            filters: {account_type: INSTAGRAM_ACCOUNT_TYPE},
             groupBy: ["channeledAccount", "channeled_account_id", "page_id"],
-            startDate: start, endDate: end 
+            startDate: start, endDate: end
         };
-        const resMain = await fetch('/facebook_organic/metric/aggregate', { method: 'POST', headers, body: JSON.stringify(payload) }).then(r => r.json());
-        
+        const resMain = await fetch('/facebook_organic/metric/aggregate', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+        }).then(r => r.json());
+
         console.log("Organic Dashboard - Master Accounts:", resMain.data);
 
         if (resMain.status === 'success' && resMain.data) {
             currentData = resMain.data;
-            
+
             // 2. Trend data for Sparklines
-            const trendAggs = {}; metrics.filter(m => m.sparkline).forEach(m => trendAggs[`trend_${m.key}`] = m.original);
-            
-            const resTrend = await fetch('/facebook_organic/metric/aggregate', { 
-                method: 'POST', headers, 
-                body: JSON.stringify({ 
-                    aggregations: trendAggs, 
-                    filters: { account_type: INSTAGRAM_ACCOUNT_TYPE },
+            const trendAggs = {};
+            metrics.filter(m => m.sparkline).forEach(m => trendAggs[`trend_${m.key}`] = m.original);
+
+            const resTrend = await fetch('/facebook_organic/metric/aggregate', {
+                method: 'POST', headers,
+                body: JSON.stringify({
+                    aggregations: trendAggs,
+                    filters: {account_type: INSTAGRAM_ACCOUNT_TYPE},
                     groupBy: ['daily', 'channeledAccount', 'channeled_account_id'],
-                    startDate: start, endDate: end 
-                }) 
+                    startDate: start, endDate: end
+                })
             }).then(r => r.json());
 
             if (resTrend.status === 'success' && resTrend.data) {
@@ -180,7 +372,7 @@ async function loadReport() {
                         const valKey = `trend_${m.key}`;
                         const val = d[m.key] || d[valKey] || d[valKey.toLowerCase()] || 0;
                         if (!TREND_DATA_CACHE['instagram'][cid][m.key]) TREND_DATA_CACHE['instagram'][cid][m.key] = [];
-                        TREND_DATA_CACHE['instagram'][cid][m.key].push({ day: d.daily, val: parseFloat(val || 0) });
+                        TREND_DATA_CACHE['instagram'][cid][m.key].push({day: d.daily, val: parseFloat(val || 0)});
                     });
                 });
             }
@@ -190,8 +382,12 @@ async function loadReport() {
         } else {
             if (emptyMsg) emptyMsg.style.display = 'block';
         }
-    } catch (error) { console.error("Organic Load Error:", error); }
-    finally { if (loader) loader.style.display = 'none'; lucide.createIcons(); }
+    } catch (error) {
+        console.error("Organic Load Error:", error);
+    } finally {
+        if (loader) loader.style.display = 'none';
+        lucide.createIcons();
+    }
 }
 
 function render(start, end) {
@@ -200,7 +396,7 @@ function render(start, end) {
     body.innerHTML = '';
     const metrics = getActiveMetrics('instagram');
     const headRow = document.getElementById('table-head-row');
-    
+
     headRow.innerHTML = `
         <th class="col-actions">&nbsp;</th>
         <th onclick="sortTable('account')" class="clickable" style="text-align: left;">INSTAGRAM ACCOUNT</th>
@@ -216,7 +412,7 @@ function render(start, end) {
         const fbValue = row.page_id || row.page_id_id || row.linked_fb_page_id;
         const fbDisplay = fbValue ? 'Linked' : 'None';
         const accountId = row.channeled_account_id || row.channeled_account_id_id;
-        
+
         tr.innerHTML = `
             <td class="col-actions">
                 <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
@@ -231,20 +427,20 @@ function render(start, end) {
             <td style="text-align: left;"><strong>${cid_raw}</strong></td>
             <td style="text-align: left;"><span class="badge-${fbValue ? 'success' : 'dim'}">${fbDisplay}</span></td>
             ${metrics.map(m => {
-                const val = row[m.key] || row[String(m.key).toLowerCase()] || 0;
-                const cid = row.channeledAccount || row.channeledaccount;
-                const sparkId = `spark-ig-${m.key}-${accountId}`.toLowerCase();
-                return `<td style="text-align: right;">
+            const val = row[m.key] || row[String(m.key).toLowerCase()] || 0;
+            const cid = row.channeledAccount || row.channeledaccount;
+            const sparkId = `spark-ig-${m.key}-${accountId}`.toLowerCase();
+            return `<td style="text-align: right;">
                     <div class="metric-flex-end">
                         <span>${formatNum(val)}</span>
                         ${m.sparkline ? `<div id="${sparkId}" class="sparkline-inline"></div>` : ''}
                     </div>
                 </td>`;
-            }).join('')}
+        }).join('')}
         `;
         body.appendChild(tr);
     });
-    
+
     for (const row of currentData) {
         const accountId = row.channeled_account_id;
         for (const m of metrics) {
@@ -254,14 +450,16 @@ function render(start, end) {
                 const points = TREND_DATA_CACHE['instagram']?.[accountId]?.[m.key] || [];
                 if (sparkEl && points.length > 1) {
                     try {
-                        const vals = points.sort((a,b) => a.day.localeCompare(b.day)).map(p => p.val);
-                        renderSparkline(sparkEl, vals, m.color || '#6366f1', start, end);
-                    } catch(e) { console.error("Sparkline render error:", e); }
+                        const vals = points.sort((a, b) => a.day.localeCompare(b.day)).map(p => p.val);
+                        renderSparkline(sparkEl, vals, m.color || '#6366F1', start, end);
+                    } catch (e) {
+                        console.error("Sparkline render error:", e);
+                    }
                 }
             }
         }
     }
-    
+
     renderSummaryFields();
     lucide.createIcons();
 }
@@ -269,7 +467,7 @@ function render(start, end) {
 async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatformId) {
     const mainRow = document.getElementById(rowId);
     const nextRow = mainRow?.nextElementSibling;
-    
+
     if (nextRow?.classList.contains('hierarchy-row') && nextRow.dataset.parentRow === rowId) {
         if (nextRow.dataset.level === level) {
             nextRow.remove();
@@ -280,7 +478,7 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
         nextRow.remove();
         document.querySelectorAll(`#${rowId} .btn-expand`).forEach(b => b.classList.remove('active'));
     }
-    
+
     btn.classList.add('active');
     const breakdownRow = document.createElement('tr');
     breakdownRow.className = 'hierarchy-row';
@@ -298,17 +496,22 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
     try {
         if (level === 'facebook') {
             const metrics = getActiveMetrics('facebook');
-            const aggs = {}; metrics.forEach(m => aggs[m.key] = m.original);
-            
+            const aggs = {};
+            metrics.forEach(m => aggs[m.key] = m.original);
+
             // Search for the specific linked FB Page
-            const payload = { 
-                aggregations: aggs, 
-                filters: { page: childPlatformId },
+            const payload = {
+                aggregations: aggs,
+                filters: {page: childPlatformId},
                 groupBy: ["page", "page_id", "page_title"],
-                startDate: start, endDate: end 
+                startDate: start, endDate: end
             };
-            const res = await fetch('/facebook_organic/metric/aggregate', { method: 'POST', headers, body: JSON.stringify(payload) }).then(r => r.json());
-            
+            const res = await fetch('/facebook_organic/metric/aggregate', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            }).then(r => r.json());
+
             if (res.status === 'success' && res.data) {
                 renderFacebookSubtable(container, res.data, rowId);
             } else {
@@ -317,17 +520,35 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
         } else if (level === 'content') {
             // Level content is reached from a FB row (row.page) or IG row (row.channeledAccount)
             // parentId is either a FB Page URL/ID or an IG Account ID
-            const isFromFb = rowId.includes('-fb-'); 
-            const groupBy = ["post", "post_id", "caption", "message", "media_type", "permalink", "permalink_url", "timestamp", "created_time"]; 
-            const filters = isFromFb ? { page: parentId, account_type: 'facebook_page', post: 'NOT_NULL' } : { channeledAccount: parentId, account_type: INSTAGRAM_ACCOUNT_TYPE, post: 'NOT_NULL' };
+            const isFromFb = rowId.includes('-fb-');
+            const groupBy = ["post", "post_id", "caption", "message", "media_type", "permalink", "permalink_url", "timestamp", "created_time"];
+            const filters = isFromFb
+                ? {page: parentId, account_type: 'facebook_page', post: 'NOT_NULL', period: 'lifetime'}
+                : {
+                    channeledAccount: parentId,
+                    account_type: INSTAGRAM_ACCOUNT_TYPE,
+                    post: 'NOT_NULL',
+                    period: 'lifetime'
+                };
 
             const metrics = getActiveMetrics('content', isFromFb);
-            const aggs = {}; metrics.forEach(m => aggs[m.key] = m.original);
+            const aggs = {};
+            metrics.forEach(m => aggs[m.key] = m.original);
 
-            const res = await fetch('/facebook_organic/metric/aggregate', { 
-                method: 'POST', headers, 
-                body: JSON.stringify({ aggregations: aggs, filters, groupBy, startDate: start, endDate: end }) 
-            }).then(r => r.json());
+            // Post/media metrics are lifetime stocks. We need the latest available
+            // snapshot date in the selected window instead of summing across dates.
+            const latestResult = await fetchLatestStockSnapshot({
+                headers,
+                aggregations: aggs,
+                filters,
+                groupBy,
+                startDate: start,
+                endDate: end,
+            });
+            const res = {
+                status: 'success',
+                data: latestResult.data,
+            };
 
             if (res.status === 'success' && res.data) {
                 renderContentSubtable(container, res.data, isFromFb);
@@ -335,11 +556,41 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
                 container.innerHTML = `<div class="empty-state">No organic content found for this period.</div>`;
             }
         }
-    } catch(e) { 
+    } catch (e) {
         console.error("Hierarchy error:", e);
-        container.innerHTML = `<div class="error-state">${e.message}</div>`; 
+        container.innerHTML = `<div class="error-state">${e.message}</div>`;
     }
     lucide.createIcons();
+}
+
+async function fetchLatestStockSnapshot({headers, aggregations, filters, groupBy, startDate, endDate}) {
+    let cursor = dayjs(endDate);
+    const floor = dayjs(startDate);
+
+    while (cursor.isAfter(floor) || cursor.isSame(floor, 'day')) {
+        const date = cursor.format('YYYY-MM-DD');
+        const payload = {
+            aggregations,
+            filters,
+            groupBy,
+            startDate: date,
+            endDate: date,
+        };
+
+        const res = await fetch('/facebook_organic/metric/aggregate', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+        }).then(r => r.json());
+
+        if (res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
+            return {data: res.data, snapshotDate: date};
+        }
+
+        cursor = cursor.subtract(1, 'day');
+    }
+
+    return {data: [], snapshotDate: null};
 }
 
 function renderFacebookSubtable(container, data, parentRowId) {
@@ -355,18 +606,18 @@ function renderFacebookSubtable(container, data, parentRowId) {
                 </tr>
             </thead>
             <tbody>`;
-    
+
     data.forEach(row => {
         const platformUrl = row.page;
         const pageNumericId = row.page_id || row.page_id_id;
         const subRowId = `row-fb-${pageNumericId}`.replace(/[^a-z0-9\-]/gi, '-');
-        
+
         const displayName = row.page_title || row.account || platformUrl;
         let nameHtml = `<strong>${displayName}</strong>`;
         if (platformUrl && platformUrl !== 'N/A' && platformUrl.startsWith('http')) {
             nameHtml = `<a href="${platformUrl}" target="_blank" class="clickable-text"><strong>${displayName}</strong> <i data-lucide="external-link" size="10"></i></a>`;
         }
-        
+
         html += `
             <tr id="${subRowId}">
                 <td class="text-center">
@@ -396,31 +647,31 @@ function renderContentSubtable(container, data, isFb = false) {
                 </tr>
             </thead>
             <tbody>`;
-    
+
     data.forEach(row => {
         let caption = 'No caption';
         if (row.caption && row.caption !== 'N/A') caption = row.caption;
         else if (row.message && row.message !== 'N/A') caption = row.message;
-        
+
         let linkDetails = '';
         let theLink = null;
         if (row.permalink && row.permalink !== 'N/A') theLink = row.permalink;
         else if (row.permalink_url && row.permalink_url !== 'N/A') theLink = row.permalink_url;
-        
+
         const shortCaption = caption.length > 80 ? caption.substring(0, 80) + '...' : caption;
         if (theLink) {
             linkDetails = `<a href="${theLink}" target="_blank" class="clickable-text" title="${caption.replace(/"/g, '&quot;')}">${shortCaption} <i data-lucide="external-link" size="10"></i></a>`;
         } else {
             linkDetails = `<div class="clickable-text" title="${caption.replace(/"/g, '&quot;')}">${shortCaption}</div>`;
         }
-        
+
         let dateVal = 'N/A';
         if (row.timestamp && row.timestamp !== 'N/A') dateVal = row.timestamp;
         else if (row.created_time && row.created_time !== 'N/A') dateVal = row.created_time;
-        
+
         const formattedDate = dateVal !== 'N/A' ? dayjs(dateVal).format('MMM D, YYYY') : 'Unknown';
         const mediaTypeLabel = (row.media_type && row.media_type !== 'N/A') ? row.media_type : (isFb ? 'POST' : 'IMAGE');
-        
+
         html += `
             <tr>
                 <td style="text-align: left;">${linkDetails}</td>
@@ -435,20 +686,24 @@ function renderContentSubtable(container, data, isFb = false) {
 
 // --- Utils ---
 function getAdminHeaders() {
-    if (window.AUTH_BYPASS) return { 'Authorization': 'Bearer DEMO_BYPASS', 'Content-Type': 'application/json' };
+    if (window.AUTH_BYPASS) return {'Authorization': 'Bearer DEMO_BYPASS', 'Content-Type': 'application/json'};
     let auth = JSON.parse(localStorage.getItem('apis_hub_admin_auth') || '{}');
-    return { 'Authorization': 'Bearer ' + (auth.token || ''), 'Content-Type': 'application/json' };
+    return {'Authorization': 'Bearer ' + (auth.token || ''), 'Content-Type': 'application/json'};
 }
 
-function formatNum(v) { return (parseFloat(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+function formatNum(v) {
+    return (parseFloat(v) || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
 
-function renderSparkline(container, points, color = '#6366f1', start, end) {
+function renderSparkline(container, points, color = '#6366F1', start, end) {
     if (!container || !points || points.length < 2) return;
-    const width = 80; const height = 24;
-    const max = Math.max(...points); const min = Math.min(...points);
+    const width = 80;
+    const height = 24;
+    const max = Math.max(...points);
+    const min = Math.min(...points);
     const range = (max - min) || 1;
     const svgPoints = points.map((p, i) => `${(i / (points.length - 1)) * width},${height - ((p - min) / range) * (height - 4) - 2}`);
-    const strokeColor = points[points.length-1] >= points[0] ? '#10b981' : '#ef4444';
+    const strokeColor = points[points.length - 1] >= points[0] ? '#10B981' : '#EF4444';
     container.innerHTML = `<svg width="${width}" height="${height}" style="overflow:visible">
         <polyline fill="none" stroke="${strokeColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${svgPoints.join(' ')}" />
     </svg>`;
@@ -461,8 +716,8 @@ function renderSummaryFields() {
         acc.inter += parseInt(r.total_interactions || 0);
         acc.follows += parseInt(r.follows_and_unfollows || 0);
         return acc;
-    }, { reach:0, views:0, inter:0, follows:0 });
-    
+    }, {reach: 0, views: 0, inter: 0, follows: 0});
+
     document.getElementById('total-reach').textContent = formatNum(sums.reach);
     document.getElementById('total-impressions').textContent = formatNum(sums.views);
     document.getElementById('total-interactions').textContent = formatNum(sums.inter);
@@ -485,12 +740,15 @@ async function confirmFlush() {
     const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'flex';
     try {
-        await fetch('/api/config-manager/flush-cache', { 
-            method: 'POST', headers: getAdminHeaders(), body: JSON.stringify({ channel: 'facebook_organic' })
+        await fetch('/api/config-manager/flush-cache', {
+            method: 'POST', headers: getAdminHeaders(), body: JSON.stringify({channel: 'facebook_organic'})
         });
         loadReport();
-    } catch (err) { console.error(err); }
-    finally { if (loader) loader.style.display = 'none'; }
+    } catch (err) {
+        console.error(err);
+    } finally {
+        if (loader) loader.style.display = 'none';
+    }
 }
 
 window.loadReport = loadReport;
