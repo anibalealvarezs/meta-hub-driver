@@ -149,6 +149,16 @@ function normalizeLookupValue(value) {
     return value === undefined || value === null ? '' : String(value).trim();
 }
 
+function pickBestPlatformIdCandidate(candidates = []) {
+    const normalized = candidates
+        .map(normalizeLookupValue)
+        .filter(Boolean);
+    if (!normalized.length) return '';
+
+    // Prefer the longest candidate to avoid selecting small internal IDs when a real platform ID is present.
+    return normalized.sort((a, b) => b.length - a.length)[0];
+}
+
 function getOrganicPagesConfig() {
     const pagesConfig = window.FB_METRICS_CONFIG?.pages_config;
     return Array.isArray(pagesConfig) ? pagesConfig : [];
@@ -161,18 +171,22 @@ function getLinkedFacebookPagePlatformIdMap() {
 
     const relationMap = {};
     getOrganicPagesConfig().forEach(pageConfig => {
-        const facebookPagePlatformId = normalizeLookupValue(
-            pageConfig?.id
-            || pageConfig?.facebook_page_id
-            || pageConfig?.data?.id
-            || pageConfig?.data?.facebook_page_id
-        );
-        const instagramPagePlatformId = normalizeLookupValue(
-            pageConfig?.ig_account
-            || pageConfig?.instagram_id
-            || pageConfig?.data?.instagram_id
-            || pageConfig?.ig_data?.id
-        );
+        const facebookPagePlatformId = pickBestPlatformIdCandidate([
+            pageConfig?.data?.id,
+            pageConfig?.platformId,
+            pageConfig?.platform_id,
+            pageConfig?.data?.facebook_page_id,
+            pageConfig?.facebook_page_id,
+            pageConfig?.id,
+        ]);
+        const instagramPagePlatformId = pickBestPlatformIdCandidate([
+            pageConfig?.ig_data?.id,
+            pageConfig?.ig_platform_id,
+            pageConfig?.igPlatformId,
+            pageConfig?.ig_account,
+            pageConfig?.data?.instagram_id,
+            pageConfig?.instagram_id,
+        ]);
 
         if (instagramPagePlatformId && facebookPagePlatformId) {
             relationMap[instagramPagePlatformId] = facebookPagePlatformId;
@@ -184,17 +198,20 @@ function getLinkedFacebookPagePlatformIdMap() {
 }
 
 function resolveLinkedFacebookPagePlatformId(row) {
+    const linkedFbFromAggregate = pickBestPlatformIdCandidate([
+        row?.linked_fb_page_id,
+        row?.linked_fb_page,
+    ]);
+    if (linkedFbFromAggregate) {
+        return linkedFbFromAggregate;
+    }
+
     const instagramPagePlatformId = normalizeLookupValue(
         pickFirstRowValue(row, ['page_platform_id', 'pageplatformid'])
     );
-    const mappedFacebookPagePlatformId = instagramPagePlatformId
-        ? getLinkedFacebookPagePlatformIdMap()[instagramPagePlatformId]
+    return instagramPagePlatformId
+        ? (getLinkedFacebookPagePlatformIdMap()[instagramPagePlatformId] || '')
         : '';
-    const fallbackLinkedValue = normalizeLookupValue(
-        pickFirstRowValue(row, ['linked_fb_page_id', 'linked_fb_page', 'linkedfbpageid'])
-    );
-
-    return mappedFacebookPagePlatformId || fallbackLinkedValue;
 }
 
 function buildContentMetricsByMode(baseMetrics, mode) {
