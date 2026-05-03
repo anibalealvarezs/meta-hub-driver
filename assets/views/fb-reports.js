@@ -390,7 +390,7 @@ async function loadReport() {
     activeMetrics.forEach((m) => (aggregations[m.key] = m.original));
     const payload = {
       aggregations,
-      groupBy: ["channeledAccount", "channeledCampaign", "account", "campaign", "channeled_account_id", "channeled_campaign_id"],
+      groupBy: ["channeledAccount", "channeledCampaign"],
       startDate: start,
       endDate: end,
     };
