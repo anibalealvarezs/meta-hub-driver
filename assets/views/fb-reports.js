@@ -433,7 +433,7 @@ async function loadReport() {
           headers,
           body: JSON.stringify({
             aggregations: trendAggregations,
-            groupBy: ["daily", "channeledCampaign", "channeled_campaign_id"],
+            groupBy: ["daily", "channeledCampaign"],
             startDate: start,
             endDate: end,
           }),
