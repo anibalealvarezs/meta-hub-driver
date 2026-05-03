@@ -177,7 +177,6 @@ function getLinkedFacebookPagePlatformIdMap() {
             pageConfig?.platform_id,
             pageConfig?.facebook_page_id,
             pageConfig?.data?.facebook_page_id,
-            pageConfig?.id,
         ]);
         const instagramPagePlatformId = pickBestPlatformIdCandidate([
             pageConfig?.ig_data?.id,
@@ -210,6 +209,12 @@ function resolveLinkedFacebookPagePlatformId(row) {
     const instagramPagePlatformId = normalizeLookupValue(
         pickFirstRowValue(row, ['page_platform_id', 'pageplatformid'])
     );
+    const linkedFbFromAggregate = normalizeLookupValue(
+        pickFirstRowValue(row, ['linked_fb_page_id', 'linked_fb_page'])
+    );
+    if (linkedFbFromAggregate && linkedFbFromAggregate !== instagramPagePlatformId) {
+        return linkedFbFromAggregate;
+    }
     const instagramAccountName = normalizeLookupValue(
         pickFirstRowValue(row, ['channeledAccount', 'channeledaccount', 'account'])
     ).toLowerCase();
@@ -575,9 +580,7 @@ function render(start, end) {
         const linkedFbPagePlatformId = resolveLinkedFacebookPagePlatformId(row);
         const fbDisplay = linkedFbPagePlatformId ? 'Linked' : 'None';
         const accountId = row.channeled_account_id || row.channeled_account_id_id;
-        const fbButtonAttrs = linkedFbPagePlatformId
-            ? `onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPagePlatformId).replace(/'/g, "\\'")}', 'page_platform_id')"`
-            : 'disabled';
+        const fbButtonAttrs = `onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPagePlatformId || '').replace(/'/g, "\\'")}', 'page_platform_id')"`;
         const fbButtonTitle = linkedFbPagePlatformId ? 'View Linked Facebook Page' : 'No linked Facebook Page configured';
 
         tr.innerHTML = `
