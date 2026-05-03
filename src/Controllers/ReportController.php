@@ -26,7 +26,8 @@ class ReportController
         $configData = [
             'strategy' => $config['metrics_strategy'] ?? 'default',
             'metrics_config' => $config['metrics_config'] ?? [],
-            'metrics_level' => $this->deriveMetricsLevel($config)
+            'metrics_level' => $this->deriveMetricsLevel($config),
+            'pages_config' => $config['pages'] ?? [],
         ];
 
         $isDemo = $args['isDemo'] ?? false;

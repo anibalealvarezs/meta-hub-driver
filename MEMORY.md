@@ -14,3 +14,4 @@
 - Keep Facebook Organic payloads aligned with the actual stored metric names, including the available `*_daily` content metrics and the IG account-level metric set.
 - IG account context should resolve against the IG page identity when syncing mixed FB + IG data, so rows do not attach to the linked Facebook page entity incorrectly.
 - Stock-style post aggregates now support `latest_snapshot` and `snapshot_delta`; UI selectors should match the backend aggregate mode and snapshot fallback behavior.
+- FB Organic hierarchy should resolve the linked Facebook page from the channel `pages` configuration (`id` FB page platform id ↔ `ig_account` IG platform id) and query the FB subtable via `page_platform_id`, not by reusing the IG `page_id` entity id.

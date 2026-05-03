@@ -45,6 +45,7 @@ const POSTS_AGGREGATE_MODES = {
     SNAPSHOT: 'snapshot',
     SNAPSHOT_DELTA: 'snapshot_delta'
 };
+let LINKED_FB_PAGE_PLATFORM_ID_BY_IG_PLATFORM_ID = null;
 const SNAPSHOT_FALLBACK_MODES = {
     RESILIENT: 'resilient',
     STRICT: 'strict'
@@ -142,6 +143,58 @@ function pickFirstRowValue(row, keys = []) {
         if (value !== undefined && value !== null && value !== '') return value;
     }
     return null;
+}
+
+function normalizeLookupValue(value) {
+    return value === undefined || value === null ? '' : String(value).trim();
+}
+
+function getOrganicPagesConfig() {
+    const pagesConfig = window.FB_METRICS_CONFIG?.pages_config;
+    return Array.isArray(pagesConfig) ? pagesConfig : [];
+}
+
+function getLinkedFacebookPagePlatformIdMap() {
+    if (LINKED_FB_PAGE_PLATFORM_ID_BY_IG_PLATFORM_ID) {
+        return LINKED_FB_PAGE_PLATFORM_ID_BY_IG_PLATFORM_ID;
+    }
+
+    const relationMap = {};
+    getOrganicPagesConfig().forEach(pageConfig => {
+        const facebookPagePlatformId = normalizeLookupValue(
+            pageConfig?.id
+            || pageConfig?.facebook_page_id
+            || pageConfig?.data?.id
+            || pageConfig?.data?.facebook_page_id
+        );
+        const instagramPagePlatformId = normalizeLookupValue(
+            pageConfig?.ig_account
+            || pageConfig?.instagram_id
+            || pageConfig?.data?.instagram_id
+            || pageConfig?.ig_data?.id
+        );
+
+        if (instagramPagePlatformId && facebookPagePlatformId) {
+            relationMap[instagramPagePlatformId] = facebookPagePlatformId;
+        }
+    });
+
+    LINKED_FB_PAGE_PLATFORM_ID_BY_IG_PLATFORM_ID = relationMap;
+    return relationMap;
+}
+
+function resolveLinkedFacebookPagePlatformId(row) {
+    const instagramPagePlatformId = normalizeLookupValue(
+        pickFirstRowValue(row, ['page_platform_id', 'pageplatformid'])
+    );
+    const mappedFacebookPagePlatformId = instagramPagePlatformId
+        ? getLinkedFacebookPagePlatformIdMap()[instagramPagePlatformId]
+        : '';
+    const fallbackLinkedValue = normalizeLookupValue(
+        pickFirstRowValue(row, ['linked_fb_page_id', 'linked_fb_page', 'linkedfbpageid'])
+    );
+
+    return mappedFacebookPagePlatformId || fallbackLinkedValue;
 }
 
 function buildContentMetricsByMode(baseMetrics, mode) {
@@ -414,7 +467,7 @@ async function loadReport() {
         const payload = {
             aggregations: aggs,
             filters: {account_type: INSTAGRAM_ACCOUNT_TYPE},
-            groupBy: ["channeledAccount", "channeled_account_id", "linked_fb_page_id"],
+            groupBy: ["channeledAccount", "channeled_account_id", "page_platform_id", "linked_fb_page_id"],
             startDate: start, endDate: end
         };
         const resMain = await fetch('/facebook_organic/metric/aggregate', {
@@ -490,15 +543,18 @@ function render(start, end) {
         const cid_raw = row.channeledAccount || row.channeledaccount;
         const rowId = `row-ig-${cid_raw}`.replace(/[^a-z0-9\-]/gi, '-');
         tr.id = rowId;
-        const linkedFbPageId = pickFirstRowValue(row, ['linked_fb_page_id', 'linked_fb_page', 'linkedfbpageid']);
-        const fbValue = linkedFbPageId || pickFirstRowValue(row, ['page_id', 'page_id_id']);
-        const fbDisplay = fbValue ? 'Linked' : 'None';
+        const linkedFbPagePlatformId = resolveLinkedFacebookPagePlatformId(row);
+        const fbDisplay = linkedFbPagePlatformId ? 'Linked' : 'None';
         const accountId = row.channeled_account_id || row.channeled_account_id_id;
+        const fbButtonAttrs = linkedFbPagePlatformId
+            ? `onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPagePlatformId).replace(/'/g, "\\'")}', 'page_platform_id')"`
+            : 'disabled';
+        const fbButtonTitle = linkedFbPagePlatformId ? 'View Linked Facebook Page' : 'No linked Facebook Page configured';
 
         tr.innerHTML = `
             <td class="col-actions">
                 <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
-                    <button class="btn-expand next-btn-fb" onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPageId || fbValue || '').replace(/'/g, "\\'")}')" title="View Linked Facebook Page">
+                    <button class="btn-expand next-btn-fb" ${fbButtonAttrs} title="${fbButtonTitle}">
                         <i data-lucide="layers" size="14"></i>
                     </button>
                     <button class="btn-expand next-btn-ig" onclick="toggleOrganicHierarchy(this, '${rowId}', 'content', '${accountId}', null)" title="View Instagram Posts" style="background-color:rgba(139,92,246,0.1); color:#8b5cf6; border-color:rgba(139,92,246,0.3);">
@@ -507,7 +563,7 @@ function render(start, end) {
                 </div>
             </td>
             <td style="text-align: left;"><strong>${cid_raw}</strong></td>
-            <td style="text-align: left;"><span class="badge-${fbValue ? 'success' : 'dim'}">${fbDisplay}</span></td>
+            <td style="text-align: left;"><span class="badge-${linkedFbPagePlatformId ? 'success' : 'dim'}">${fbDisplay}</span></td>
             ${metrics.map(m => {
             const val = row[m.key] || row[String(m.key).toLowerCase()] || 0;
             const cid = row.channeledAccount || row.channeledaccount;
@@ -546,7 +602,7 @@ function render(start, end) {
     lucide.createIcons();
 }
 
-async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatformId) {
+async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatformId, childFilterKey = 'page') {
     const mainRow = document.getElementById(rowId);
     const nextRow = mainRow?.nextElementSibling;
 
@@ -577,6 +633,11 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
 
     try {
         if (level === 'facebook') {
+            if (!childPlatformId) {
+                container.innerHTML = `<div class="empty-state">No linked Facebook Page is configured for this Instagram account.</div>`;
+                btn.classList.remove('active');
+                return;
+            }
             const metrics = getActiveMetrics('facebook');
             const aggs = {};
             metrics.forEach(m => aggs[m.key] = m.original);
@@ -584,7 +645,7 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
             // Search for the specific linked FB Page
             const payload = {
                 aggregations: aggs,
-                filters: {page: childPlatformId, account_type: FACEBOOK_PAGE_ACCOUNT_TYPE},
+                filters: {[childFilterKey]: childPlatformId, account_type: FACEBOOK_PAGE_ACCOUNT_TYPE},
                 groupBy: ["page", "page_id", "page_title"],
                 startDate: start, endDate: end
             };
