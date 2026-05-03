@@ -209,12 +209,6 @@ function resolveLinkedFacebookPagePlatformId(row) {
     const instagramPagePlatformId = normalizeLookupValue(
         pickFirstRowValue(row, ['page_platform_id', 'pageplatformid'])
     );
-    const linkedFbFromAggregate = normalizeLookupValue(
-        pickFirstRowValue(row, ['linked_fb_page_id', 'linked_fb_page'])
-    );
-    if (linkedFbFromAggregate && linkedFbFromAggregate !== instagramPagePlatformId) {
-        return linkedFbFromAggregate;
-    }
     const instagramAccountName = normalizeLookupValue(
         pickFirstRowValue(row, ['channeledAccount', 'channeledaccount', 'account'])
     ).toLowerCase();
@@ -679,9 +673,6 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
     try {
         if (level === 'facebook') {
             if (!childPlatformId) {
-                childPlatformId = await resolveLinkedFbPageIdByChanneledAccount(headers, parentId, start, end);
-            }
-            if (!childPlatformId) {
                 container.innerHTML = `<div class="empty-state">No linked Facebook Page is configured for this Instagram account.</div>`;
                 btn.classList.remove('active');
                 return;
@@ -755,37 +746,6 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
     lucide.createIcons();
 }
 
-async function resolveLinkedFbPageIdByChanneledAccount(headers, channeledAccountId, startDate, endDate) {
-    if (!channeledAccountId) return '';
-
-    const payload = {
-        aggregations: {probe_reach: 'reach'},
-        filters: {channeledAccount: channeledAccountId, account_type: INSTAGRAM_ACCOUNT_TYPE},
-        groupBy: ['linked_fb_page_id'],
-        startDate,
-        endDate,
-    };
-
-    try {
-        const res = await fetch('/facebook_organic/metric/aggregate', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-        }).then(r => r.json());
-
-        if (res.status !== 'success' || !Array.isArray(res.data) || !res.data.length) {
-            return '';
-        }
-
-        const linkedId = normalizeLookupValue(
-            pickFirstRowValue(res.data[0], ['linked_fb_page_id', 'linked_fb_page'])
-        );
-        return linkedId || '';
-    } catch (e) {
-        console.error('Linked FB resolver error:', e);
-        return '';
-    }
-}
 
 async function fetchContentAggregate({headers, aggregations, filters, groupBy, startDate, endDate, mode, fallbackMode}) {
     const modeFilters = {
