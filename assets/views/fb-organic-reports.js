@@ -39,6 +39,7 @@ const HIERARCHY = {
 };
 
 const INSTAGRAM_ACCOUNT_TYPE = 'instagram_account';
+const FACEBOOK_PAGE_ACCOUNT_TYPE = 'facebook_page';
 const POSTS_AGGREGATE_MODES = {
     DAILY: 'daily',
     SNAPSHOT: 'snapshot',
@@ -132,6 +133,15 @@ function getPostsAggregateConfig() {
 function toDailyMetricName(metricName) {
     if (!metricName || metricName.endsWith('_daily')) return metricName;
     return `${metricName}_daily`;
+}
+
+function pickFirstRowValue(row, keys = []) {
+    if (!row || !Array.isArray(keys)) return null;
+    for (const key of keys) {
+        const value = row[key];
+        if (value !== undefined && value !== null && value !== '') return value;
+    }
+    return null;
 }
 
 function buildContentMetricsByMode(baseMetrics, mode) {
@@ -404,7 +414,7 @@ async function loadReport() {
         const payload = {
             aggregations: aggs,
             filters: {account_type: INSTAGRAM_ACCOUNT_TYPE},
-            groupBy: ["channeledAccount", "channeled_account_id", "page_id"],
+            groupBy: ["channeledAccount", "channeled_account_id", "linked_fb_page_id"],
             startDate: start, endDate: end
         };
         const resMain = await fetch('/facebook_organic/metric/aggregate', {
@@ -480,14 +490,15 @@ function render(start, end) {
         const cid_raw = row.channeledAccount || row.channeledaccount;
         const rowId = `row-ig-${cid_raw}`.replace(/[^a-z0-9\-]/gi, '-');
         tr.id = rowId;
-        const fbValue = row.page_id || row.page_id_id || row.linked_fb_page_id;
+        const linkedFbPageId = pickFirstRowValue(row, ['linked_fb_page_id', 'linked_fb_page', 'linkedfbpageid']);
+        const fbValue = linkedFbPageId || pickFirstRowValue(row, ['page_id', 'page_id_id']);
         const fbDisplay = fbValue ? 'Linked' : 'None';
         const accountId = row.channeled_account_id || row.channeled_account_id_id;
 
         tr.innerHTML = `
             <td class="col-actions">
                 <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
-                    <button class="btn-expand next-btn-fb" onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(fbValue || '').replace(/'/g, "\\'")}')" title="View Linked Facebook Page">
+                    <button class="btn-expand next-btn-fb" onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPageId || fbValue || '').replace(/'/g, "\\'")}')" title="View Linked Facebook Page">
                         <i data-lucide="layers" size="14"></i>
                     </button>
                     <button class="btn-expand next-btn-ig" onclick="toggleOrganicHierarchy(this, '${rowId}', 'content', '${accountId}', null)" title="View Instagram Posts" style="background-color:rgba(139,92,246,0.1); color:#8b5cf6; border-color:rgba(139,92,246,0.3);">
@@ -573,7 +584,7 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
             // Search for the specific linked FB Page
             const payload = {
                 aggregations: aggs,
-                filters: {page: childPlatformId},
+                filters: {page: childPlatformId, account_type: FACEBOOK_PAGE_ACCOUNT_TYPE},
                 groupBy: ["page", "page_id", "page_title"],
                 startDate: start, endDate: end
             };
@@ -595,7 +606,7 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
             const postsAggregateConfig = getPostsAggregateConfig();
             const groupBy = ["post", "post_id", "caption", "message", "media_type", "permalink", "permalink_url", "timestamp", "created_time"];
             const filters = isFromFb
-                ? {page: parentId, account_type: 'facebook_page', post: 'NOT_NULL'}
+                ? {page: parentId, account_type: FACEBOOK_PAGE_ACCOUNT_TYPE, post: 'NOT_NULL'}
                 : {
                     channeledAccount: parentId,
                     account_type: INSTAGRAM_ACCOUNT_TYPE,
