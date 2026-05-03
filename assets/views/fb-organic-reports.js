@@ -45,7 +45,7 @@ const POSTS_AGGREGATE_MODES = {
     SNAPSHOT: 'snapshot',
     SNAPSHOT_DELTA: 'snapshot_delta'
 };
-let LINKED_FB_PAGE_ID_BY_IG_PLATFORM_ID = null;
+let LINKED_FB_PAGE_PLATFORM_ID_BY_IG_KEY = null;
 const SNAPSHOT_FALLBACK_MODES = {
     RESILIENT: 'resilient',
     STRICT: 'strict'
@@ -164,18 +164,20 @@ function getOrganicPagesConfig() {
     return Array.isArray(pagesConfig) ? pagesConfig : [];
 }
 
-function getLinkedFacebookPageIdMap() {
-    if (LINKED_FB_PAGE_ID_BY_IG_PLATFORM_ID) {
-        return LINKED_FB_PAGE_ID_BY_IG_PLATFORM_ID;
+function getLinkedFacebookPagePlatformIdMap() {
+    if (LINKED_FB_PAGE_PLATFORM_ID_BY_IG_KEY) {
+        return LINKED_FB_PAGE_PLATFORM_ID_BY_IG_KEY;
     }
 
     const relationMap = {};
     getOrganicPagesConfig().forEach(pageConfig => {
-        const facebookPageId = pickBestPlatformIdCandidate([
-            pageConfig?.id,
+        const facebookPagePlatformId = pickBestPlatformIdCandidate([
+            pageConfig?.data?.id,
+            pageConfig?.platformId,
+            pageConfig?.platform_id,
             pageConfig?.facebook_page_id,
             pageConfig?.data?.facebook_page_id,
-            pageConfig?.page_id,
+            pageConfig?.id,
         ]);
         const instagramPagePlatformId = pickBestPlatformIdCandidate([
             pageConfig?.ig_data?.id,
@@ -185,31 +187,43 @@ function getLinkedFacebookPageIdMap() {
             pageConfig?.data?.instagram_id,
             pageConfig?.instagram_id,
         ]);
+        const instagramAccountName = normalizeLookupValue(
+            pageConfig?.ig_account_name
+            || pageConfig?.ig_data?.username
+            || pageConfig?.ig_data?.name
+        );
 
-        if (instagramPagePlatformId && facebookPageId) {
-            relationMap[instagramPagePlatformId] = facebookPageId;
+        if (instagramPagePlatformId && facebookPagePlatformId) {
+            relationMap[`ig_platform:${instagramPagePlatformId}`] = facebookPagePlatformId;
+        }
+        if (instagramAccountName && facebookPagePlatformId) {
+            relationMap[`ig_name:${instagramAccountName.toLowerCase()}`] = facebookPagePlatformId;
         }
     });
 
-    LINKED_FB_PAGE_ID_BY_IG_PLATFORM_ID = relationMap;
+    LINKED_FB_PAGE_PLATFORM_ID_BY_IG_KEY = relationMap;
     return relationMap;
 }
 
-function resolveLinkedFacebookPageId(row) {
-    const linkedFbFromAggregate = pickBestPlatformIdCandidate([
-        row?.linked_fb_page_id,
-        row?.linked_fb_page,
-    ]);
-    if (linkedFbFromAggregate) {
-        return linkedFbFromAggregate;
-    }
-
+function resolveLinkedFacebookPagePlatformId(row) {
+    const relationMap = getLinkedFacebookPagePlatformIdMap();
     const instagramPagePlatformId = normalizeLookupValue(
         pickFirstRowValue(row, ['page_platform_id', 'pageplatformid'])
     );
-    return instagramPagePlatformId
-        ? (getLinkedFacebookPageIdMap()[instagramPagePlatformId] || '')
-        : '';
+    const instagramAccountName = normalizeLookupValue(
+        pickFirstRowValue(row, ['channeledAccount', 'channeledaccount', 'account'])
+    ).toLowerCase();
+
+    const fbPlatformId = relationMap[`ig_name:${instagramAccountName}`]
+        || relationMap[`ig_platform:${instagramPagePlatformId}`]
+        || '';
+
+    // Guardrail: never reuse IG platform id as linked FB id.
+    if (fbPlatformId && instagramPagePlatformId && fbPlatformId === instagramPagePlatformId) {
+        return '';
+    }
+
+    return fbPlatformId;
 }
 
 function buildContentMetricsByMode(baseMetrics, mode) {
@@ -558,13 +572,13 @@ function render(start, end) {
         const cid_raw = row.channeledAccount || row.channeledaccount;
         const rowId = `row-ig-${cid_raw}`.replace(/[^a-z0-9\-]/gi, '-');
         tr.id = rowId;
-        const linkedFbPageId = resolveLinkedFacebookPageId(row);
-        const fbDisplay = linkedFbPageId ? 'Linked' : 'None';
+        const linkedFbPagePlatformId = resolveLinkedFacebookPagePlatformId(row);
+        const fbDisplay = linkedFbPagePlatformId ? 'Linked' : 'None';
         const accountId = row.channeled_account_id || row.channeled_account_id_id;
-        const fbButtonAttrs = linkedFbPageId
-            ? `onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPageId).replace(/'/g, "\\'")}', 'page')"`
+        const fbButtonAttrs = linkedFbPagePlatformId
+            ? `onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPagePlatformId).replace(/'/g, "\\'")}', 'page_platform_id')"`
             : 'disabled';
-        const fbButtonTitle = linkedFbPageId ? 'View Linked Facebook Page' : 'No linked Facebook Page configured';
+        const fbButtonTitle = linkedFbPagePlatformId ? 'View Linked Facebook Page' : 'No linked Facebook Page configured';
 
         tr.innerHTML = `
             <td class="col-actions">
@@ -578,7 +592,7 @@ function render(start, end) {
                 </div>
             </td>
             <td style="text-align: left;"><strong>${cid_raw}</strong></td>
-            <td style="text-align: left;"><span class="badge-${linkedFbPageId ? 'success' : 'dim'}">${fbDisplay}</span></td>
+            <td style="text-align: left;"><span class="badge-${linkedFbPagePlatformId ? 'success' : 'dim'}">${fbDisplay}</span></td>
             ${metrics.map(m => {
             const val = row[m.key] || row[String(m.key).toLowerCase()] || 0;
             const cid = row.channeledAccount || row.channeledaccount;
