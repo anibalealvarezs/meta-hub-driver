@@ -45,7 +45,7 @@ const POSTS_AGGREGATE_MODES = {
     SNAPSHOT: 'snapshot',
     SNAPSHOT_DELTA: 'snapshot_delta'
 };
-let LINKED_FB_PAGE_PLATFORM_ID_BY_IG_PLATFORM_ID = null;
+let LINKED_FB_PAGE_ID_BY_IG_PLATFORM_ID = null;
 const SNAPSHOT_FALLBACK_MODES = {
     RESILIENT: 'resilient',
     STRICT: 'strict'
@@ -164,20 +164,18 @@ function getOrganicPagesConfig() {
     return Array.isArray(pagesConfig) ? pagesConfig : [];
 }
 
-function getLinkedFacebookPagePlatformIdMap() {
-    if (LINKED_FB_PAGE_PLATFORM_ID_BY_IG_PLATFORM_ID) {
-        return LINKED_FB_PAGE_PLATFORM_ID_BY_IG_PLATFORM_ID;
+function getLinkedFacebookPageIdMap() {
+    if (LINKED_FB_PAGE_ID_BY_IG_PLATFORM_ID) {
+        return LINKED_FB_PAGE_ID_BY_IG_PLATFORM_ID;
     }
 
     const relationMap = {};
     getOrganicPagesConfig().forEach(pageConfig => {
-        const facebookPagePlatformId = pickBestPlatformIdCandidate([
-            pageConfig?.data?.id,
-            pageConfig?.platformId,
-            pageConfig?.platform_id,
-            pageConfig?.data?.facebook_page_id,
-            pageConfig?.facebook_page_id,
+        const facebookPageId = pickBestPlatformIdCandidate([
             pageConfig?.id,
+            pageConfig?.facebook_page_id,
+            pageConfig?.data?.facebook_page_id,
+            pageConfig?.page_id,
         ]);
         const instagramPagePlatformId = pickBestPlatformIdCandidate([
             pageConfig?.ig_data?.id,
@@ -188,16 +186,16 @@ function getLinkedFacebookPagePlatformIdMap() {
             pageConfig?.instagram_id,
         ]);
 
-        if (instagramPagePlatformId && facebookPagePlatformId) {
-            relationMap[instagramPagePlatformId] = facebookPagePlatformId;
+        if (instagramPagePlatformId && facebookPageId) {
+            relationMap[instagramPagePlatformId] = facebookPageId;
         }
     });
 
-    LINKED_FB_PAGE_PLATFORM_ID_BY_IG_PLATFORM_ID = relationMap;
+    LINKED_FB_PAGE_ID_BY_IG_PLATFORM_ID = relationMap;
     return relationMap;
 }
 
-function resolveLinkedFacebookPagePlatformId(row) {
+function resolveLinkedFacebookPageId(row) {
     const linkedFbFromAggregate = pickBestPlatformIdCandidate([
         row?.linked_fb_page_id,
         row?.linked_fb_page,
@@ -210,7 +208,7 @@ function resolveLinkedFacebookPagePlatformId(row) {
         pickFirstRowValue(row, ['page_platform_id', 'pageplatformid'])
     );
     return instagramPagePlatformId
-        ? (getLinkedFacebookPagePlatformIdMap()[instagramPagePlatformId] || '')
+        ? (getLinkedFacebookPageIdMap()[instagramPagePlatformId] || '')
         : '';
 }
 
@@ -560,13 +558,13 @@ function render(start, end) {
         const cid_raw = row.channeledAccount || row.channeledaccount;
         const rowId = `row-ig-${cid_raw}`.replace(/[^a-z0-9\-]/gi, '-');
         tr.id = rowId;
-        const linkedFbPagePlatformId = resolveLinkedFacebookPagePlatformId(row);
-        const fbDisplay = linkedFbPagePlatformId ? 'Linked' : 'None';
+        const linkedFbPageId = resolveLinkedFacebookPageId(row);
+        const fbDisplay = linkedFbPageId ? 'Linked' : 'None';
         const accountId = row.channeled_account_id || row.channeled_account_id_id;
-        const fbButtonAttrs = linkedFbPagePlatformId
-            ? `onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPagePlatformId).replace(/'/g, "\\'")}', 'page_platform_id')"`
+        const fbButtonAttrs = linkedFbPageId
+            ? `onclick="toggleOrganicHierarchy(this, '${rowId}', 'facebook', '${accountId}', '${String(linkedFbPageId).replace(/'/g, "\\'")}', 'page')"`
             : 'disabled';
-        const fbButtonTitle = linkedFbPagePlatformId ? 'View Linked Facebook Page' : 'No linked Facebook Page configured';
+        const fbButtonTitle = linkedFbPageId ? 'View Linked Facebook Page' : 'No linked Facebook Page configured';
 
         tr.innerHTML = `
             <td class="col-actions">
@@ -580,7 +578,7 @@ function render(start, end) {
                 </div>
             </td>
             <td style="text-align: left;"><strong>${cid_raw}</strong></td>
-            <td style="text-align: left;"><span class="badge-${linkedFbPagePlatformId ? 'success' : 'dim'}">${fbDisplay}</span></td>
+            <td style="text-align: left;"><span class="badge-${linkedFbPageId ? 'success' : 'dim'}">${fbDisplay}</span></td>
             ${metrics.map(m => {
             const val = row[m.key] || row[String(m.key).toLowerCase()] || 0;
             const cid = row.channeledAccount || row.channeledaccount;
