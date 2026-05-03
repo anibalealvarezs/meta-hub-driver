@@ -98,8 +98,19 @@ function bindPostsAggregateControls() {
         fallbackEl.style.opacity = enabled ? '1' : '0.55';
     };
 
-    modeEl.addEventListener('change', syncFallbackEnabledState);
+    modeEl.addEventListener('change', () => {
+        syncFallbackEnabledState();
+        resetExpandedHierarchyRows();
+    });
+    fallbackEl.addEventListener('change', () => {
+        resetExpandedHierarchyRows();
+    });
     syncFallbackEnabledState();
+}
+
+function resetExpandedHierarchyRows() {
+    document.querySelectorAll('tr.hierarchy-row').forEach(row => row.remove());
+    document.querySelectorAll('.btn-expand.active').forEach(btn => btn.classList.remove('active'));
 }
 
 function getPostsAggregateConfig() {
