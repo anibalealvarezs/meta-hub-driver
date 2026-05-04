@@ -366,14 +366,14 @@ function getActiveMetrics(level = 'instagram', isFb = false, postsAggregateMode 
                 {
                     key: 'ig_reels_avg_watch_time',
                     label: 'REEL AVG WT',
-                    format: 'number',
+                    format: 'duration_ms',
                     precision: 0,
                     original: 'ig_reels_avg_watch_time'
                 },
                 {
                     key: 'ig_reels_video_view_total_time',
                     label: 'REEL TOT WT',
-                    format: 'number',
+                    format: 'duration_ms',
                     precision: 0,
                     original: 'ig_reels_video_view_total_time'
                 },
@@ -450,14 +450,14 @@ function getActiveMetrics(level = 'instagram', isFb = false, postsAggregateMode 
             {
                 key: 'ig_reels_avg_watch_time',
                 label: 'REEL AVG WT',
-                format: 'number',
+                format: 'duration_ms',
                 precision: 0,
                 original: 'ig_reels_avg_watch_time'
             },
             {
                 key: 'ig_reels_video_view_total_time',
                 label: 'REEL TOT WT',
-                format: 'number',
+                format: 'duration_ms',
                 precision: 0,
                 original: 'ig_reels_video_view_total_time'
             },
@@ -597,7 +597,7 @@ function render(start, end) {
             const sparkId = `spark-ig-${m.key}-${accountId}`.toLowerCase();
             return `<td style="text-align: right;">
                     <div class="metric-flex-end">
-                        <span>${formatNum(val)}</span>
+                        <span>${formatMetricValue(m, val)}</span>
                         ${m.sparkline ? `<div id="${sparkId}" class="sparkline-inline"></div>` : ''}
                     </div>
                 </td>`;
@@ -817,7 +817,7 @@ function renderFacebookSubtable(container, data, parentRowId) {
                     </button>
                 </td>
                 <td style="text-align: left;">${nameHtml}</td>
-                ${metrics.map(m => `<td style="text-align: right;">${formatNum(row[m.key])}</td>`).join('')}
+                ${metrics.map(m => `<td style="text-align: right;">${formatMetricValue(m, row[m.key])}</td>`).join('')}
             </tr>`;
     });
     html += `</tbody></table>`;
@@ -881,7 +881,7 @@ function renderContentSubtable(container, data, isFb = false, postsAggregateConf
                 <td style="text-align: left;">${linkDetails}</td>
                 <td style="text-align: center;"><span class="badge-dim" style="font-size:0.7em; letter-spacing:0.5px; padding:2px 6px;">${mediaTypeLabel}</span></td>
                 <td style="text-align: center;"><span style="color:#94a3b8; font-size:0.85em;">${formattedDate}</span></td>
-                ${metrics.map(m => `<td style="text-align: right;">${formatNum(row[m.key])}</td>`).join('')}
+                ${metrics.map(m => `<td style="text-align: right;">${formatMetricValue(m, row[m.key])}</td>`).join('')}
             </tr>`;
     });
     html += `</tbody></table>`;
@@ -895,8 +895,44 @@ function getAdminHeaders() {
     return {'Authorization': 'Bearer ' + (auth.token || ''), 'Content-Type': 'application/json'};
 }
 
-function formatNum(v) {
-    return (parseFloat(v) || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+function formatMetricValue(metric, value) {
+    if (metric?.format === 'duration_ms') {
+        return formatDurationMs(value);
+    }
+
+    return formatNum(value, metric?.precision ?? 0);
+}
+
+function formatNum(v, precision = 0) {
+    return (parseFloat(v) || 0).toLocaleString('en-US', {
+        minimumFractionDigits: precision,
+        maximumFractionDigits: precision
+    });
+}
+
+function formatDurationMs(value) {
+    const ms = parseFloat(value) || 0;
+    if (ms <= 0) return '0s';
+
+    const totalSeconds = ms / 1000;
+    if (totalSeconds < 60) {
+        const precision = totalSeconds < 10 && Math.abs(totalSeconds - Math.round(totalSeconds)) > 0.001 ? 1 : 0;
+        return `${totalSeconds.toLocaleString('en-US', {
+            minimumFractionDigits: precision,
+            maximumFractionDigits: precision
+        })}s`;
+    }
+
+    const totalWholeSeconds = Math.round(totalSeconds);
+    const hours = Math.floor(totalWholeSeconds / 3600);
+    const minutes = Math.floor((totalWholeSeconds % 3600) / 60);
+    const seconds = totalWholeSeconds % 60;
+
+    if (hours > 0) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    return `${minutes}m ${seconds}s`;
 }
 
 function renderSparkline(container, points, color = '#6366F1', start, end) {
