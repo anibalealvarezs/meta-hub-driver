@@ -100,6 +100,17 @@ function getSparkId(level, key, entityId) {
     return `spark-${level}-${key}-${sanitizedId}`.toLowerCase();
 }
 
+function getDimensionTrendKey(parentId, dims, source) {
+    const dimKey = dims
+        .map((d) => {
+            const val = source[d] || source[String(d).toLowerCase()];
+            return String(val || "N/A");
+        })
+        .join("-");
+
+    return `${String(parentId)}::${dimKey}`;
+}
+
 function getActiveMetrics() {
     const config = window.FB_METRICS_CONFIG || {};
     const strategy = config.strategy || "default";
@@ -626,13 +637,13 @@ function drawTableSparklines(level, data, cacheKey = null) {
 
         if (level.startsWith("dim-") && cacheKey) {
             const entry = NESTED_DATA_CACHE[cacheKey];
-            const dimKey = entry.dims
-                .map((d) => {
-                    const val = row[d] || row[String(d).toLowerCase()];
-                    return String(val || "N/A");
-                })
-                .join("-");
-            lookupKey = dimKey;
+            const scopedTrendKey = getDimensionTrendKey(
+                entry.parentId,
+                entry.dims,
+                row,
+            );
+            const dimKey = scopedTrendKey.split("::").slice(1).join("::");
+            lookupKey = scopedTrendKey;
             entityId = `dim-${entry.parentId}-${dimKey}`;
         } else {
             const hItem = HIERARCHY[level];
@@ -790,20 +801,25 @@ async function toggleHierarchy(rowId, type, level, entityId, entityName) {
                 if (resTrend.status === "success" && resTrend.data) {
                     const levelKey = "dim-" + set.dims.join("-");
                     if (!TREND_DATA_CACHE[levelKey]) TREND_DATA_CACHE[levelKey] = {};
+                    const initializedTrendKeys = new Set();
 
                     resTrend.data.forEach((d) => {
-                        const dimKey = set.dims
-                            .map((dim) => d[dim] || d[String(dim).toLowerCase()])
-                            .join("-");
-                        if (!TREND_DATA_CACHE[levelKey][dimKey])
-                            TREND_DATA_CACHE[levelKey][dimKey] = {};
+                        const trendKey = getDimensionTrendKey(
+                            entityId,
+                            set.dims,
+                            d,
+                        );
+                        if (!initializedTrendKeys.has(trendKey)) {
+                            TREND_DATA_CACHE[levelKey][trendKey] = {};
+                            initializedTrendKeys.add(trendKey);
+                        }
                         activeMetrics.forEach((m) => {
                             const valKey = `trend_${m.key}`;
                             const val = d[valKey] || d[valKey.toLowerCase()];
                             if (val !== undefined) {
-                                if (!TREND_DATA_CACHE[levelKey][dimKey][m.key])
-                                    TREND_DATA_CACHE[levelKey][dimKey][m.key] = [];
-                                TREND_DATA_CACHE[levelKey][dimKey][m.key].push({
+                                if (!TREND_DATA_CACHE[levelKey][trendKey][m.key])
+                                    TREND_DATA_CACHE[levelKey][trendKey][m.key] = [];
+                                TREND_DATA_CACHE[levelKey][trendKey][m.key].push({
                                     day: d.daily,
                                     val: parseFloat(val || 0),
                                 });
