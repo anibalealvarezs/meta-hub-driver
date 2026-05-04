@@ -9,6 +9,27 @@ let sortConfig = {key: "campaign", dir: "asc"};
 const TREND_DATA_CACHE = {}; // Cache for sparklines: { [level]: { [entityId]: { [metric]: [points] } } }
 const NESTED_DATA_CACHE = {}; // Cache for sub-tables to allow sorting
 
+function getRecordValue(record, keys, fallback = "") {
+    if (!record || typeof record !== "object") return fallback;
+
+    const lowerKeyMap = {};
+    Object.keys(record).forEach((k) => {
+        lowerKeyMap[String(k).toLowerCase()] = record[k];
+    });
+
+    for (const key of keys) {
+        if (record[key] !== undefined && record[key] !== null && record[key] !== "") {
+            return record[key];
+        }
+        const lowerVal = lowerKeyMap[String(key).toLowerCase()];
+        if (lowerVal !== undefined && lowerVal !== null && lowerVal !== "") {
+            return lowerVal;
+        }
+    }
+
+    return fallback;
+}
+
 const HIERARCHY = {
     campaign: {
         next: "adset",
@@ -409,7 +430,24 @@ async function loadReport() {
                 cacheBadge.style.display = "inline-flex";
                 cacheBadge.title = `Source: Redis (${resMain.meta.cache_type})`;
             }
-            currentData = resMain.data.map((d) => ({...d, _trend: []}));
+            currentData = resMain.data.map((d) => ({
+                ...d,
+                account: String(
+                    getRecordValue(
+                        d,
+                        ["account", "channeledAccount", "channeledaccount"],
+                        "Unknown Account",
+                    ),
+                ),
+                campaign: String(
+                    getRecordValue(
+                        d,
+                        ["campaign", "channeledCampaign", "channeledcampaign"],
+                        "Unknown Campaign",
+                    ),
+                ),
+                _trend: [],
+            }));
 
             // Initial sort
             currentData.sort((a, b) => {
@@ -516,27 +554,36 @@ function render() {
             row.channeledCampaign_id ||
             row.channeledCampaign ||
             row.channeledcampaign;
-        if (row.account !== currentAccount) {
+        const accountLabel = String(
+            getRecordValue(
+                row,
+                ["account", "channeledAccount", "channeledaccount"],
+                "Unknown Account",
+            ),
+        );
+        if (accountLabel !== currentAccount) {
             const groupRow = document.createElement("tr");
             groupRow.className = "account-group-row";
-            groupRow.innerHTML = `<td colspan="${4 + activeMetrics.length}" style="background: rgba(255,255,255,0.02); padding: 12px 20px; font-weight: 800; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.05em; border-bottom: 1px solid var(--border);"><i data-lucide="target" size="12" style="vertical-align:middle; margin-right:8px; color:#1877F2;"></i> AD ACCOUNT: ${(row.channeledAccount || row.account).toUpperCase()}</td>`;
+            groupRow.innerHTML = `<td colspan="${4 + activeMetrics.length}" style="background: rgba(255,255,255,0.02); padding: 12px 20px; font-weight: 800; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.05em; border-bottom: 1px solid var(--border);"><i data-lucide="target" size="12" style="vertical-align:middle; margin-right:8px; color:#1877F2;"></i> AD ACCOUNT: ${accountLabel.toUpperCase()}</td>`;
             body.appendChild(groupRow);
-            currentAccount = row.account;
+            currentAccount = accountLabel;
         }
         const tr = document.createElement("tr");
-        const rowId = `row-campaign-${cid}`.replace(/[^a-z0-9\-]/gi, "-");
+        const campaignId = cid || `unknown-${idx}`;
+        const rowId = `row-campaign-${campaignId}`.replace(/[^a-z0-9\-]/gi, "-");
         tr.id = rowId;
-        const nameEscaped = row.campaign.replace(/'/g, "\\'");
+        const campaignName = String(row.campaign || "Unknown Campaign");
+        const nameEscaped = campaignName.replace(/'/g, "\\'");
         const isDisaggregatable = canDisaggregate("adset");
         tr.innerHTML = `
             <td class="col-actions cell-no-padding">
                 <div class="btn-group-center">
-                    <button class="btn-expand dim-btn" onclick="toggleHierarchy('${rowId}', 'dimensions', 'campaign', '${cid}', '${nameEscaped}')" title="Audience Analysis" ${!isDisaggregatable ? 'disabled class="disabled-btn"' : ""}><i data-lucide="users" size="14"></i></button>
-                    <button class="btn-expand next-btn" onclick="toggleHierarchy('${rowId}', 'next', 'campaign', '${cid}', '${nameEscaped}')" title="Explore AdSets" ${!isDisaggregatable ? 'disabled class="disabled-btn"' : ""}><i data-lucide="layers" size="14"></i></button>
+                    <button class="btn-expand dim-btn" onclick="toggleHierarchy('${rowId}', 'dimensions', 'campaign', '${campaignId}', '${nameEscaped}')" title="Audience Analysis" ${!isDisaggregatable ? 'disabled class="disabled-btn"' : ""}><i data-lucide="users" size="14"></i></button>
+                    <button class="btn-expand next-btn" onclick="toggleHierarchy('${rowId}', 'next', 'campaign', '${campaignId}', '${nameEscaped}')" title="Explore AdSets" ${!isDisaggregatable ? 'disabled class="disabled-btn"' : ""}><i data-lucide="layers" size="14"></i></button>
                 </div>
             </td>
-            <td class="account-cell">${row.account}</td>
-            <td class="campaign-cell clickable-text" onclick="toggleHierarchy('${rowId}', 'next', 'campaign', '${cid}', '${nameEscaped}')">${row.campaign}</td>
+            <td class="account-cell">${accountLabel}</td>
+            <td class="campaign-cell clickable-text" onclick="toggleHierarchy('${rowId}', 'next', 'campaign', '${campaignId}', '${nameEscaped}')">${campaignName}</td>
             <td class="text-center">${getStatusIcon(row.campaign_status)}</td>
             ${activeMetrics
             .map((m) => {
