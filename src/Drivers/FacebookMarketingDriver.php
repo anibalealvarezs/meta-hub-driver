@@ -3,11 +3,8 @@
 namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry;
-use Anibalealvarezs\ApiDriverCore\Classes\MetricProfileTemplates;
-use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
-use Anibalealvarezs\ApiDriverCore\Enums\AssetCategory;
-use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
-use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
+use Anibalealvarezs\ApiDriverCore\Classes\AggregationProfileTemplates;
+use Anibalealvarezs\ApiDriverCore\Interfaces\AggregationProfileProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\MetricProfileProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
 use Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes;
@@ -37,7 +34,7 @@ use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
 
-class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface
+class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface, AggregationProfileProviderInterface
 {
     use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
@@ -77,6 +74,17 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 channel: 'facebook_marketing',
                 key: 'facebook_marketing_ad',
                 label: 'Facebook Marketing Ad'
+            ),
+        ];
+    }
+
+    public static function getAggregationProfiles(): array
+    {
+        return [
+            AggregationProfileTemplates::adsHierarchyProfile(
+                channel: 'facebook_marketing',
+                key: 'facebook_marketing_ads_hierarchy',
+                label: 'Facebook Marketing Ads Hierarchy'
             ),
         ];
     }
