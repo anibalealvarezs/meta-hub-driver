@@ -16,6 +16,7 @@ use Anibalealvarezs\MetaHubDriver\Enums\MetaFeature;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\MetaHubDriver\Enums\MetaSyncScope;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
+use Anibalealvarezs\ApiDriverCore\Enums\AssetCategory;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricBreakdown;
 use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
 use Anibalealvarezs\FacebookGraphApi\Enums\AdAccountPermission;
