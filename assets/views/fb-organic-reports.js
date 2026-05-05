@@ -410,7 +410,7 @@ function getActiveMetrics(level = 'instagram', isFb = false, postsAggregateMode 
                 {
                     key: 'post_video_avg_time_watched',
                     label: 'VID AVG WT',
-                    format: 'number',
+                    format: 'duration_ms',
                     precision: 0,
                     original: 'post_video_avg_time_watched'
                 },
