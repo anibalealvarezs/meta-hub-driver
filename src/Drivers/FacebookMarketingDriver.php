@@ -40,17 +40,6 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
 
-    public static function getAggregationProfiles(): array
-    {
-        return [
-            AggregationProfileTemplates::adsHierarchyProfile(
-                channel: 'facebook_marketing',
-                key: 'facebook_marketing_ads_hierarchy',
-                label: 'Facebook Marketing Ads Hierarchy'
-            ),
-        ];
-    }
-
     public array $updatableCredentials = [
         'FACEBOOK_USER_TOKEN',
         'FACEBOOK_USER_ID',
