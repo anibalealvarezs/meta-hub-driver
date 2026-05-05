@@ -34,4 +34,14 @@ class FacebookMarketingDriverTest extends TestCase
         
         $this->driver->sync(new DateTime(), new DateTime());
     }
+
+    public function testGetCanonicalMetricDictionary()
+    {
+        $dictionary = FacebookMarketingDriver::getCanonicalMetricDictionary();
+
+        $this->assertArrayHasKey('conversions', $dictionary);
+        $this->assertArrayHasKey('roas_purchase', $dictionary);
+        $this->assertContains('results', $dictionary['conversions']);
+        $this->assertContains('purchase_roas', $dictionary['roas_purchase']);
+    }
 }

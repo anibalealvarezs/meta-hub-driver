@@ -7,6 +7,7 @@ use Anibalealvarezs\ApiDriverCore\Classes\AggregationProfileTemplates;
 use Anibalealvarezs\ApiDriverCore\Classes\MetricProfileTemplates;
 use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AggregationProfileProviderInterface;
+use Anibalealvarezs\ApiDriverCore\Interfaces\CanonicalMetricDictionaryProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\MetricProfileProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
 use Anibalealvarezs\ApiDriverCore\Routes\AssetRoutes;
@@ -39,7 +40,7 @@ use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
 
-class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface, AggregationProfileProviderInterface
+class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface, AggregationProfileProviderInterface, CanonicalMetricDictionaryProviderInterface
 {
     use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
@@ -91,6 +92,22 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 key: 'facebook_marketing_ads_hierarchy',
                 label: 'Facebook Marketing Ads Hierarchy'
             ),
+        ];
+    }
+
+    public static function getCanonicalMetricDictionary(): array
+    {
+        return [
+            'spend' => ['spend', 'spend_daily'],
+            'clicks' => ['clicks', 'clicks_daily'],
+            'impressions' => ['impressions', 'impressions_daily'],
+            'reach' => ['reach', 'reach_daily'],
+            'frequency' => ['frequency', 'frequency_daily'],
+            'conversions' => ['results', 'results_daily'],
+            'cost_per_conversion' => ['cost_per_result'],
+            'conversion_rate' => ['result_rate'],
+            'roas_purchase' => ['purchase_roas', 'purchase_roas_daily', 'website_purchase_roas', 'website_purchase_roas_daily'],
+            'actions' => ['actions', 'actions_daily'],
         ];
     }
 
@@ -1427,5 +1444,24 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 'FACEBOOK_TOKEN_PATH' => 'token_path',
             ]
         ];
+    }
+
+    public static function getCanonicalMetricDictionary(): array
+    {
+        return [
+            'spend'         => ['spend', 'spend_daily'],
+            'clicks'        => ['clicks', 'clicks_daily'],
+            'impressions'   => ['impressions', 'impressions_daily'],
+            'reach'         => ['reach', 'reach_daily'],
+            'frequency'     => ['frequency', 'frequency_daily'],
+            'conversions'   => ['results', 'results_daily'],
+            'roas_purchase' => ['purchase_roas', 'purchase_roas_daily', 'website_purchase_roas', 'website_purchase_roas_daily'],
+            'actions'       => ['actions', 'actions_daily'],
+        ];
+    }
+
+    public static function getPlatformEntityIdField(): string
+    {
+        return 'facebook_page_id';
     }
 }
