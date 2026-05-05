@@ -21,6 +21,7 @@ use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
 use Anibalealvarezs\FacebookGraphApi\Enums\AdAccountPermission;
 use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingMetricConvert;
 use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
+use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Traits\HasUpdatableCredentials;
@@ -38,6 +39,17 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 {
     use HasHierarchicalValidationTrait;
     use SyncDriverTrait;
+
+    public static function getAggregationProfiles(): array
+    {
+        return [
+            AggregationProfileTemplates::adsHierarchyProfile(
+                channel: 'facebook_marketing',
+                key: 'facebook_marketing_ads_hierarchy',
+                label: 'Facebook Marketing Ads Hierarchy'
+            ),
+        ];
+    }
 
     public array $updatableCredentials = [
         'FACEBOOK_USER_TOKEN',

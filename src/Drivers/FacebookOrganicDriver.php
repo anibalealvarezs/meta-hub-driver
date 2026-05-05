@@ -53,6 +53,22 @@
         use HasHierarchicalValidationTrait;
         use SyncDriverTrait;
 
+        public static function getAggregationProfiles(): array
+        {
+            return [
+                AggregationProfileTemplates::organicPageFlowProfile(
+                    channel: 'facebook_organic',
+                    key: 'facebook_organic_page_flow',
+                    label: 'Facebook Organic Page Flow'
+                ),
+                AggregationProfileTemplates::organicPostMixedProfile(
+                    channel: 'facebook_organic',
+                    key: 'facebook_organic_post_mixed',
+                    label: 'Facebook Organic Post Mixed'
+                ),
+            ];
+        }
+
         public array $updatableCredentials = [
             'FACEBOOK_USER_TOKEN',
             'FACEBOOK_USER_ID',
