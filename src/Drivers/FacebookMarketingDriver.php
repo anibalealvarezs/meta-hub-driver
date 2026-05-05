@@ -111,6 +111,11 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         ];
     }
 
+    public static function getPlatformEntityIdField(): string
+    {
+        return 'account_id';
+    }
+
     /**
      * Store credentials for this driver.
      * 
@@ -1446,22 +1451,4 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         ];
     }
 
-    public static function getCanonicalMetricDictionary(): array
-    {
-        return [
-            'spend'         => ['spend', 'spend_daily'],
-            'clicks'        => ['clicks', 'clicks_daily'],
-            'impressions'   => ['impressions', 'impressions_daily'],
-            'reach'         => ['reach', 'reach_daily'],
-            'frequency'     => ['frequency', 'frequency_daily'],
-            'conversions'   => ['results', 'results_daily'],
-            'roas_purchase' => ['purchase_roas', 'purchase_roas_daily', 'website_purchase_roas', 'website_purchase_roas_daily'],
-            'actions'       => ['actions', 'actions_daily'],
-        ];
-    }
-
-    public static function getPlatformEntityIdField(): string
-    {
-        return 'facebook_page_id';
-    }
 }
