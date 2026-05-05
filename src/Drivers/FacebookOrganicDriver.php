@@ -165,6 +165,11 @@
             ];
         }
 
+        public static function getPlatformEntityIdField(): string
+        {
+            return 'facebook_page_id';
+        }
+
         /**
          * Store credentials for this driver.
          *
@@ -1811,35 +1816,5 @@
                 'recent_cron_hour'   => 6,
                 'recent_cron_minute' => 30,
             ];
-        }
-        public static function getCanonicalMetricDictionary(): array
-        {
-            return [
-                'likes'                          => ['likes', 'likes_daily', 'post_reactions_by_type_total', 'post_reactions_by_type_total_daily'],
-                'comments'                       => ['comments', 'comments_daily', 'post_comments', 'post_comments_daily'],
-                'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily'],
-                'views'                          => ['plays', 'plays_daily', 'video_views', 'video_views_daily', 'views', 'views_daily', 'post_video_views', 'post_video_views_daily', 'page_video_views', 'page_video_views_daily'],
-                'profile_views'                  => ['profile_views', 'profile_views_daily'],
-                'website_clicks'                 => ['website_clicks', 'website_clicks_daily'],
-                'profile_links_taps'             => ['profile_links_taps', 'profile_links_taps_daily'],
-                'follows_and_unfollows'          => ['follows_and_unfollows', 'follows_and_unfollows_daily'],
-                'saves'                          => ['saves', 'saves_daily', 'saved', 'saved_daily'],
-                'shares'                         => ['shares', 'shares_daily', 'post_shares', 'post_shares_daily'],
-                'total_interactions'             => ['total_interactions', 'total_interactions_daily', 'post_engagement', 'post_engagement_daily', 'post_engagements', 'post_engagements_daily', 'page_post_engagements', 'page_post_engagements_daily'],
-                'replies'                        => ['replies', 'replies_daily'],
-                'accounts_engaged'               => ['accounts_engaged', 'accounts_engaged_daily'],
-                'post_clicks'                    => ['post_clicks', 'post_clicks_daily'],
-                'ig_reels_avg_watch_time'        => ['ig_reels_avg_watch_time'],
-                'ig_reels_video_view_total_time' => ['ig_reels_video_view_total_time'],
-                'profile_activity'               => ['profile_activity', 'profile_activity_daily'],
-                'profile_visits'                 => ['profile_visits', 'profile_visits_daily'],
-                'reposts'                        => ['reposts', 'reposts_daily'],
-                'follows'                        => ['follows', 'follows_daily'],
-            ];
-        }
-
-        public static function getPlatformEntityIdField(): string
-        {
-            return 'facebook_page_id';
         }
     }

@@ -19,3 +19,5 @@
 - Shared Phase 2 pilot now also covers Meta Organic: `FacebookOrganicDriver` implements `AggregationProfileProviderInterface` and exposes aggregation capability profiles consumed by `apis-hub` planner capability checks.
 - Read-only canonical metric equivalence pilot now includes Meta Marketing: `FacebookMarketingDriver` implements `CanonicalMetricDictionaryProviderInterface` and publishes canonical -> raw metric mappings (`conversions/results`, `roas_purchase/purchase_roas`, etc.) for aggregation-time SQL resolution without changing synced raw data.
 - **Platform Identity**: Drivers now explicitly define their platform entity ID field (e.g., `facebook_page_id`, `instagram_business_account_id`) via `getPlatformEntityIdField()`, allowing the orchestrator to resolve them agnostically.
+- **Redeclaration Fix**: Resolved a fatal error caused by duplicate `getCanonicalMetricDictionary` and `getAggregationProfiles` methods in `FacebookMarketingDriver` and `FacebookOrganicDriver` following the transition to the new interfaces.
+
