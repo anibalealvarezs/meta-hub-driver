@@ -4,6 +4,8 @@ namespace Anibalealvarezs\MetaHubDriver\Drivers;
 
 use Anibalealvarezs\ApiDriverCore\Classes\RepositoryRegistry;
 use Anibalealvarezs\ApiDriverCore\Classes\AggregationProfileTemplates;
+use Anibalealvarezs\ApiDriverCore\Classes\MetricProfileTemplates;
+use Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity;
 use Anibalealvarezs\ApiDriverCore\Interfaces\AggregationProfileProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\MetricProfileProviderInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\PageableInterface;
@@ -34,6 +36,7 @@ use DateTime;
 use Exception;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SeederInterface;
 use Anibalealvarezs\ApiDriverCore\Enums\HierarchyType;
+use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
 
 class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface, AggregationProfileProviderInterface
