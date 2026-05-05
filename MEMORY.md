@@ -16,3 +16,4 @@
 - Stock-style post aggregates now support `latest_snapshot` and `snapshot_delta`; UI selectors should match the backend aggregate mode and snapshot fallback behavior.
 - FB Organic hierarchy should resolve the linked Facebook page from the channel `pages` configuration (`id` FB page platform id ↔ `ig_account` IG platform id) and query the FB subtable via `page_platform_id`, not by reusing the IG `page_id` entity id.
 - FB Organic report now relies on backend support for relation-attribute filtering (`isAttribute`) so `page_platform_id` resolves by page platform id value instead of strict FK ID-only semantics.
+- Shared Phase 2 pilot now also covers Meta Organic: `FacebookOrganicDriver` implements `AggregationProfileProviderInterface` and exposes aggregation capability profiles consumed by `apis-hub` planner capability checks.
