@@ -136,6 +136,25 @@
                         ],
                     ]
                 ),
+                AggregationProfileTemplates::organicPageFlowProfile(
+                    channel: 'facebook_organic',
+                    key: 'facebook_organic_linked_pages_flow',
+                    label: 'Facebook Organic Linked Pages Flow',
+                    overrides: [
+                        'asset_type' => 'account',
+                        'group_patterns' => [
+                            ['channeledAccount', 'channeled_account_id', 'page_platform_id', 'linked_fb_page_id'],
+                            ['channeledAccount', 'channeled_account_id', 'page_platform_id', 'linked_platform_entity_id'],
+                        ],
+                        'filter_contract' => [
+                            'channel' => ['eq'],
+                            'account_type' => ['eq'],
+                            'channeledAccount' => ['eq', 'in'],
+                            'metricDate' => ['between', '>=', '<='],
+                        ],
+                    ]
+                ),
+
             ];
         }
 
