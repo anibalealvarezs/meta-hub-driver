@@ -718,7 +718,7 @@ class FacebookEntitySync
         ?callable $jobStatusChecker = null
     ): Response {
         try {
-            $logger?->info("DEBUG: FacebookEntitySync::syncPosts - IDs received: Account: $accountId | ChanneledAccount: $channeledAccountId");
+            $logger?->info("DEBUG: FacebookEntitySync::syncPosts - IDs received: Account: $accountId | ChanneledAccount: " . (is_array($channeledAccountId) ? json_encode(array_keys($channeledAccountId)) : $channeledAccountId));
             if (empty($channeledPages)) {
                 return new Response(json_encode(['message' => 'No pages to sync']), 200, ['Content-Type' => 'application/json']);
             }
