@@ -1750,7 +1750,7 @@
             $ui['fb_organic_cron_entities_minute'] = $channelConfig['cron_entities_minute'] ?? 0;
             $ui['fb_organic_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 6;
             $ui['fb_organic_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
-            $ui['fb_granular_sync'] = $channelConfig['granular_sync'] ?? false;
+            $ui['fb_organic_granular_sync'] = $channelConfig['granular_sync'] ?? false;
 
             $ui['fb_page_ids'] = [];
             foreach (($channelConfig['pages'] ?? []) as $p) {
@@ -1839,5 +1839,102 @@
                 'recent_cron_hour'   => 6,
                 'recent_cron_minute' => 30,
             ];
+        }
+
+        /**
+         * @inheritdoc
+         */
+        public function updateConfiguration(array $newData, array $currentConfig): array
+        {
+            $enabled = $newData['enabled'] ?? false;
+            $historyRange = $newData['organic_history_range'] ?? null;
+            $featureToggles = $newData['feature_toggles'] ?? [];
+            $selectedPages = $newData['assets']['pages'] ?? [];
+
+            if (!isset($currentConfig['channels'][$this->getChannel()])) {
+                $currentConfig['channels'][$this->getChannel()] = [];
+            }
+
+            $chanCfg = &$currentConfig['channels'][$this->getChannel()];
+            $chanCfg['enabled'] = filter_var($enabled, FILTER_VALIDATE_BOOLEAN);
+
+            if ($historyRange) {
+                $chanCfg['cache_history_range'] = $historyRange;
+            }
+
+            if (isset($newData['granular_sync'])) {
+                $chanCfg['granular_sync'] = filter_var($newData['granular_sync'], FILTER_VALIDATE_BOOLEAN);
+            }
+
+            // Global feature toggles
+            $chanCfg['PAGE'] = $chanCfg['PAGE'] ?? [];
+            $features = ['page_metrics', 'posts', 'post_metrics', 'ig_accounts', 'ig_account_metrics', 'ig_account_media', 'ig_account_media_metrics'];
+            foreach ($features as $f) {
+                if (isset($featureToggles[$f])) {
+                    $chanCfg['PAGE'][$f] = filter_var($featureToggles[$f], FILTER_VALIDATE_BOOLEAN);
+                }
+            }
+
+            if (isset($featureToggles['cache_aggregations'])) {
+                $chanCfg['cache_aggregations'] = filter_var($featureToggles['cache_aggregations'], FILTER_VALIDATE_BOOLEAN);
+            }
+
+            // Cron settings
+            $cronKeys = [
+                'cron_entities_hour'   => 'cron_entities_hour',
+                'cron_entities_minute' => 'cron_entities_minute',
+                'cron_recent_hour'     => 'cron_recent_hour',
+                'cron_recent_minute'   => 'cron_recent_minute'
+            ];
+            foreach ($cronKeys as $payloadKey => $configKey) {
+                if (isset($featureToggles[$payloadKey])) {
+                    $chanCfg[$configKey] = (int)$featureToggles[$payloadKey];
+                }
+            }
+
+            // Pages management
+            $currentPages = $chanCfg['pages'] ?? [];
+            $newPagesList = [];
+            $selectedMap = [];
+            foreach ($selectedPages as $sel) {
+                $selectedMap[(string)$sel['id']] = $sel;
+            }
+
+            $processedIds = [];
+            foreach ($currentPages as $page) {
+                $id = (string)$page['id'];
+                if (isset($selectedMap[$id])) {
+                    $sel = $selectedMap[$id];
+                    foreach ($sel as $k => $v) {
+                        if ($k === 'data' || $k === 'ig_data') {
+                            $page[$k] = $v ?: ($page[$k] ?? []);
+                        } else {
+                            $page[$k] = $v;
+                        }
+                    }
+                    $newPagesList[] = $page;
+                    $processedIds[] = $id;
+                }
+            }
+
+            foreach ($selectedPages as $sel) {
+                $id = (string)$sel['id'];
+                if (!in_array($id, $processedIds)) {
+                    $newPagesList[] = $sel;
+                }
+            }
+
+            $chanCfg['pages'] = $newPagesList;
+
+            return $currentConfig;
+        }
+
+        /**
+         * @inheritdoc
+         */
+        public function getConfigurationJs(): string
+        {
+            $jsPath = __DIR__ . '/js/FacebookOrganicConfigHandler.js';
+            return file_exists($jsPath) ? file_get_contents($jsPath) : "";
         }
     }
