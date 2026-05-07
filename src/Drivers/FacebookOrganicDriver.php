@@ -554,6 +554,7 @@
         {
             $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
             $api = $this->initializeApi($config);
+            $chunkSize = $config['cache_chunk_size'] ?? '1 week';
             $targetAccountId = $config['account_id'] ?? null;
 
             // 1. Batch Resolve Identities via Oracle (Facebook Pages & Instagram Accounts)
@@ -788,7 +789,7 @@
                             channeledPages: $resolvedPages,
                             entityProcessor: $this->dataProcessor,
                             channeledAccountId: $resolvedChanneledAccounts,
-                            accountId: (is_object($this->authProvider) && method_exists($this->authProvider, 'getAccount') && $this->authProvider->getAccount()) ? $this->authProvider->getAccount()->getId() : null,
+                            accountId: $this->authProvider?->getUserId(),
                             jobStatusChecker: $shouldContinue
                         );
                     }
