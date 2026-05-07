@@ -1347,7 +1347,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $ui['fb_marketing_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 5;
         $ui['fb_marketing_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
         $ui['fb_metrics_strategy'] = $channelConfig['metrics_strategy'] ?? 'default';
-        $ui['fb_granular_sync'] = $channelConfig['granular_sync'] ?? false;
+        $ui['fb_marketing_granular_sync'] = $channelConfig['granular_sync'] ?? false;
 
         $ui['fb_cache_chunk_size'] = $channelConfig['cache_chunk_size'] ?? '1 week';
         $ui['fb_ad_account_ids'] = [];
@@ -1455,4 +1455,96 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         ];
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function updateConfiguration(array $newData, array $currentConfig): array
+    {
+        $enabled = $newData['enabled'] ?? false;
+        $historyRange = $newData['marketing_history_range'] ?? null;
+        $featureToggles = $newData['feature_toggles'] ?? [];
+        $selectedAssets = $newData['assets']['ad_accounts'] ?? [];
+
+        if (!isset($currentConfig['channels'][$this->getChannel()])) {
+            $currentConfig['channels'][$this->getChannel()] = [];
+        }
+
+        $chanCfg = &$currentConfig['channels'][$this->getChannel()];
+        $chanCfg['enabled'] = filter_var($enabled, FILTER_VALIDATE_BOOLEAN);
+
+        if ($historyRange) {
+            $chanCfg['cache_history_range'] = $historyRange;
+        }
+
+        if (isset($newData['granular_sync'])) {
+            $chanCfg['granular_sync'] = filter_var($newData['granular_sync'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        // Global feature toggles
+        $chanCfg['PAGE'] = $chanCfg['PAGE'] ?? [];
+        $features = ['campaigns', 'adsets', 'ads', 'creatives', 'ad_account_metrics', 'campaign_metrics', 'adset_metrics', 'ad_metrics', 'creative_metrics'];
+        foreach ($features as $f) {
+            if (isset($featureToggles[$f])) {
+                $chanCfg['PAGE'][$f] = filter_var($featureToggles[$f], FILTER_VALIDATE_BOOLEAN);
+            }
+        }
+
+        // Cron settings
+        $cronKeys = [
+            'cron_entities_hour'   => 'cron_entities_hour',
+            'cron_entities_minute' => 'cron_entities_minute',
+            'cron_recent_hour'     => 'cron_recent_hour',
+            'cron_recent_minute'   => 'cron_recent_minute'
+        ];
+        foreach ($cronKeys as $payloadKey => $configKey) {
+            if (isset($featureToggles[$payloadKey])) {
+                $chanCfg[$configKey] = (int)$featureToggles[$payloadKey];
+            }
+        }
+
+        // Assets management
+        $currentAssets = $chanCfg['ad_accounts'] ?? [];
+        $newAssetsList = [];
+        $selectedMap = [];
+        foreach ($selectedAssets as $sel) {
+            $selectedMap[(string)$sel['id']] = $sel;
+        }
+
+        $processedIds = [];
+        foreach ($currentAssets as $asset) {
+            $id = (string)$asset['id'];
+            if (isset($selectedMap[$id])) {
+                $sel = $selectedMap[$id];
+                foreach ($sel as $k => $v) {
+                    if ($k === 'data') {
+                        $asset[$k] = $v ?: ($asset[$k] ?? []);
+                    } else {
+                        $asset[$k] = $v;
+                    }
+                }
+                $newAssetsList[] = $asset;
+                $processedIds[] = $id;
+            }
+        }
+
+        foreach ($selectedAssets as $sel) {
+            $id = (string)$sel['id'];
+            if (!in_array($id, $processedIds)) {
+                $newAssetsList[] = $sel;
+            }
+        }
+
+        $chanCfg['ad_accounts'] = $newAssetsList;
+
+        return $currentConfig;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getConfigurationJs(): string
+    {
+        $jsPath = __DIR__ . '/js/FacebookMarketingConfigHandler.js';
+        return file_exists($jsPath) ? file_get_contents($jsPath) : "";
+    }
 }
