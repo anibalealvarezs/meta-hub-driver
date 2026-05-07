@@ -541,7 +541,13 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $accountPlatformIdRaw = (string)($account['id'] ?? $account);
             if (!$accountPlatformIdRaw) continue;
 
-            $accountPlatformId = method_exists($this, 'getCleanId') ? $this->getCleanId($accountPlatformIdRaw) : $accountPlatformIdRaw;
+            // Use the formal platform ID calculation (same as Scheduler)
+            $accountPlatformId = self::getPlatformId(['id' => $accountPlatformIdRaw], AssetCategory::IDENTITY, 'facebook');
+
+            $targetAccountId = $config['account_id'] ?? null;
+            if ($targetAccountId && $targetAccountId !== $accountPlatformId) {
+                continue;
+            }
 
             try {
 
@@ -1295,9 +1301,15 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         return $hostname;
     }
 
+    public static function getPlatformId(array $asset, AssetCategory $category, string $context): string
+    {
+        $id = (string) ($asset['id'] ?? $asset['account_id'] ?? $asset['identifier'] ?? '');
+        return str_replace('act_', '', $id);
+    }
+
     public function getCleanId(string $id): string
     {
-        return str_replace('act_', '', $id);
+        return self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, 'facebook');
     }
 
     /**

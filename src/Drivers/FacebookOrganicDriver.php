@@ -554,7 +554,7 @@
         {
             $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
             $api = $this->initializeApi($config);
-            $chunkSize = $config['cache_chunk_size'] ?? '1 week';
+            $targetAccountId = $config['account_id'] ?? null;
 
             // 1. Batch Resolve Identities via Oracle (Facebook Pages & Instagram Accounts)
             $pageMap = [];
@@ -563,8 +563,16 @@
                 $fbPIds = [];
                 $igPIds = [];
                 foreach ($pagesToProcess as $page) {
-                    if ($pId = (string)($page['id'] ?? $page)) $fbPIds[] = $pId;
-                    if ($igId = (string)($page['ig_account'] ?? null)) $igPIds[] = $igId;
+                    // Use formal platform ID calculation
+                    $pId = self::getPlatformId($page, AssetCategory::IDENTITY, 'facebook');
+                    $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, 'facebook') : null;
+
+                    if ($targetAccountId && $targetAccountId !== $pId && $targetAccountId !== $igId) {
+                        continue;
+                    }
+
+                    if ($pId) $fbPIds[] = $pId;
+                    if ($igId) $igPIds[] = $igId;
                 }
                 $pageMap = $identityMapper('pages', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
                 // We resolve BOTH FB and IG accounts under 'channeled_accounts'
@@ -574,8 +582,13 @@
             $totalStats = ['metrics' => 0, 'rows' => 0, 'duplicates' => 0];
 
             foreach ($pagesToProcess as $page) {
-                $pagePlatformId = (string)($page['id'] ?? $page);
-                $igPlatformId = (string)($page['ig_account'] ?? null);
+                // Use formal platform ID calculation (same as Scheduler)
+                $pagePlatformId = self::getPlatformId($page, AssetCategory::IDENTITY, 'facebook');
+                $igPlatformId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, 'facebook') : null;
+
+                if ($targetAccountId && $targetAccountId !== $pagePlatformId && $targetAccountId !== $igPlatformId) {
+                    continue;
+                }
 
                 $this->logger?->info(">>> INICIO: Sincronizando métricas Orgánicas para FB Page: $pagePlatformId".($igPlatformId ? " e Instagram: $igPlatformId" : ""));
 
