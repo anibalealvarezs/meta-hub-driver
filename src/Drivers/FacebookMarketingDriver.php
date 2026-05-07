@@ -307,6 +307,9 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         }
         
         $chanCfg['enabled'] = $channelEnabled;
+        if (isset($newData['granular_sync'])) {
+            $chanCfg['granular_sync'] = filter_var($newData['granular_sync'], FILTER_VALIDATE_BOOLEAN);
+        }
 
         // Redis cache toggle
         if (isset($featureToggles['cache_aggregations'])) {
@@ -1344,6 +1347,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $ui['fb_marketing_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 5;
         $ui['fb_marketing_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
         $ui['fb_metrics_strategy'] = $channelConfig['metrics_strategy'] ?? 'default';
+        $ui['fb_granular_sync'] = $channelConfig['granular_sync'] ?? false;
 
         $ui['fb_cache_chunk_size'] = $channelConfig['cache_chunk_size'] ?? '1 week';
         $ui['fb_ad_account_ids'] = [];

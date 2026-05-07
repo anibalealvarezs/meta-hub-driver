@@ -313,6 +313,9 @@
             }
 
             $chanCfg['enabled'] = $enabled;
+            if (isset($newData['granular_sync'])) {
+                $chanCfg['granular_sync'] = filter_var($newData['granular_sync'], FILTER_VALIDATE_BOOLEAN);
+            }
 
             // Redis cache toggle
             if (isset($featureToggles['cache_aggregations'])) {
@@ -1747,6 +1750,7 @@
             $ui['fb_organic_cron_entities_minute'] = $channelConfig['cron_entities_minute'] ?? 0;
             $ui['fb_organic_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 6;
             $ui['fb_organic_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
+            $ui['fb_granular_sync'] = $channelConfig['granular_sync'] ?? false;
 
             $ui['fb_page_ids'] = [];
             foreach (($channelConfig['pages'] ?? []) as $p) {
