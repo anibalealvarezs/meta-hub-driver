@@ -1851,6 +1851,13 @@
             $featureToggles = $newData['feature_toggles'] ?? [];
             $selectedPages = $newData['assets']['pages'] ?? [];
 
+            if (empty($selectedPages) && isset($newData['type']) && $newData['type'] !== 'global') {
+                if ($this->logger) {
+                    $this->logger->warning("Received empty pages payload for Facebook Organic, skipping update to prevent wipe.");
+                }
+                return $currentConfig;
+            }
+
             if (!isset($currentConfig['channels'][$this->getChannel()])) {
                 $currentConfig['channels'][$this->getChannel()] = [];
             }
