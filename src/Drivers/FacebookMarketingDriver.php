@@ -517,7 +517,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $api = $this->initializeApi($config);
         $accountsToProcess = $config['ad_accounts'] ?? [];
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
-        
+        $targetAccountId = $config['account_id'] ?? null;
+
         // 1. Batch Resolve Ad Accounts via Oracle
         $caMap = [];
         if ($identityMapper && !empty($accountsToProcess)) {
@@ -525,7 +526,10 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             foreach ($accountsToProcess as $account) {
                 $id = (string)($account['id'] ?? $account);
                 if ($id) {
-                    $cleanId = method_exists($this, 'getCleanId') ? $this->getCleanId($id) : $id;
+                    $cleanId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, 'facebook');
+                    if ($targetAccountId && $targetAccountId !== $cleanId) {
+                        continue;
+                    }
                     $aIds[] = $cleanId;
                 }
             }
@@ -541,10 +545,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $accountPlatformIdRaw = (string)($account['id'] ?? $account);
             if (!$accountPlatformIdRaw) continue;
 
-            // Use the formal platform ID calculation (same as Scheduler)
             $accountPlatformId = self::getPlatformId(['id' => $accountPlatformIdRaw], AssetCategory::IDENTITY, 'facebook');
 
-            $targetAccountId = $config['account_id'] ?? null;
             if ($targetAccountId && $targetAccountId !== $accountPlatformId) {
                 continue;
             }
@@ -1299,12 +1301,6 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $hostname = parse_url($hostname, PHP_URL_HOST);
         }
         return $hostname;
-    }
-
-    public static function getPlatformId(array $asset, AssetCategory $category, string $context): string
-    {
-        $id = (string) ($asset['id'] ?? $asset['account_id'] ?? $asset['identifier'] ?? '');
-        return str_replace('act_', '', $id);
     }
 
     public function getCleanId(string $id): string
