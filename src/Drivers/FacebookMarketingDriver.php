@@ -1465,6 +1465,13 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $featureToggles = $newData['feature_toggles'] ?? [];
         $selectedAssets = $newData['assets']['ad_accounts'] ?? [];
 
+        if (empty($selectedAssets) && isset($newData['type']) && $newData['type'] !== 'global') {
+            if ($this->logger) {
+                $this->logger->warning("Received empty ad_accounts payload for Facebook Marketing, skipping update to prevent wipe.");
+            }
+            return $currentConfig;
+        }
+
         if (!isset($currentConfig['channels'][$this->getChannel()])) {
             $currentConfig['channels'][$this->getChannel()] = [];
         }
