@@ -70,7 +70,10 @@ class MetaInitializerService
             $platformId = (string)$page['id'];
             $title = $page['title'] ?? $page['name'] ?? "Page " . $platformId;
 
-            if (\Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($title, $config, 'PAGE')) {
+            if (
+                \Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($title, $config, 'PAGE')
+                || !$this->isAssetEnabled($platformId, $config)
+            ) {
                 continue;
             }
 
@@ -114,7 +117,7 @@ class MetaInitializerService
 
             // 3. Handle Instagram if present
             $igId = $page['instagram_business_account']['id'] ?? $page['ig_account'] ?? null;
-            if ($igId) {
+            if ($igId && $this->isAssetEnabled((string)$igId, $config)) {
                 $igId = (string)$igId;
                 $igData = $page['instagram_business_account'] ?? ['id' => $igId];
                 $igName = $igData['name'] ?? $igData['username'] ?? "IG " . $igId;
@@ -179,7 +182,10 @@ class MetaInitializerService
             $adAccountId = (string)$adAccount['id'];
             $name = $adAccount['name'] ?? "Ad Account " . $adAccountId;
 
-            if (\Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($name, $config, 'AD_ACCOUNT')) {
+            if (
+                \Anibalealvarezs\ApiDriverCore\Helpers\Helpers::isAssetFiltered($name, $config, 'AD_ACCOUNT')
+                || !$this->isAssetEnabled($adAccountId, $config)
+            ) {
                 continue;
             }
 
@@ -206,5 +212,19 @@ class MetaInitializerService
         }
 
         return $stats;
+    }
+    private function isAssetEnabled(string $platformId, array $config): bool
+    {
+        if (!isset($config['assets']) || !is_array($config['assets'])) {
+            return true;
+        }
+
+        foreach ($config['assets'] as $asset) {
+            if ((string)($asset['platformId'] ?? '') === $platformId) {
+                return (bool)($asset['enabled'] ?? true);
+            }
+        }
+
+        return false;
     }
 }
