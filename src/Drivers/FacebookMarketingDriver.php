@@ -255,13 +255,14 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 fields: 'id,name,account_id,account_status,currency,created_time'
             );
 
-            if (!empty($adAccountsData['data'])) {
-                foreach ($adAccountsData['data'] as $acc) {
+            if (isset($adAccountsData['data'])) {
+                foreach ($adAccountsData['data'] as $adAccount) {
+                    $adAccount['id'] = self::getPlatformId($adAccount, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
                     $assets['ad_accounts'][] = [
-                        'id' => $acc['id'],
-                        'name' => $acc['name'] ?? ('Ad Account ' . $acc['id']),
-                        'created_time' => $acc['created_time'] ?? null,
-                        'data' => $acc,
+                        'id' => $adAccount['id'],
+                        'name' => $adAccount['name'] ?? ('Ad Account ' . $adAccount['id']),
+                        'created_time' => $adAccount['created_time'] ?? null,
+                        'data' => $adAccount,
                     ];
                 }
             }
@@ -1417,11 +1418,16 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         }
 
         $this->logger?->info("TRACE: [facebook_marketing] Calling initializer->initialize()...");
+        $adAccounts = $assets['ad_accounts'] ?? [];
+        foreach ($adAccounts as $key => $acc) {
+            $adAccounts[$key]['id'] = self::getPlatformId($acc, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
+        }
+
         $results = $initializer->initialize(
             $this->getChannel(), 
             $config, 
             [
-                'ad_accounts' => $assets['ad_accounts'] ?? [],
+                'ad_accounts' => $adAccounts,
                 'pages' => $assets['facebook_pages'] ?? []
             ],
             $identityMapper,
