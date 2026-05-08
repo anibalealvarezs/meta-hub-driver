@@ -518,6 +518,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $accountsToProcess = $config['ad_accounts'] ?? [];
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
         $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
+        $cleanTargetId = $targetAccountId ? ltrim($targetAccountId, '#') : null;
 
         // 1. Batch Resolve Ad Accounts via Oracle
         $caMap = [];
@@ -527,7 +528,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 $id = (string)($account['id'] ?? $account);
                 if ($id) {
                     $cleanId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
-                    if ($targetAccountId && $targetAccountId !== $cleanId) {
+                    if ($cleanTargetId && $cleanTargetId !== $cleanId) {
                         continue;
                     }
                     $aIds[] = $cleanId;
@@ -658,6 +659,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $syncService = FacebookEntitySync::class;
 
         $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
+        $cleanTargetId = $targetAccountId ? ltrim($targetAccountId, '#') : null;
         $channeledAccounts = [];
         if ($identityMapper && !empty($config['ad_accounts'])) {
             $aIds = [];
@@ -665,7 +667,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 $id = (string)($account['id'] ?? $account);
                 if ($id) {
                     $cleanId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
-                    if ($targetAccountId && $targetAccountId !== $cleanId) {
+                    if ($cleanTargetId && $cleanTargetId !== $cleanId) {
                         continue;
                     }
                     $aIds[] = $cleanId;

@@ -587,7 +587,7 @@
                 $pagePlatformId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
                 $igPlatformId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
-                if ($targetAccountId && $targetAccountId !== $pagePlatformId && $targetAccountId !== $igPlatformId) {
+                if ($cleanTargetId && $cleanTargetId !== $pagePlatformId && $cleanTargetId !== $igPlatformId) {
                     continue;
                 }
 
@@ -741,6 +741,7 @@
             $syncService = FacebookEntitySync::class;
 
             $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
+            $cleanTargetId = $targetAccountId ? ltrim($targetAccountId, '#') : null;
             $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
             $resolvedPages = [];
             $resolvedChanneledAccounts = [];
@@ -752,7 +753,7 @@
                     $pId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
                     $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
-                    if ($targetAccountId && $targetAccountId !== $pId && $targetAccountId !== $igId) {
+                    if ($cleanTargetId && $cleanTargetId !== $pId && $cleanTargetId !== $igId) {
                         continue;
                     }
 
