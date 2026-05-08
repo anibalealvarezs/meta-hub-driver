@@ -49,7 +49,7 @@ class FacebookOrganicConvert
                 'url' => fn ($r) => $r['url'] ?? $r['id'] ?? null,
                 'title' => fn ($r) => $r['title'] ?? $r['name'] ?? $r['id'] ?? '',
                 'hostname' => fn ($r) => $r['hostname'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getPageHostname($r)),
-                'canonicalId' => fn ($r) => $r['canonicalId'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getCanonicalId($r, \Anibalealvarezs\ApiDriverCore\Enums\AssetCategory::PAGEABLE, 'facebook_page')),
+                'canonicalId' => fn ($r) => $r['canonicalId'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getCanonicalId($r, \Anibalealvarezs\ApiDriverCore\Enums\AssetCategory::PAGEABLE, \Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType::PAGE->value)),
             ],
             'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'accountPlatformId' => $accountId,

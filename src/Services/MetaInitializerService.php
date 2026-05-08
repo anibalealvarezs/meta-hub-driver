@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Anibalealvarezs\MetaHubDriver\Services;
 
 use Anibalealvarezs\ApiDriverCore\Classes\AssetRegistry;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Psr\Log\LoggerInterface;
 
 class MetaInitializerService
@@ -75,7 +76,7 @@ class MetaInitializerService
 
             $pageUrl = $page['url'] ?? "https://www.facebook.com/" . $platformId;
             $hostname = $page['website'] ?? $page['hostname'] ?? 'facebook.com';
-            $canonicalId = AssetRegistry::getCanonicalId($pageUrl, $platformId, 'facebook_page', $hostname);
+            $canonicalId = AssetRegistry::getCanonicalId($pageUrl, $platformId, MetaEntityType::PAGE->value, $hostname);
 
             $pageEntity = $pageMap[$platformId] ?? null;
             $caFb = $caMap[$platformId] ?? null;
@@ -105,7 +106,7 @@ class MetaInitializerService
                 $caFb = new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity();
                 $caFb->setPlatformId($platformId)
                     ->setChannel($channel)
-                    ->setType('facebook_page')
+                    ->setType(MetaEntityType::PAGE->value)
                     ->setTitle($title)
                     ->setContext(['page' => $pageEntity, 'account' => $defaultAccount]);
                 $toPersist->add($caFb);
@@ -118,7 +119,7 @@ class MetaInitializerService
                 $igData = $page['instagram_business_account'] ?? ['id' => $igId];
                 $igName = $igData['name'] ?? $igData['username'] ?? "IG " . $igId;
                 $igUrl = "https://www.instagram.com/" . ($igData['username'] ?? $igId);
-                $igCanonicalId = AssetRegistry::getCanonicalId($igUrl, $igId, 'instagram', 'instagram.com');
+                $igCanonicalId = AssetRegistry::getCanonicalId($igUrl, $igId, MetaEntityType::INSTAGRAM_ACCOUNT->value, 'instagram.com');
 
                 $igPage = $pageMap[$igId] ?? null;
                 $caIg = $caMap[$igId] ?? null;
@@ -141,7 +142,7 @@ class MetaInitializerService
                     $caIg = new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity();
                     $caIg->setPlatformId($igId)
                         ->setChannel($channel)
-                        ->setType('instagram')
+                        ->setType(MetaEntityType::INSTAGRAM_ACCOUNT->value)
                         ->setTitle($igName)
                         ->setContext(['page' => $igPage, 'account' => $defaultAccount]);
                     $toPersist->add($caIg);
@@ -188,7 +189,7 @@ class MetaInitializerService
                 $ca = new \Anibalealvarezs\ApiDriverCore\Classes\UniversalEntity();
                 $ca->setPlatformId($adAccountId)
                     ->setChannel($channel)
-                    ->setType('meta_ad_account')
+                    ->setType(MetaEntityType::META_AD_ACCOUNT->value)
                     ->setTitle($name)
                     ->setData($adAccount);
                 
