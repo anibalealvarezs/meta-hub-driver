@@ -215,16 +215,36 @@ class MetaInitializerService
     }
     private function isAssetEnabled(string $platformId, array $config): bool
     {
-        if (!isset($config['assets']) || !is_array($config['assets'])) {
-            return true;
-        }
-
-        foreach ($config['assets'] as $asset) {
-            if ((string)($asset['platformId'] ?? '') === $platformId) {
-                return (bool)($asset['enabled'] ?? true);
+        $assetLists = [];
+        foreach (['assets', 'pages', 'ad_accounts'] as $key) {
+            if (isset($config[$key]) && is_array($config[$key])) {
+                $assetLists[] = $config[$key];
             }
         }
 
+        if (empty($assetLists)) {
+            return true;
+        }
+
+        $normalizedInput = str_starts_with($platformId, 'act_') ? substr($platformId, 4) : $platformId;
+
+        foreach ($assetLists as $list) {
+            foreach ($list as $asset) {
+                $configId = (string)($asset['platformId'] ?? $asset['id'] ?? '');
+                $configIgId = (string)($asset['ig_account'] ?? '');
+                
+                $normalizedConfig = str_starts_with($configId, 'act_') ? substr($configId, 4) : $configId;
+                $normalizedConfigIg = str_starts_with($configIgId, 'act_') ? substr($configIgId, 4) : $configIgId;
+
+                if ($normalizedConfig === $normalizedInput || ($normalizedConfigIg && $normalizedConfigIg === $normalizedInput)) {
+                    $enabled = (bool)($asset['enabled'] ?? true);
+                    error_log("DEBUG: MetaInitializerService - Asset $platformId match found in config (ID or IG ID). Enabled: " . ($enabled ? 'true' : 'false'));
+                    return $enabled;
+                }
+            }
+        }
+
+        error_log("DEBUG: MetaInitializerService - Asset $platformId NOT found in config lists. Skipping.");
         return false;
     }
 }
