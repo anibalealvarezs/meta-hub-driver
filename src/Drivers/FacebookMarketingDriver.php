@@ -517,7 +517,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $api = $this->initializeApi($config);
         $accountsToProcess = $config['ad_accounts'] ?? [];
         $chunkSize = $config['cache_chunk_size'] ?? '1 week';
-        $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
+        $targetAccountId = $config['account_id'] ?? null;
+
         $cleanTargetId = $targetAccountId ? ltrim($targetAccountId, '#') : null;
 
         // 1. Batch Resolve Ad Accounts via Oracle

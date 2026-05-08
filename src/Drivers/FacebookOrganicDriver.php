@@ -740,7 +740,8 @@
 
             $syncService = FacebookEntitySync::class;
 
-            $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
+            $targetAccountId = $config['account_id'] ?? null;
+
             $cleanTargetId = $targetAccountId ? ltrim($targetAccountId, '#') : null;
             $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
             $resolvedPages = [];
