@@ -526,7 +526,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             foreach ($accountsToProcess as $account) {
                 $id = (string)($account['id'] ?? $account);
                 if ($id) {
-                    $cleanId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, 'facebook');
+                    $cleanId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
                     if ($targetAccountId && $targetAccountId !== $cleanId) {
                         continue;
                     }
@@ -545,7 +545,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $accountPlatformIdRaw = (string)($account['id'] ?? $account);
             if (!$accountPlatformIdRaw) continue;
 
-            $accountPlatformId = self::getPlatformId(['id' => $accountPlatformIdRaw], AssetCategory::IDENTITY, 'facebook');
+            $accountPlatformId = self::getPlatformId(['id' => $accountPlatformIdRaw], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
 
             if ($targetAccountId && $targetAccountId !== $accountPlatformId) {
                 continue;
@@ -1078,7 +1078,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $ca = $seeder->resolveEntity('channeled_account', [
             'platformId' => $adAccountId,
             'account' => $demoAccount,
-            'type' => 'meta_ad_account',
+            'type' => MetaEntityType::META_AD_ACCOUNT->value,
             'channel' => \Anibalealvarezs\ApiSkeleton\Enums\Channel::facebook_marketing->value,
             'name' => "Demo Ad Account"
         ]);
@@ -1209,7 +1209,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     public static function getAssetPatterns(): array
     {
         return [
-            'facebook_ad_account' => [
+            MetaEntityType::META_AD_ACCOUNT->value => [
                 'category' => AssetCategory::IDENTITY,
                 'key' => 'ad_accounts',
                 'channeled_account' => [
@@ -1219,7 +1219,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                     ],
                     'platform_created_at_key' => 'created_time',
                     'name_key' => 'name',
-                    'type' => 'facebook_ad_account',
+                    'type' => MetaEntityType::META_AD_ACCOUNT->value,
                     'data_key' => 'data'
                 ]
             ]
@@ -1230,7 +1230,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         return [
             // Ad account
             [
-                'platformId' => self::getPlatformId($asset, AssetCategory::IDENTITY, 'facebook_ad_account'),
+                'platformId' => self::getPlatformId($asset, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value),
                 'platformCreatedAt' => self::getChanneledAccountPlatformCreatedAt(asset: $asset),
                 'name' => self::getChanneledAccountName(asset: $asset),
                 'type' => self::getChanneledAccountType(),
@@ -1243,7 +1243,10 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     public static function getPlatformId(array $asset, AssetCategory $category, string $context): string
     {
         return match ($category) {
-            AssetCategory::IDENTITY => self::deriveAdAccountId($asset, 'id'),
+            AssetCategory::IDENTITY => match ($context) {
+                MetaEntityType::META_AD_ACCOUNT->value => self::deriveAdAccountId($asset, 'id'),
+                default => ''
+            },
             AssetCategory::CAMPAIGN => self::deriveMarketingId($asset, 'id'),
             AssetCategory::GROUPING => self::deriveMarketingId($asset, 'id'),
             AssetCategory::UNIT => self::deriveMarketingId($asset, 'id'),
@@ -1271,7 +1274,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
     public static function getChanneledAccountPlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
         $idKey = $key ?: 'id';
-        return isset($asset[$idKey]) && ($asset[$idKey]) ? self::getPlatformId($asset, AssetCategory::IDENTITY, 'facebook_ad_account') : '';
+        return isset($asset[$idKey]) && ($asset[$idKey]) ? self::getPlatformId($asset, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value) : '';
     }
 
     public static function getChanneledAccountPlatformCreatedAt(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::META_AD_ACCOUNT): string {
@@ -1305,7 +1308,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
     public function getCleanId(string $id): string
     {
-        return self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, 'facebook');
+        return self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
     }
 
     /**
@@ -1314,7 +1317,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     public static function getPageTypes(): array
     {
         return [
-            'meta_ad_account' => 'Meta Ad Account'
+            MetaEntityType::META_AD_ACCOUNT->value => 'Meta Ad Account'
         ];
     }
 
@@ -1324,7 +1327,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     public static function getAccountTypes(): array
     {
         return [
-            'meta_ad_account' => 'Meta Ad Account'
+            MetaEntityType::META_AD_ACCOUNT->value => 'Meta Ad Account'
         ];
     }
 

@@ -607,7 +607,7 @@ class FacebookEntitySync
                             'name' => $pageCfg['name'] ?? $pageCfg['title'] ?? null,
                             'url' => $pageCfg['url'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getPageUrl(['id' => $pId])),
                             'hostname' => $pageCfg['hostname'] ?? (\Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getPageHostname(['id' => $pId, 'url' => $pageCfg['url'] ?? null])),
-                            'canonicalId' => \Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getCanonicalId(['id' => $pId, 'url' => $pageCfg['url'] ?? null], \Anibalealvarezs\ApiDriverCore\Enums\AssetCategory::PAGEABLE, 'facebook_page'),
+                            'canonicalId' => \Anibalealvarezs\MetaHubDriver\Drivers\FacebookOrganicDriver::getCanonicalId(['id' => $pId, 'url' => $pageCfg['url'] ?? null], \Anibalealvarezs\ApiDriverCore\Enums\AssetCategory::PAGEABLE, MetaEntityType::PAGE->value),
                         ];
 
                         $converted = FacebookOrganicConvert::pages([$pageData]);

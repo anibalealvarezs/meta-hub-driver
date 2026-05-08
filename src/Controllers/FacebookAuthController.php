@@ -5,10 +5,8 @@ namespace Anibalealvarezs\MetaHubDriver\Controllers;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Anibalealvarezs\ApiDriverCore\Helpers\Helpers;
 use Anibalealvarezs\FacebookGraphApi\Enums\UserPermission;
 use Anibalealvarezs\FacebookGraphApi\Enums\PagePermission;
-use Anibalealvarezs\ApiDriverCore\Drivers\DriverFactory;
 
 class FacebookAuthController
 {
@@ -62,7 +60,11 @@ class FacebookAuthController
         }
 
         try {
-            $allConfigs = \Helpers\Helpers::getChannelsConfig();
+            if (class_exists('\Helpers\Helpers')) {
+                $allConfigs = \Helpers\Helpers::getChannelsConfig();
+            } else {
+                $allConfigs = [];
+            }
         } catch (\Exception $e) {
             $allConfigs = [];
         }

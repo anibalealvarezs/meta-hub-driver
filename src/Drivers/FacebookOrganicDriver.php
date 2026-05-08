@@ -565,8 +565,8 @@
                 $igPIds = [];
                 foreach ($pagesToProcess as $page) {
                     // Use formal platform ID calculation
-                    $pId = self::getPlatformId($page, AssetCategory::IDENTITY, 'facebook');
-                    $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, 'facebook') : null;
+                    $pId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
+                    $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
                     if ($targetAccountId && $targetAccountId !== $pId && $targetAccountId !== $igId) {
                         continue;
@@ -584,8 +584,8 @@
 
             foreach ($pagesToProcess as $page) {
                 // Use formal platform ID calculation (same as Scheduler)
-                $pagePlatformId = self::getPlatformId($page, AssetCategory::IDENTITY, 'facebook');
-                $igPlatformId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, 'facebook') : null;
+                $pagePlatformId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
+                $igPlatformId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
                 if ($targetAccountId && $targetAccountId !== $pagePlatformId && $targetAccountId !== $igPlatformId) {
                     continue;
@@ -1218,7 +1218,7 @@
                 $caFb = $seeder->resolveEntity('channeled_account', [
                     'platformId' => $fbPId,
                     'account'    => $fbAcc,
-                    'type'       => 'facebook_page',
+                    'type'       => MetaEntityType::PAGE->value,
                     'channel'    => $gscChan->value,
                     'name'       => "$name FB Page"
                 ]);
@@ -1227,7 +1227,7 @@
                 $caIg = $seeder->resolveEntity('channeled_account', [
                     'platformId' => $igPId,
                     'account'    => $fbAcc,
-                    'type'       => 'instagram',
+                    'type'       => MetaEntityType::INSTAGRAM_ACCOUNT->value,
                     'channel'    => $gscChan->value,
                     'name'       => "$name IG Account",
                     'data'       => ['instagram_id' => $igPId, 'facebook_page_id' => $fbPId]
@@ -1454,7 +1454,7 @@
         public static function getAssetPatterns(): array
         {
             return [
-                'facebook_page'     => [
+                MetaEntityType::PAGE->value => [
                     'category'          => [AssetCategory::IDENTITY, AssetCategory::PAGEABLE],
                     'key'               => 'pages',
                     'channeled_account' => [
@@ -1486,7 +1486,7 @@
                         'data_key'     => 'data'
                     ]
                 ],
-                'instagram_account' => [
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => [
                     'category'          => [AssetCategory::IDENTITY, AssetCategory::PAGEABLE],
                     'key'               => 'pages',
                     'channeled_account' => [
@@ -1525,11 +1525,11 @@
         public static function getPages(array $asset): array
         {
             $list = [];
-            $fbPageId = self::getPlatformId($asset, AssetCategory::PAGEABLE, 'facebook_page');
+            $fbPageId = self::getPlatformId($asset, AssetCategory::PAGEABLE, MetaEntityType::PAGE->value);
             if (!empty($fbPageId)) {
                 $fbPage = [
                     'platformId'  => $fbPageId,
-                    'canonicalId' => self::getCanonicalId($asset, AssetCategory::PAGEABLE, 'facebook_page'),
+                    'canonicalId' => self::getCanonicalId($asset, AssetCategory::PAGEABLE, MetaEntityType::PAGE->value),
                     'hostname'    => self::getPageHostname(asset: $asset),
                     'title'       => self::getPageTitle(asset: $asset),
                     'url'         => self::getPageUrl(asset: $asset),
@@ -1538,11 +1538,11 @@
                 ];
                 $list[] = $fbPage;
             }
-            $igPlatformId = self::getPlatformId($asset, AssetCategory::PAGEABLE, 'instagram_account');
+            $igPlatformId = self::getPlatformId($asset, AssetCategory::PAGEABLE, MetaEntityType::INSTAGRAM_ACCOUNT->value);
             if ($igPlatformId) {
                 $igAccount = [
                     'platformId'  => $igPlatformId,
-                    'canonicalId' => self::getCanonicalId($asset, AssetCategory::PAGEABLE, 'instagram_account'),
+                    'canonicalId' => self::getCanonicalId($asset, AssetCategory::PAGEABLE, MetaEntityType::INSTAGRAM_ACCOUNT->value),
                     'hostname'    => self::getPageHostname(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                     'title'       => self::getPageTitle(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
                     'url'         => self::getPageUrl(asset: $asset, entityType: MetaEntityType::INSTAGRAM_ACCOUNT),
@@ -1592,9 +1592,9 @@
         {
             return match ($category) {
                 AssetCategory::IDENTITY, AssetCategory::PAGEABLE => match ($context) {
-                    'instagram_account' => self::deriveMetaId($asset, 'ig_account'),
-                    'facebook_page' => self::deriveMetaId($asset, 'id'),
-                    default => self::deriveMetaId($asset, 'ig_account') ?: self::deriveMetaId($asset, 'id')
+                    MetaEntityType::INSTAGRAM_ACCOUNT->value => self::deriveMetaId($asset, 'ig_account'),
+                    MetaEntityType::PAGE->value => self::deriveMetaId($asset, 'id'),
+                    default => ''
                 },
                 AssetCategory::UNIT => self::deriveMetaId($asset, 'id'),
                 default => (string)($asset['id'] ?? '')
@@ -1634,7 +1634,7 @@
         public static function getPageHostname(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string
         {
             $hostnameKey = $key ?: match (self::getChanneledAccountType($entityType)) {
-                'instagram_account' => 'ig_hostname',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'ig_hostname',
                 default => 'hostname'
             };
 
@@ -1644,7 +1644,7 @@
         public static function getPageTitle(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string
         {
             $titleKey = $key ?: match (self::getChanneledAccountType($entityType)) {
-                'instagram_account' => 'ig_account_name',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'ig_account_name',
                 default => 'title'
             };
 
@@ -1658,7 +1658,7 @@
             }
 
             return match (self::getChanneledAccountType($entityType)) {
-                'instagram_account' => (isset($asset['ig_data']['username']) && $asset['ig_data']['username'] ?
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => (isset($asset['ig_data']['username']) && $asset['ig_data']['username'] ?
                     'https://www.instagram.com/'.FieldsNormalizerHelper::getCleanString($asset['ig_data']['username']) : ''),
                 default => isset($asset['link']) && ($asset['link']) ? FieldsNormalizerHelper::getCleanString($asset['link']) : ''
             };
@@ -1667,7 +1667,7 @@
         public static function getPageData(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): array
         {
             $dataKey = $key ?: match (self::getChanneledAccountType($entityType)) {
-                'instagram_account' => 'ig_data',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'ig_data',
                 default => 'data'
             };
 
@@ -1679,7 +1679,7 @@
         public static function getChanneledAccountPlatformId(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string
         {
             $platformIdKey = $key ?: match (self::getChanneledAccountType($entityType)) {
-                'instagram_account' => 'ig_account',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'ig_account',
                 default => 'id'
             };
 
@@ -1689,7 +1689,7 @@
         public static function getChanneledAccountPlatformCreatedAt(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string
         {
             $platformCreatedAtKey = $key ?: match (self::getChanneledAccountType($entityType)) {
-                'instagram_account' => 'ig_created_time',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'ig_created_time',
                 default => 'created_time'
             };
 
@@ -1699,7 +1699,7 @@
         public static function getChanneledAccountName(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): string
         {
             $nameKey = $key ?: match (self::getChanneledAccountType($entityType)) {
-                'instagram_account' => 'ig_account_name',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'ig_account_name',
                 default => 'title'
             };
 
@@ -1714,7 +1714,7 @@
         public static function getChanneledAccountData(array $asset, ?string $key = null, string|MetaEntityType $entityType = MetaEntityType::PAGE): array
         {
             $dataKey = $key ?: match (self::getChanneledAccountType($entityType)) {
-                'instagram_account' => 'ig_data',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'ig_data',
                 default => 'data'
             };
 
@@ -1727,8 +1727,8 @@
         public static function getPageTypes(): array
         {
             return [
-                'facebook_page' => 'Facebook Page',
-                'instagram'     => 'Instagram Account'
+                MetaEntityType::PAGE->value => 'Facebook Page',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'Instagram Account'
             ];
         }
 
@@ -1738,8 +1738,8 @@
         public static function getAccountTypes(): array
         {
             return [
-                'facebook_page' => 'Facebook Page',
-                'instagram'     => 'Instagram Account'
+                MetaEntityType::PAGE->value => 'Facebook Page',
+                MetaEntityType::INSTAGRAM_ACCOUNT->value => 'Instagram Account'
             ];
         }
 
