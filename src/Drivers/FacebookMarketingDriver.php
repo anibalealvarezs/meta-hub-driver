@@ -1396,30 +1396,40 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
      */
     public function initializeEntities(array $config = []): array
     {
+        $this->logger?->info("TRACE: [facebook_marketing] Fetching available assets...");
         $assets = $this->fetchAvailableAssets(throwOnError: true);
-        
+        $this->logger?->info("TRACE: [facebook_marketing] Assets fetched: " . count($assets['ad_accounts'] ?? []) . " ad accounts, " . count($assets['facebook_pages'] ?? []) . " pages.");
+
         $initializerClass = '\\Anibalealvarezs\\MetaHubDriver\\Services\\MetaInitializerService';
         if (!class_exists($initializerClass)) {
-            throw new Exception("MetaInitializerService not found.");
+            $this->logger?->error("TRACE: [facebook_marketing] Initializer class not found: $initializerClass");
+            return ['initialized' => 0, 'skipped' => 0];
         }
-        
+
         $initializer = new $initializerClass($this->logger);
 
         $identityMapper = $config['identityMapper'] ?? null;
         $dataProcessor = $config['dataProcessor'] ?? null;
 
         if (!$identityMapper || !$dataProcessor) {
-            // Fallback for when called without callbacks (legacy or direct)
+            $this->logger?->error("TRACE: [facebook_marketing] Callbacks missing.");
             return ['initialized' => 0, 'skipped' => 0, 'error' => 'Callbacks missing'];
         }
 
-        return $initializer->initialize(
+        $this->logger?->info("TRACE: [facebook_marketing] Calling initializer->initialize()...");
+        $results = $initializer->initialize(
             $this->getChannel(), 
             $config, 
-            ['ad_accounts' => $assets['facebook_ad_accounts'] ?? []],
+            [
+                'ad_accounts' => $assets['ad_accounts'] ?? [],
+                'pages' => $assets['facebook_pages'] ?? []
+            ],
             $identityMapper,
             $dataProcessor
         );
+        $this->logger?->info("TRACE: [facebook_marketing] Initialization complete. Results: " . json_encode($results));
+
+        return $results;
     }
 
     /**
