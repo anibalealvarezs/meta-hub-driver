@@ -555,7 +555,7 @@
             $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
             $api = $this->initializeApi($config);
             $chunkSize = $config['cache_chunk_size'] ?? '1 week';
-            $targetAccountId = $config['account_id'] ?? null;
+            $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
 
             // 1. Batch Resolve Identities via Oracle (Facebook Pages & Instagram Accounts)
             $pageMap = [];
@@ -733,12 +733,14 @@
             ?callable                    $identityMapper = null
         ): Response
         {
+            $api = $api ?? $this->initializeApi($config);
             $startDateStr = $startDate->format('Y-m-d');
             $endDateStr = $endDate->format('Y-m-d');
             $jobId = $config['jobId'] ?? null;
 
             $syncService = FacebookEntitySync::class;
 
+            $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
             $pagesToProcess = array_filter($config['pages'] ?? [], fn($p) => !isset($p['enabled']) || (bool)$p['enabled']);
             $resolvedPages = [];
             $resolvedChanneledAccounts = [];
@@ -747,8 +749,15 @@
                 $fbPIds = [];
                 $igPIds = [];
                 foreach ($pagesToProcess as $page) {
-                    if ($pId = (string)($page['id'] ?? $page)) $fbPIds[] = $pId;
-                    if ($igId = (string)($page['ig_account'] ?? null)) $igPIds[] = $igId;
+                    $pId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
+                    $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
+
+                    if ($targetAccountId && $targetAccountId !== $pId && $targetAccountId !== $igId) {
+                        continue;
+                    }
+
+                    if ($pId) $fbPIds[] = $pId;
+                    if ($igId) $igPIds[] = $igId;
                 }
                 $resolvedPages = array_values($identityMapper('pages', ['platform_ids' => $fbPIds]) ?? []);
                 $resolvedChanneledAccounts = $identityMapper('channeled_accounts', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
