@@ -1463,6 +1463,9 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     public function initializeEntities(array $config = []): array
     {
         $totalStart = microtime(true);
+        // Ensure the selective fetching logic in fetchAvailableAssets() sees the pages/accounts from config
+        $this->config = array_merge($this->config, $config);
+        
         error_log("TRACE: [facebook_marketing] Hook started. Fetching available assets...");
         $assets = $this->fetchAvailableAssets(throwOnError: true);
         error_log("TRACE: [facebook_marketing] Assets fetched successfully.");
