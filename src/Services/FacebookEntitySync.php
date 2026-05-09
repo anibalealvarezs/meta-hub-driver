@@ -155,11 +155,11 @@ class FacebookEntitySync
 
                                 if (!empty($filteredCampaigns)) {
                                     $converted = FacebookMarketingConvert::campaigns($filteredCampaigns, $adAccount->getId());
-                                    foreach ($converted as $item) {
-                                        if ($entityProcessor) {
+                                    if ($entityProcessor) {
+                                        foreach ($converted as $item) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $adAccount]));
-                                            ($entityProcessor)($item, MetaEntityType::CAMPAIGN->value);
                                         }
+                                        ($entityProcessor)($converted, MetaEntityType::CAMPAIGN->value);
                                     }
                                 }
                             },
@@ -294,11 +294,11 @@ class FacebookEntitySync
 
                                 if (!empty($filteredAdsets)) {
                                     $converted = FacebookMarketingConvert::adsets($filteredAdsets, $adAccount->getId());
-                                    foreach ($converted as $item) {
-                                        if ($entityProcessor) {
+                                    if ($entityProcessor) {
+                                        foreach ($converted as $item) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $adAccount]));
-                                            ($entityProcessor)($item, MetaEntityType::AD_GROUP->value);
                                         }
+                                        ($entityProcessor)($converted, MetaEntityType::AD_GROUP->value);
                                     }
                                 }
                             },
@@ -429,11 +429,11 @@ class FacebookEntitySync
 
                                 if (!empty($filteredAds)) {
                                     $converted = FacebookMarketingConvert::ads($filteredAds, $channeledAccountItem->getId());
-                                    foreach ($converted as $item) {
-                                        if ($entityProcessor) {
+                                    if ($entityProcessor) {
+                                        foreach ($converted as $item) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccountItem]));
-                                            ($entityProcessor)($item, MetaEntityType::AD->value);
                                         }
+                                        ($entityProcessor)($converted, MetaEntityType::AD->value);
                                     }
                                 }
                             },
@@ -528,11 +528,11 @@ class FacebookEntitySync
 
                                 if (!empty($filteredCreatives)) {
                                     $converted = FacebookMarketingConvert::creatives($filteredCreatives, $channeledAccount->getId());
-                                    foreach ($converted as $item) {
-                                        if ($entityProcessor) {
+                                    if ($entityProcessor) {
+                                        foreach ($converted as $item) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                            ($entityProcessor)($item, MetaEntityType::CREATIVE->value);
                                         }
+                                        ($entityProcessor)($converted, MetaEntityType::CREATIVE->value);
                                     }
                                 }
                             },
@@ -611,10 +611,8 @@ class FacebookEntitySync
                         ];
 
                         $converted = FacebookOrganicConvert::pages([$pageData]);
-                        foreach ($converted as $item) {
-                            if ($entityProcessor) {
-                                ($entityProcessor)($item, MetaEntityType::PAGE->value);
-                            }
+                        if ($entityProcessor) {
+                            ($entityProcessor)($converted, MetaEntityType::PAGE->value);
                         }
                     } catch (\Exception $e) {
                         $logger?->error("Error syncing organic page $pId from config: " . $e->getMessage());
@@ -661,11 +659,11 @@ class FacebookEntitySync
 
                                     if (!empty($filteredPages)) {
                                         $converted = FacebookOrganicConvert::pages($filteredPages, $channeledAccount->getId());
-                                        foreach ($converted as $item) {
-                                            if ($entityProcessor) {
+                                        if ($entityProcessor) {
+                                            foreach ($converted as $item) {
                                                 $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                                ($entityProcessor)($item, MetaEntityType::PAGE->value);
                                             }
+                                            ($entityProcessor)($converted, MetaEntityType::PAGE->value);
                                         }
                                     }
                                 },
@@ -778,12 +776,12 @@ class FacebookEntitySync
                                             channeledAccountId: $specificChanneledAccountId
                                         );
                                         $saveCount = 0;
-                                        foreach ($converted as $item) {
-                                            if ($entityProcessor) {
+                                        if ($entityProcessor) {
+                                            foreach ($converted as $item) {
                                                 $item->setContext(array_merge($item->getContext(), ['facebookPage' => $channeledPage]));
-                                                ($entityProcessor)($item, MetaEntityType::POST->value);
-                                                $saveCount++;
                                             }
+                                            ($entityProcessor)($converted, MetaEntityType::POST->value);
+                                            $saveCount = $converted->count();
                                         }
                                         $logger?->info("<<< EXITO: Se sincronizaron $saveCount posts para FB Page: $pageId");
                                     } else {
