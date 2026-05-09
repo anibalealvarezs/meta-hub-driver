@@ -138,28 +138,30 @@ class FacebookEntitySync
                         $includeFilter = self::getFacebookFilter($config, 'CAMPAIGN', 'cache_include');
                         $excludeFilter = self::getFacebookFilter($config, 'CAMPAIGN', 'cache_exclude');
 
+                        $buffer = new \Doctrine\Common\Collections\ArrayCollection();
                         $api->getCampaignsAndProcess(
-                            callback: function ($pageData) use (&$authorizedIdsMap, $accId, $adAccount, $includeFilter, $excludeFilter, $entityProcessor, $logger) {
-                                $filteredCampaigns = [];
+                            callback: function ($pageData) use (&$authorizedIdsMap, $accId, $adAccount, $includeFilter, $excludeFilter, $entityProcessor, $logger, $buffer) {
                                 foreach ($pageData as $c) {
                                     $cName = $c['name'] ?? '';
                                     $cId = (string)$c['id'];
                                     $matches = self::matchesFilter($cName, $includeFilter, $excludeFilter) || self::matchesFilter($cId, $includeFilter, $excludeFilter);
                                     if ($matches) {
                                         $authorizedIdsMap[$accId][] = $cId;
-                                        $filteredCampaigns[] = $c;
-                                    } else {
-                                        $logger?->info("Skipping campaign $cId ($cName) - filtered out by extraction patterns.");
-                                    }
-                                }
-
-                                if (!empty($filteredCampaigns)) {
-                                    $converted = FacebookMarketingConvert::campaigns($filteredCampaigns, $adAccount->getId());
-                                    if ($entityProcessor) {
+                                        
+                                        $converted = FacebookMarketingConvert::campaigns([$c], $adAccount->getId());
                                         foreach ($converted as $item) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $adAccount]));
+                                            $buffer->add($item);
                                         }
-                                        ($entityProcessor)($converted, MetaEntityType::CAMPAIGN->value);
+
+                                        // Flush buffer if it hits 100
+                                        if ($buffer->count() >= 100 && $entityProcessor) {
+                                            error_log("TRACE: [facebook_marketing] [BUFFERED-SYNC] Flushing 100 campaigns to processor.");
+                                            ($entityProcessor)($buffer, MetaEntityType::CAMPAIGN->value);
+                                            $buffer->clear();
+                                        }
+                                    } else {
+                                        $logger?->info("Skipping campaign $cId ($cName) - filtered out by extraction patterns.");
                                     }
                                 }
                             },
@@ -173,6 +175,13 @@ class FacebookEntitySync
                                 ]])
                             ]
                         );
+
+                        // Final flush
+                        if ($buffer->count() > 0 && $entityProcessor) {
+                            error_log("TRACE: [facebook_marketing] [BUFFERED-SYNC] Final flush of " . $buffer->count() . " campaigns.");
+                            ($entityProcessor)($buffer, MetaEntityType::CAMPAIGN->value);
+                            $buffer->clear();
+                        }
                         $fetched = true;
                     } catch (\Exception $e) {
                         if (str_contains($e->getMessage(), 'reduce the amount of data')) {
@@ -278,27 +287,27 @@ class FacebookEntitySync
                             ]]);
                         }
 
+                        $buffer = new \Doctrine\Common\Collections\ArrayCollection();
                         $api->getAdsetsAndProcess(
-                            callback: function ($pageData) use (&$authorizedIdsMap, $accId, $adAccount, $includeFilter, $excludeFilter, $entityProcessor, $logger) {
-                                $filteredAdsets = [];
+                            callback: function ($pageData) use (&$authorizedIdsMap, $accId, $adAccount, $includeFilter, $excludeFilter, $entityProcessor, $logger, $buffer) {
                                 foreach ($pageData as $a) {
                                     $aName = $a['name'] ?? '';
                                     $aId = (string)$a['id'];
                                     if (self::matchesFilter($aName, $includeFilter, $excludeFilter) || self::matchesFilter($aId, $includeFilter, $excludeFilter)) {
                                         $authorizedIdsMap[$accId][] = $aId;
-                                        $filteredAdsets[] = $a;
-                                    } else {
-                                        $logger?->info("Skipping adset $aId ($aName) - filtered out by extraction patterns");
-                                    }
-                                }
-
-                                if (!empty($filteredAdsets)) {
-                                    $converted = FacebookMarketingConvert::adsets($filteredAdsets, $adAccount->getId());
-                                    if ($entityProcessor) {
+                                        
+                                        $converted = FacebookMarketingConvert::adsets([$a], $adAccount->getId());
                                         foreach ($converted as $item) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $adAccount]));
+                                            $buffer->add($item);
                                         }
-                                        ($entityProcessor)($converted, MetaEntityType::AD_GROUP->value);
+
+                                        if ($buffer->count() >= 100 && $entityProcessor) {
+                                            ($entityProcessor)($buffer, MetaEntityType::AD_GROUP->value);
+                                            $buffer->clear();
+                                        }
+                                    } else {
+                                        $logger?->info("Skipping adset $aId ($aName) - filtered out by extraction patterns");
                                     }
                                 }
                             },
@@ -306,6 +315,11 @@ class FacebookEntitySync
                             limit: $currentLimit, 
                             additionalParams: $additionalParams
                         );
+
+                        if ($buffer->count() > 0 && $entityProcessor) {
+                            ($entityProcessor)($buffer, MetaEntityType::AD_GROUP->value);
+                            $buffer->clear();
+                        }
                         $fetched = true;
                     } catch (\Exception $e) {
                         if (str_contains($e->getMessage(), 'reduce the amount of data')) {
@@ -413,27 +427,27 @@ class FacebookEntitySync
                             ]]);
                         }
 
+                        $buffer = new \Doctrine\Common\Collections\ArrayCollection();
                         $api->getAdsAndProcess(
-                            callback: function ($pageData) use (&$authorizedIdsMap, $adAccountId, $channeledAccountItem, $includeFilter, $excludeFilter, $entityProcessor, $logger) {
-                                $filteredAds = [];
+                            callback: function ($pageData) use (&$authorizedIdsMap, $adAccountId, $channeledAccountItem, $includeFilter, $excludeFilter, $entityProcessor, $logger, $buffer) {
                                 foreach ($pageData as $a) {
                                     $aName = $a['name'] ?? '';
                                     $aId = (string)$a['id'];
                                     if (self::matchesFilter($aName, $includeFilter, $excludeFilter) || self::matchesFilter($aId, $includeFilter, $excludeFilter)) {
                                         $authorizedIdsMap[$adAccountId][] = $aId;
-                                        $filteredAds[] = $a;
-                                    } else {
-                                        $logger?->info("Skipping ad $aId ($aName) - filtered out by extraction patterns");
-                                    }
-                                }
-
-                                if (!empty($filteredAds)) {
-                                    $converted = FacebookMarketingConvert::ads($filteredAds, $channeledAccountItem->getId());
-                                    if ($entityProcessor) {
+                                        
+                                        $converted = FacebookMarketingConvert::ads([$a], $channeledAccountItem->getId());
                                         foreach ($converted as $item) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccountItem]));
+                                            $buffer->add($item);
                                         }
-                                        ($entityProcessor)($converted, MetaEntityType::AD->value);
+
+                                        if ($buffer->count() >= 100 && $entityProcessor) {
+                                            ($entityProcessor)($buffer, MetaEntityType::AD->value);
+                                            $buffer->clear();
+                                        }
+                                    } else {
+                                        $logger?->info("Skipping ad $aId ($aName) - filtered out by extraction patterns");
                                     }
                                 }
                             },
@@ -441,6 +455,11 @@ class FacebookEntitySync
                             limit: $currentLimit, 
                             additionalParams: $additionalParams
                         );
+
+                        if ($buffer->count() > 0 && $entityProcessor) {
+                            ($entityProcessor)($buffer, MetaEntityType::AD->value);
+                            $buffer->clear();
+                        }
                         $fetched = true;
                     } catch (\Exception $e) {
                         if (str_contains($e->getMessage(), 'reduce the amount of data')) {
@@ -513,32 +532,37 @@ class FacebookEntitySync
                         $includeFilter = self::getFacebookFilter($config, 'CREATIVE', 'cache_include');
                         $excludeFilter = self::getFacebookFilter($config, 'CREATIVE', 'cache_exclude');
 
+                        $buffer = new \Doctrine\Common\Collections\ArrayCollection();
                         $api->getCreativesAndProcess(
-                            callback: function ($pageData) use ($adAccountId, $channeledAccount, $includeFilter, $excludeFilter, $entityProcessor, $logger) {
-                                $filteredCreatives = [];
+                            callback: function ($pageData) use ($adAccountId, $channeledAccount, $includeFilter, $excludeFilter, $entityProcessor, $logger, $buffer) {
                                 foreach ($pageData as $c) {
                                     $cName = $c['name'] ?? $c['title'] ?? '';
                                     $cId = (string)$c['id'];
                                     if (self::matchesFilter($cName, $includeFilter, $excludeFilter) || self::matchesFilter($cId, $includeFilter, $excludeFilter)) {
-                                        $filteredCreatives[] = $c;
-                                    } else {
-                                        $logger?->info("Skipping creative $cId ($cName) - filtered out by extraction patterns");
-                                    }
-                                }
-
-                                if (!empty($filteredCreatives)) {
-                                    $converted = FacebookMarketingConvert::creatives($filteredCreatives, $channeledAccount->getId());
-                                    if ($entityProcessor) {
+                                        
+                                        $converted = FacebookMarketingConvert::creatives([$c], $channeledAccount->getId());
                                         foreach ($converted as $item) {
                                             $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
+                                            $buffer->add($item);
                                         }
-                                        ($entityProcessor)($converted, MetaEntityType::CREATIVE->value);
+
+                                        if ($buffer->count() >= 100 && $entityProcessor) {
+                                            ($entityProcessor)($buffer, MetaEntityType::AD_CREATIVE->value);
+                                            $buffer->clear();
+                                        }
+                                    } else {
+                                        $logger?->info("Skipping creative $cId ($cName) - filtered out by extraction patterns");
                                     }
                                 }
                             },
                             adAccountId: $adAccountId, 
                             limit: $currentLimit
                         );
+
+                        if ($buffer->count() > 0 && $entityProcessor) {
+                            ($entityProcessor)($buffer, MetaEntityType::AD_CREATIVE->value);
+                            $buffer->clear();
+                        }
                         $fetched = true;
                     } catch (\Exception $e) {
                         if (str_contains($e->getMessage(), 'reduce the amount of data')) {
@@ -644,31 +668,36 @@ class FacebookEntitySync
                             $includeFilter = self::getFacebookFilter($config, 'PAGE', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'PAGE', 'cache_exclude');
 
+                            $buffer = new \Doctrine\Common\Collections\ArrayCollection();
                             $api->getPagesAndProcess(
-                                callback: function ($pageData) use ($adAccountId, $channeledAccount, $includeFilter, $excludeFilter, $entityProcessor, $logger) {
-                                    $filteredPages = [];
+                                callback: function ($pageData) use ($adAccountId, $channeledAccount, $includeFilter, $excludeFilter, $entityProcessor, $logger, $buffer) {
                                     foreach ($pageData as $p) {
                                         $pName = $p['name'] ?? '';
                                         $pId = (string)$p['id'];
                                         if (self::matchesFilter($pName, $includeFilter, $excludeFilter) || self::matchesFilter($pId, $includeFilter, $excludeFilter)) {
-                                            $filteredPages[] = $p;
-                                        } else {
-                                            $logger?->info("Skipping page $pId ($pName) - filtered out by extraction patterns");
-                                        }
-                                    }
-
-                                    if (!empty($filteredPages)) {
-                                        $converted = FacebookOrganicConvert::pages($filteredPages, $channeledAccount->getId());
-                                        if ($entityProcessor) {
+                                            
+                                            $converted = FacebookOrganicConvert::pages([$p], $channeledAccount->getId());
                                             foreach ($converted as $item) {
                                                 $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
+                                                $buffer->add($item);
                                             }
-                                            ($entityProcessor)($converted, MetaEntityType::PAGE->value);
+
+                                            if ($buffer->count() >= 100 && $entityProcessor) {
+                                                ($entityProcessor)($buffer, MetaEntityType::PAGE->value);
+                                                $buffer->clear();
+                                            }
+                                        } else {
+                                            $logger?->info("Skipping page $pId ($pName) - filtered out by extraction patterns");
                                         }
                                     }
                                 },
                                 userId: $adAccountId
                             );
+
+                            if ($buffer->count() > 0 && $entityProcessor) {
+                                ($entityProcessor)($buffer, MetaEntityType::PAGE->value);
+                                $buffer->clear();
+                            }
                             $fetched = true;
                         } catch (\Exception $e) {
                             $retryCount++;
@@ -750,47 +779,47 @@ class FacebookEntitySync
                             $includeFilter = self::getFacebookFilter($config, 'POST', 'cache_include');
                             $excludeFilter = self::getFacebookFilter($config, 'POST', 'cache_exclude');
 
+                            $buffer = new \Doctrine\Common\Collections\ArrayCollection();
                             $api->getFacebookPostsAndProcess(
-                                callback: function ($pageData) use ($pageId, $channeledPage, $includeFilter, $excludeFilter, $entityProcessor, $logger, $accountId, $channeledAccountId) {
-                                    $filteredPosts = [];
+                                callback: function ($pageData) use ($pageId, $channeledPage, $includeFilter, $excludeFilter, $entityProcessor, $logger, $accountId, $channeledAccountId, $buffer) {
                                     foreach ($pageData as $p) {
                                         $pName = $p['message'] ?? $p['story'] ?? '';
                                         $pId = (string)$p['id'];
                                         if (self::matchesFilter($pName, $includeFilter, $excludeFilter) || self::matchesFilter($pId, $includeFilter, $excludeFilter)) {
-                                            $filteredPosts[] = $p;
-                                        }
-                                    }
+                                            $pageAccountId = $accountId ?: ((method_exists($channeledPage, 'getAccount') && $channeledPage->getAccount()) ? $channeledPage->getAccount()->getId() : null);
+                                            $specificChanneledAccountId = is_array($channeledAccountId)
+                                                ? ($channeledAccountId[$pageId]?->getId() ?? null)
+                                                : $channeledAccountId;
 
-                                    if (!empty($filteredPosts)) {
-                                        $pageAccountId = $accountId ?: ((method_exists($channeledPage, 'getAccount') && $channeledPage->getAccount()) ? $channeledPage->getAccount()->getId() : null);
-
-                                        // Resolve specific ChanneledAccount ID for this page if a map is provided
-                                        $specificChanneledAccountId = is_array($channeledAccountId)
-                                            ? ($channeledAccountId[$pageId]?->getId() ?? null)
-                                            : $channeledAccountId;
-
-                                        $converted = FacebookOrganicConvert::posts(
-                                            posts: $filteredPosts, 
-                                            pageId: $channeledPage->getId(),
-                                            accountId: $pageAccountId,
-                                            channeledAccountId: $specificChanneledAccountId
-                                        );
-                                        $saveCount = 0;
-                                        if ($entityProcessor) {
+                                            $converted = FacebookOrganicConvert::posts(
+                                                posts: [$p], 
+                                                pageId: $channeledPage->getId(),
+                                                accountId: $pageAccountId,
+                                                channeledAccountId: $specificChanneledAccountId
+                                            );
+                                            
                                             foreach ($converted as $item) {
                                                 $item->setContext(array_merge($item->getContext(), ['facebookPage' => $channeledPage]));
+                                                $buffer->add($item);
                                             }
-                                            ($entityProcessor)($converted, MetaEntityType::POST->value);
-                                            $saveCount = $converted->count();
+
+                                            if ($buffer->count() >= 100 && $entityProcessor) {
+                                                error_log("TRACE: [facebook_organic] [BUFFERED-SYNC] Flushing 100 posts to processor.");
+                                                ($entityProcessor)($buffer, MetaEntityType::POST->value);
+                                                $buffer->clear();
+                                            }
                                         }
-                                        $logger?->info("<<< EXITO: Se sincronizaron $saveCount posts para FB Page: $pageId");
-                                    } else {
-                                        $logger?->info("--- INFO: No se encontraron posts que coincidan con los filtros para FB Page: $pageId");
                                     }
                                 },
                                 pageId: $pageId, 
                                 limit: $limit
                             );
+
+                            if ($buffer->count() > 0 && $entityProcessor) {
+                                error_log("TRACE: [facebook_organic] [BUFFERED-SYNC] Final flush of " . $buffer->count() . " posts for page $pageId.");
+                                ($entityProcessor)($buffer, MetaEntityType::POST->value);
+                                $buffer->clear();
+                            }
                             $fetched = true;
                         } catch (\Exception $e) {
                             $retryCount++;
