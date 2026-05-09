@@ -229,16 +229,22 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             // 1. Identify Target IDs from Config
             $targetPageIds = [];
             if (!empty($config['pages'])) {
-                foreach ($config['pages'] as $p) {
-                    if (isset($p['id'])) $targetPageIds[] = (string)$p['id'];
+                foreach ($config['pages'] as $key => $val) {
+                    $pageId = is_array($val) ? ($val['id'] ?? $key) : $val;
+                    $enabled = is_array($val) ? ($val['enabled'] ?? true) : true;
+                    if ($enabled) {
+                        $targetPageIds[] = (string)$pageId;
+                    }
                 }
             }
 
             $targetAdAccountIds = [];
             if (!empty($config['ad_accounts'])) {
-                foreach ($config['ad_accounts'] as $id => $acc) {
-                    if (isset($acc['enabled']) && $acc['enabled']) {
-                        $pId = str_starts_with((string)$id, 'act_') ? (string)$id : 'act_' . (string)$id;
+                foreach ($config['ad_accounts'] as $key => $val) {
+                    $accId = is_array($val) ? ($val['id'] ?? $key) : $val;
+                    $enabled = is_array($val) ? ($val['enabled'] ?? true) : true;
+                    if ($enabled) {
+                        $pId = str_starts_with((string)$accId, 'act_') ? (string)$accId : 'act_' . (string)$accId;
                         $targetAdAccountIds[] = $pId;
                     }
                 }
@@ -249,7 +255,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 'facebook_pages' => []
             ];
 
-            // 2. Batch Fetch Pages
+            // 2. Batch Fetch Pages (Only if explicitly in config)
             if (!empty($targetPageIds)) {
                 error_log("TRACE: [facebook_marketing] Batch fetching " . count($targetPageIds) . " pages via getBatch...");
                 $fields = 'id,name,website,created_time,instagram_business_account{id,name,username,website}';
@@ -275,25 +281,10 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                     }
                 }
             } else {
-                // Fallback: Fetch all if nothing specific in config
-                error_log("TRACE: [facebook_marketing] No target pages. Fetching all...");
-                $pagesData = $api->getPages($userId, limit: 100, fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}');
-                foreach (($pagesData['data'] ?? []) as $page) {
-                    $assets['facebook_pages'][] = [
-                        'id' => $page['id'],
-                        'title' => $page['name'],
-                        'hostname' => $page['website'] ?? null,
-                        'created_time' => $page['created_time'] ?? null,
-                        'data' => $page,
-                        'ig_account' => $page['instagram_business_account']['id'] ?? null,
-                        'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
-                        'ig_hostname' => $page['instagram_business_account']['website'] ?? null,
-                        'ig_data' => $page['instagram_business_account'] ?? null,
-                    ];
-                }
+                error_log("TRACE: [facebook_marketing] No target pages in config. Skipping page fetch.");
             }
 
-            // 3. Batch Fetch Ad Accounts
+            // 3. Batch Fetch Ad Accounts (Only if explicitly in config)
             if (!empty($targetAdAccountIds)) {
                 error_log("TRACE: [facebook_marketing] Batch fetching " . count($targetAdAccountIds) . " ad accounts via getBatch...");
                 $fields = 'id,name,account_id,account_status,currency,created_time';
@@ -315,18 +306,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                     }
                 }
             } else {
-                // Fallback: Fetch all
-                error_log("TRACE: [facebook_marketing] No target ad accounts. Fetching all...");
-                $adAccountsData = $api->getAdAccounts($userId, limit: 100, fields: 'id,name,account_id,account_status,currency,created_time');
-                foreach (($adAccountsData['data'] ?? []) as $adAccount) {
-                    $adAccount['id'] = self::getPlatformId($adAccount, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
-                    $assets['ad_accounts'][] = [
-                        'id' => $adAccount['id'],
-                        'name' => $adAccount['name'] ?? ('Ad Account ' . $adAccount['id']),
-                        'created_time' => $adAccount['created_time'] ?? null,
-                        'data' => $adAccount,
-                    ];
-                }
+                error_log("TRACE: [facebook_marketing] No target ad accounts in config. Skipping ad account fetch.");
             }
 
             $totalTime = round(microtime(true) - $startTime, 2);
