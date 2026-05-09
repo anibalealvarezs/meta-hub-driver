@@ -1407,6 +1407,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
      */
     public function initializeEntities(array $config = []): array
     {
+        $totalStart = microtime(true);
         error_log("TRACE: [facebook_marketing] Hook started. Fetching available assets...");
         $assets = $this->fetchAvailableAssets(throwOnError: true);
         error_log("TRACE: [facebook_marketing] Assets fetched successfully.");
@@ -1445,7 +1446,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $identityMapper,
             $dataProcessor
         );
-        error_log("TRACE: [facebook_marketing] MetaInitializerService->initialize completed.");
+        $totalTime = round(microtime(true) - $totalStart, 2);
+        error_log("TRACE: [facebook_marketing] MetaInitializerService->initialize completed in {$totalTime}s.");
         $this->logger?->info("TRACE: [facebook_marketing] Initialization complete. Results: " . json_encode($results));
 
         return $results;
