@@ -52,6 +52,8 @@ class MetaInitializerService
         callable $dataProcessor
     ): array {
         $stats = ['initialized' => 0, 'skipped' => 0];
+        $startTime = microtime(true);
+        
         $fbPIds = array_map(fn($p) => (string)$p['id'], $pages);
         $igPIds = array_filter(array_map(fn($p) => $p['instagram_business_account']['id'] ?? $p['ig_account'] ?? null, $pages));
         
@@ -59,19 +61,24 @@ class MetaInitializerService
         $igUrls = array_map(fn($id) => "https://www.instagram.com/" . $id, $igPIds);
 
         // 1. Batch Resolve Identities
+        error_log("TRACE: [MetaInitializerService] Resolving identities for " . count($pages) . " assets...");
+        $mapStart = microtime(true);
         $pageMap = $identityMapper('pages', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
         $caMap = $identityMapper('channeled_accounts', ['platform_ids' => array_unique(array_merge($fbPIds, $igPIds))]) ?? [];
         
         $fbGroupName = $config['accounts_group_name'] ?? 'Default Meta Group';
         $accountMap = $identityMapper('accounts', ['names' => [$fbGroupName]]) ?? [];
         $defaultAccount = $accountMap[$fbGroupName] ?? null;
+        error_log("TRACE: [MetaInitializerService] Identities resolved in " . round(microtime(true) - $mapStart, 2) . "s");
 
         $count = 0;
         $total = count($pages);
+        $processStart = microtime(true);
         foreach ($pages as $page) {
             $count++;
             if ($count % 10 === 0) {
-                error_log("TRACE: [MetaInitializerService] Processing pages: $count/$total...");
+                $elapsed = round(microtime(true) - $processStart, 2);
+                error_log("TRACE: [MetaInitializerService] Processing pages: $count/$total... ({$elapsed}s)");
             }
             $platformId = (string)$page['id'];
             $title = $page['title'] ?? $page['name'] ?? "Page " . $platformId;

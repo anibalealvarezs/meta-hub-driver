@@ -222,13 +222,17 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         }
 
         try {
+            $startTime = microtime(true);
             $api = $this->getApi();
             $userId = $api->getUserId();
             
+            error_log("TRACE: [facebook_marketing] Fetching Pages from API...");
+            $pageStart = microtime(true);
             $pagesData = $api->getPages(
                 userId: $userId,
                 fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
             );
+            error_log("TRACE: [facebook_marketing] Pages fetched in " . round(microtime(true) - $pageStart, 2) . "s");
 
             $assets = [
                 'ad_accounts' => []
@@ -250,10 +254,13 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 }
             }
 
+            error_log("TRACE: [facebook_marketing] Fetching Ad Accounts from API...");
+            $adStart = microtime(true);
             $adAccountsData = $api->getAdAccounts(
                 userId: $userId,
                 fields: 'id,name,account_id,account_status,currency,created_time'
             );
+            error_log("TRACE: [facebook_marketing] Ad Accounts fetched in " . round(microtime(true) - $adStart, 2) . "s");
 
             if (isset($adAccountsData['data'])) {
                 foreach ($adAccountsData['data'] as $adAccount) {
@@ -267,7 +274,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 }
             }
 
-            error_log("TRACE: [facebook_marketing] Assets fetched: " . count($assets['facebook_pages'] ?? []) . " pages, " . count($assets['ad_accounts'] ?? []) . " ad accounts.");
+            $totalTime = round(microtime(true) - $startTime, 2);
+            error_log("TRACE: [facebook_marketing] Assets fetched in {$totalTime}s: " . count($assets['facebook_pages'] ?? []) . " pages, " . count($assets['ad_accounts'] ?? []) . " ad accounts.");
 
             return $assets;
         } catch (Exception $e) {
@@ -1399,6 +1407,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
      */
     public function initializeEntities(array $config = []): array
     {
+        $totalStart = microtime(true);
         error_log("TRACE: [facebook_marketing] Hook started. Fetching available assets...");
         $assets = $this->fetchAvailableAssets(throwOnError: true);
         error_log("TRACE: [facebook_marketing] Assets fetched successfully.");
@@ -1437,7 +1446,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $identityMapper,
             $dataProcessor
         );
-        error_log("TRACE: [facebook_marketing] MetaInitializerService->initialize completed.");
+        $totalTime = round(microtime(true) - $totalStart, 2);
+        error_log("TRACE: [facebook_marketing] MetaInitializerService->initialize completed in {$totalTime}s.");
         $this->logger?->info("TRACE: [facebook_marketing] Initialization complete. Results: " . json_encode($results));
 
         return $results;
