@@ -223,7 +223,8 @@ class MetaInitializerService
         }
 
         if (empty($assetLists)) {
-            return true;
+            error_log("WARNING: MetaInitializerService - No asset lists found in config for " . $platformId . ". Skipping.");
+            return false;
         }
 
         $normalizedInput = str_starts_with($platformId, 'act_') ? substr($platformId, 4) : $platformId;
