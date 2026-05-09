@@ -225,10 +225,12 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $api = $this->getApi();
             $userId = $api->getUserId();
             
+            error_log("TRACE: [facebook_marketing] Fetching pages...");
             $pagesData = $api->getPages(
                 userId: $userId,
                 fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
             );
+            error_log("TRACE: [facebook_marketing] Pages fetched: " . count($pagesData['data'] ?? []) . " items.");
 
             $assets = [
                 'ad_accounts' => []
@@ -250,10 +252,12 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 }
             }
 
+            error_log("TRACE: [facebook_marketing] Fetching ad accounts...");
             $adAccountsData = $api->getAdAccounts(
                 userId: $userId,
                 fields: 'id,name,account_id,account_status,currency,created_time'
             );
+            error_log("TRACE: [facebook_marketing] Ad accounts fetched: " . count($adAccountsData['data'] ?? []) . " items.");
 
             if (isset($adAccountsData['data'])) {
                 foreach ($adAccountsData['data'] as $adAccount) {
@@ -271,7 +275,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
             return $assets;
         } catch (Exception $e) {
-            $this->logger?->error("FacebookMarketingDriver: Error fetching available assets: " . $e->getMessage());
+            error_log("ERROR: [facebook_marketing] Error fetching available assets: " . $e->getMessage());
             if ($throwOnError) {
                 throw $e;
             }
@@ -797,18 +801,35 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         return $this->initializeApi($config);
     }
 
-    /**
-     * @throws Exception
-     */
     protected function initializeApi(array $config): FacebookGraphApi
     {
         $this->logger?->info("DEBUG: FacebookMarketingDriver::initializeApi - START");
+
+        $guzzleClient = new \GuzzleHttp\Client([
+            'connect_timeout' => 15,
+            'timeout' => 60,
+        ]);
+
+        $token = $config['access_token'] ?? $config['graph_user_access_token'] ?? $this->authProvider->getAccessToken();
+        error_log("TRACE: [facebook_marketing] User access token present: " . ($token ? 'YES' : 'NO'));
+
         return new FacebookGraphApi(
             userId: $config['user_id'] ?? $config['facebook']['user_id'] ?? $this->authProvider->getUserId() ?: 'system',
             appId: $config['app_id'] ?? $config['facebook']['app_id'] ?? '',
             appSecret: $config['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
             redirectUrl: $config['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
-            userAccessToken: $config['access_token'] ?? $config['graph_user_access_token'] ?? $this->authProvider->getAccessToken(),
+            pageId: null,
+            userAccessToken: $token,
+            longLivedUserAccessToken: null,
+            appAccessToken: null,
+            pageAccesstoken: null,
+            longLivedPageAccesstoken: null,
+            clientAccesstoken: null,
+            longLivedClientAccesstoken: null,
+            guzzleClient: $guzzleClient,
+            auth: null,
+            tokenPath: "",
+            tokenIdentifier: "",
             apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0'
         );
     }
