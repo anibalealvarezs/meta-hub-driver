@@ -226,20 +226,59 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $api = $this->getApi();
             $userId = $api->getUserId();
             
-            error_log("TRACE: [facebook_marketing] Fetching Pages from API...");
-            $pageStart = microtime(true);
-            $pagesData = $api->getPages(
-                userId: $userId,
-                fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}'
-            );
-            error_log("TRACE: [facebook_marketing] Pages fetched in " . round(microtime(true) - $pageStart, 2) . "s");
+            // 1. Identify Target IDs from Config
+            $targetPageIds = [];
+            if (!empty($this->config['pages'])) {
+                foreach ($this->config['pages'] as $p) {
+                    if (isset($p['id'])) $targetPageIds[] = (string)$p['id'];
+                }
+            }
+
+            $targetAdAccountIds = [];
+            if (!empty($this->config['ad_accounts'])) {
+                foreach ($this->config['ad_accounts'] as $id => $acc) {
+                    if (isset($acc['enabled']) && $acc['enabled']) {
+                        $pId = str_starts_with((string)$id, 'act_') ? (string)$id : 'act_' . (string)$id;
+                        $targetAdAccountIds[] = $pId;
+                    }
+                }
+            }
 
             $assets = [
-                'ad_accounts' => []
+                'ad_accounts' => [],
+                'facebook_pages' => []
             ];
 
-            if (!empty($pagesData['data'])) {
-                foreach ($pagesData['data'] as $page) {
+            // 2. Batch Fetch Pages
+            if (!empty($targetPageIds)) {
+                error_log("TRACE: [facebook_marketing] Batch fetching " . count($targetPageIds) . " pages via getBatch...");
+                $fields = 'id,name,website,created_time,instagram_business_account{id,name,username,website}';
+                $relativeUrls = array_map(fn($id) => "{$id}?fields={$fields}", $targetPageIds);
+                
+                $batchResults = $api->getBatch($relativeUrls);
+                foreach ($batchResults as $res) {
+                    if (($res['code'] ?? 0) === 200 && !empty($res['body'])) {
+                        $page = json_decode($res['body'], true);
+                        if ($page) {
+                            $assets['facebook_pages'][] = [
+                                'id' => $page['id'],
+                                'title' => $page['name'],
+                                'hostname' => $page['website'] ?? null,
+                                'created_time' => $page['created_time'] ?? null,
+                                'data' => $page,
+                                'ig_account' => $page['instagram_business_account']['id'] ?? null,
+                                'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
+                                'ig_hostname' => $page['instagram_business_account']['website'] ?? null,
+                                'ig_data' => $page['instagram_business_account'] ?? null,
+                            ];
+                        }
+                    }
+                }
+            } else {
+                // Fallback: Fetch all if nothing specific in config
+                error_log("TRACE: [facebook_marketing] No target pages. Fetching all...");
+                $pagesData = $api->getPages($userId, limit: 100, fields: 'id,name,website,created_time,instagram_business_account{id,name,username,website}');
+                foreach (($pagesData['data'] ?? []) as $page) {
                     $assets['facebook_pages'][] = [
                         'id' => $page['id'],
                         'title' => $page['name'],
@@ -254,16 +293,32 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 }
             }
 
-            error_log("TRACE: [facebook_marketing] Fetching Ad Accounts from API...");
-            $adStart = microtime(true);
-            $adAccountsData = $api->getAdAccounts(
-                userId: $userId,
-                fields: 'id,name,account_id,account_status,currency,created_time'
-            );
-            error_log("TRACE: [facebook_marketing] Ad Accounts fetched in " . round(microtime(true) - $adStart, 2) . "s");
-
-            if (isset($adAccountsData['data'])) {
-                foreach ($adAccountsData['data'] as $adAccount) {
+            // 3. Batch Fetch Ad Accounts
+            if (!empty($targetAdAccountIds)) {
+                error_log("TRACE: [facebook_marketing] Batch fetching " . count($targetAdAccountIds) . " ad accounts via getBatch...");
+                $fields = 'id,name,account_id,account_status,currency,created_time';
+                $relativeUrls = array_map(fn($id) => "{$id}?fields={$fields}", $targetAdAccountIds);
+                
+                $batchResults = $api->getBatch($relativeUrls);
+                foreach ($batchResults as $res) {
+                    if (($res['code'] ?? 0) === 200 && !empty($res['body'])) {
+                        $adAccount = json_decode($res['body'], true);
+                        if ($adAccount) {
+                            $adAccount['id'] = self::getPlatformId($adAccount, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
+                            $assets['ad_accounts'][] = [
+                                'id' => $adAccount['id'],
+                                'name' => $adAccount['name'] ?? ('Ad Account ' . $adAccount['id']),
+                                'created_time' => $adAccount['created_time'] ?? null,
+                                'data' => $adAccount,
+                            ];
+                        }
+                    }
+                }
+            } else {
+                // Fallback: Fetch all
+                error_log("TRACE: [facebook_marketing] No target ad accounts. Fetching all...");
+                $adAccountsData = $api->getAdAccounts($userId, limit: 100, fields: 'id,name,account_id,account_status,currency,created_time');
+                foreach (($adAccountsData['data'] ?? []) as $adAccount) {
                     $adAccount['id'] = self::getPlatformId($adAccount, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
                     $assets['ad_accounts'][] = [
                         'id' => $adAccount['id'],
@@ -275,7 +330,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             }
 
             $totalTime = round(microtime(true) - $startTime, 2);
-            error_log("TRACE: [facebook_marketing] Assets fetched in {$totalTime}s: " . count($assets['facebook_pages'] ?? []) . " pages, " . count($assets['ad_accounts'] ?? []) . " ad accounts.");
+            error_log("TRACE: [facebook_marketing] Asset fetch completed in {$totalTime}s.");
 
             return $assets;
         } catch (Exception $e) {
