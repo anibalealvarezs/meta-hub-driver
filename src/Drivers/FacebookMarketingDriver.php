@@ -267,6 +267,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 }
             }
 
+            error_log("TRACE: [facebook_marketing] Assets fetched: " . count($assets['facebook_pages'] ?? []) . " pages, " . count($assets['ad_accounts'] ?? []) . " ad accounts.");
+
             return $assets;
         } catch (Exception $e) {
             $this->logger?->error("FacebookMarketingDriver: Error fetching available assets: " . $e->getMessage());
@@ -1397,8 +1399,9 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
      */
     public function initializeEntities(array $config = []): array
     {
-        $this->logger?->info("TRACE: [facebook_marketing] Fetching available assets...");
+        error_log("TRACE: [facebook_marketing] Hook started. Fetching available assets...");
         $assets = $this->fetchAvailableAssets(throwOnError: true);
+        error_log("TRACE: [facebook_marketing] Assets fetched successfully.");
         $this->logger?->info("TRACE: [facebook_marketing] Assets fetched: " . count($assets['ad_accounts'] ?? []) . " ad accounts, " . count($assets['facebook_pages'] ?? []) . " pages.");
 
         $initializerClass = '\\Anibalealvarezs\\MetaHubDriver\\Services\\MetaInitializerService';
@@ -1423,6 +1426,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $adAccounts[$key]['id'] = self::getPlatformId($acc, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
         }
 
+        error_log("TRACE: [facebook_marketing] Calling MetaInitializerService->initialize...");
         $results = $initializer->initialize(
             $this->getChannel(), 
             $config, 
@@ -1433,6 +1437,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             $identityMapper,
             $dataProcessor
         );
+        error_log("TRACE: [facebook_marketing] MetaInitializerService->initialize completed.");
         $this->logger?->info("TRACE: [facebook_marketing] Initialization complete. Results: " . json_encode($results));
 
         return $results;

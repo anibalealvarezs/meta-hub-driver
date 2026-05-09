@@ -66,7 +66,13 @@ class MetaInitializerService
         $accountMap = $identityMapper('accounts', ['names' => [$fbGroupName]]) ?? [];
         $defaultAccount = $accountMap[$fbGroupName] ?? null;
 
+        $count = 0;
+        $total = count($pages);
         foreach ($pages as $page) {
+            $count++;
+            if ($count % 10 === 0) {
+                error_log("TRACE: [MetaInitializerService] Processing pages: $count/$total...");
+            }
             $platformId = (string)$page['id'];
             $title = $page['title'] ?? $page['name'] ?? "Page " . $platformId;
 
@@ -178,7 +184,13 @@ class MetaInitializerService
         $accountMap = $identityMapper('accounts', ['names' => [$fbGroupName]]) ?? [];
         $defaultAccount = $accountMap[$fbGroupName] ?? null;
 
+        $count = 0;
+        $total = count($adAccounts);
         foreach ($adAccounts as $adAccount) {
+            $count++;
+            if ($count % 10 === 0) {
+                error_log("TRACE: [MetaInitializerService] Processing ad accounts: $count/$total...");
+            }
             $adAccountId = (string)$adAccount['id'];
             $name = $adAccount['name'] ?? "Ad Account " . $adAccountId;
 
