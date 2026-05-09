@@ -215,7 +215,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
      * @inheritdoc
      * @throws Exception|GuzzleException
      */
-    public function fetchAvailableAssets(bool $throwOnError = false): array
+    public function fetchAvailableAssets(bool $throwOnError = false, array $config = []): array
     {
         if (!$this->authProvider) {
             return [];
@@ -228,15 +228,15 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             
             // 1. Identify Target IDs from Config
             $targetPageIds = [];
-            if (!empty($this->config['pages'])) {
-                foreach ($this->config['pages'] as $p) {
+            if (!empty($config['pages'])) {
+                foreach ($config['pages'] as $p) {
                     if (isset($p['id'])) $targetPageIds[] = (string)$p['id'];
                 }
             }
 
             $targetAdAccountIds = [];
-            if (!empty($this->config['ad_accounts'])) {
-                foreach ($this->config['ad_accounts'] as $id => $acc) {
+            if (!empty($config['ad_accounts'])) {
+                foreach ($config['ad_accounts'] as $id => $acc) {
                     if (isset($acc['enabled']) && $acc['enabled']) {
                         $pId = str_starts_with((string)$id, 'act_') ? (string)$id : 'act_' . (string)$id;
                         $targetAdAccountIds[] = $pId;
@@ -1463,11 +1463,9 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
     public function initializeEntities(array $config = []): array
     {
         $totalStart = microtime(true);
-        // Ensure the selective fetching logic in fetchAvailableAssets() sees the pages/accounts from config
-        $this->config = array_merge($this->config, $config);
         
         error_log("TRACE: [facebook_marketing] Hook started. Fetching available assets...");
-        $assets = $this->fetchAvailableAssets(throwOnError: true);
+        $assets = $this->fetchAvailableAssets(throwOnError: true, config: $config);
         error_log("TRACE: [facebook_marketing] Assets fetched successfully.");
         $this->logger?->info("TRACE: [facebook_marketing] Assets fetched: " . count($assets['ad_accounts'] ?? []) . " ad accounts, " . count($assets['facebook_pages'] ?? []) . " pages.");
 
