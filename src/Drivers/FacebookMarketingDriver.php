@@ -578,7 +578,8 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 $id = (string)($account['id'] ?? $account);
                 if ($id) {
                     $cleanId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
-                    if ($cleanTargetId && $cleanTargetId !== $cleanId) {
+                    $resolvedTargetId = $cleanTargetId ? self::getPlatformId(['id' => $cleanTargetId], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value) : null;
+                    if ($resolvedTargetId && $resolvedTargetId !== $cleanId) {
                         continue;
                     }
                     $aIds[] = $cleanId;
@@ -597,8 +598,9 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             if (!$accountPlatformIdRaw) continue;
 
             $accountPlatformId = self::getPlatformId(['id' => $accountPlatformIdRaw], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
+            $resolvedTargetId = $cleanTargetId ? self::getPlatformId(['id' => $cleanTargetId], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value) : null;
 
-            if ($targetAccountId && $targetAccountId !== $accountPlatformId) {
+            if ($resolvedTargetId && $resolvedTargetId !== $accountPlatformId) {
                 continue;
             }
 

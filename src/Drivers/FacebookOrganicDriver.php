@@ -559,6 +559,7 @@
             $api = $this->initializeApi($config);
             $chunkSize = $config['cache_chunk_size'] ?? '1 week';
             $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
+            $cleanTargetId = $targetAccountId ? ltrim($targetAccountId, '#') : null;
 
             // 1. Batch Resolve Identities via Oracle (Facebook Pages & Instagram Accounts)
             $pageMap = [];
@@ -571,7 +572,13 @@
                     $pId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
                     $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
-                    if ($targetAccountId && $targetAccountId !== $pId && $targetAccountId !== $igId) {
+                    $resolvedTargetId = $cleanTargetId ? (
+                        (str_contains($cleanTargetId, '_') || is_numeric($cleanTargetId)) 
+                        ? self::getPlatformId(['id' => $cleanTargetId], AssetCategory::IDENTITY, MetaEntityType::PAGE->value)
+                        : $cleanTargetId
+                    ) : null;
+
+                    if ($resolvedTargetId && $resolvedTargetId !== $pId && $resolvedTargetId !== $igId) {
                         continue;
                     }
 
@@ -590,7 +597,13 @@
                 $pagePlatformId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
                 $igPlatformId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
-                if ($cleanTargetId && $cleanTargetId !== $pagePlatformId && $cleanTargetId !== $igPlatformId) {
+                $resolvedTargetId = $cleanTargetId ? (
+                    (str_contains($cleanTargetId, '_') || is_numeric($cleanTargetId)) 
+                    ? self::getPlatformId(['id' => $cleanTargetId], AssetCategory::IDENTITY, MetaEntityType::PAGE->value)
+                    : $cleanTargetId
+                ) : null;
+
+                if ($resolvedTargetId && $resolvedTargetId !== $pagePlatformId && $resolvedTargetId !== $igPlatformId) {
                     continue;
                 }
 
