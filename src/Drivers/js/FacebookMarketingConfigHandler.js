@@ -5,6 +5,7 @@ window.ConfigHandlers['facebook_marketing'] = {
         const payload = {
             enabled: document.getElementById('fb-marketing-enabled')?.checked,
             granular_sync: document.getElementById('fb-marketing-granular-sync')?.checked,
+            max_workers: document.getElementById('fb-marketing-max-workers')?.value,
             marketing_history_range: document.getElementById('fb-marketing-history-range')?.value,
             feature_toggles: {
                 cron_entities_hour: document.getElementById('fb-marketing-entities-cron-hour')?.value,

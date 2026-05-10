@@ -316,6 +316,9 @@
             if (isset($newData['granular_sync'])) {
                 $chanCfg['granular_sync'] = filter_var($newData['granular_sync'], FILTER_VALIDATE_BOOLEAN);
             }
+            if (isset($newData['max_workers'])) {
+                $chanCfg['max_workers'] = (int)$newData['max_workers'];
+            }
 
             // Redis cache toggle
             if (isset($featureToggles['cache_aggregations'])) {
@@ -1776,6 +1779,7 @@
             $ui['fb_organic_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 6;
             $ui['fb_organic_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
             $ui['fb_organic_granular_sync'] = $channelConfig['granular_sync'] ?? false;
+            $ui['fb_organic_max_workers'] = $channelConfig['max_workers'] ?? 3;
 
             $ui['fb_page_ids'] = [];
             foreach (($channelConfig['pages'] ?? []) as $p) {
