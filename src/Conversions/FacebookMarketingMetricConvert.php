@@ -242,12 +242,14 @@ class FacebookMarketingMetricConvert
                 'adset_id'    => ['channeledAdGroup'],
                 'ad_id'       => ['channeledAd'],
                 'creative_id' => ['creative'],
+                'id'          => ['channeledAd'], // Fallback for ad_id
             ],
             'row_entity_fields' => [
                 'campaign_id' => 'channeledCampaign',
                 'adset_id'    => 'channeledAdGroup',
                 'ad_id'       => 'channeledAd',
                 'creative'    => 'creative',
+                'id'          => 'channeledAd', // Fallback for ad_id
             ],
             'fallback_platform_id' => $channeledAdId
         ], $logger);

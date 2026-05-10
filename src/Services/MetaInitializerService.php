@@ -253,6 +253,7 @@ class MetaInitializerService
                 $configId = (string)($asset['platformId'] ?? $asset['id'] ?? '');
                 $configIgId = (string)($asset['ig_account'] ?? '');
                 
+                $normalizedInput = str_starts_with($platformId, 'act_') ? substr($platformId, 4) : $platformId;
                 $normalizedConfig = str_starts_with($configId, 'act_') ? substr($configId, 4) : $configId;
                 $normalizedConfigIg = str_starts_with($configIgId, 'act_') ? substr($configIgId, 4) : $configIgId;
 
