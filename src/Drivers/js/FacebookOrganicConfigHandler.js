@@ -5,6 +5,7 @@ window.ConfigHandlers['facebook_organic'] = {
         const payload = {
             enabled: document.getElementById('fb-organic-enabled')?.checked,
             granular_sync: document.getElementById('fb-organic-granular-sync')?.checked,
+            max_workers: document.getElementById('fb-organic-max-workers')?.value,
             organic_history_range: document.getElementById('fb-organic-history-range')?.value,
             feature_toggles: {
                 cron_entities_hour: document.getElementById('fb-organic-entities-cron-hour')?.value,
