@@ -1792,7 +1792,7 @@
             $ui['fb_organic_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 6;
             $ui['fb_organic_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
             $ui['fb_organic_granular_sync'] = $channelConfig['granular_sync'] ?? false;
-            $ui['fb_organic_max_workers'] = $channelConfig['max_workers'] ?? 3;
+            $ui['fb_organic_max_workers'] = (int)($channelConfig['max_workers'] ?? 3);
 
             $ui['fb_page_ids'] = [];
             foreach (($channelConfig['pages'] ?? []) as $p) {
