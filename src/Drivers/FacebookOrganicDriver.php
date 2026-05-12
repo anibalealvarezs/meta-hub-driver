@@ -54,6 +54,8 @@
         use HasHierarchicalValidationTrait;
         use SyncDriverTrait;
 
+        private const int DEFAULT_MAX_WORKERS = 1;
+
         public array $updatableCredentials = [
             'FACEBOOK_USER_TOKEN',
             'FACEBOOK_USER_ID',
@@ -96,16 +98,16 @@
                     key: 'facebook_organic_page_flow',
                     label: 'Facebook Organic Page Flow',
                     overrides: [
-                        'asset_type' => 'page',
-                        'group_patterns' => [
+                        'asset_type'         => 'page',
+                        'group_patterns'     => [
                             ['page', 'page_id', 'page_title'],
                             ['daily'],
                         ],
-                        'filter_contract' => [
-                            'channel' => ['eq'],
-                            'account_type' => ['eq'],
+                        'filter_contract'    => [
+                            'channel'          => ['eq'],
+                            'account_type'     => ['eq'],
                             'page_platform_id' => ['eq', 'in'],
-                            'metricDate' => ['between', '>=', '<='],
+                            'metricDate'       => ['between', '>=', '<='],
                         ],
                         'reducer_strategies' => [
                             '*' => 'sum',
@@ -117,19 +119,19 @@
                     key: 'facebook_organic_post_snapshot',
                     label: 'Facebook Organic Post Snapshot',
                     overrides: [
-                        'asset_type' => 'post',
-                        'group_patterns' => [
+                        'asset_type'         => 'post',
+                        'group_patterns'     => [
                             ['caption', 'created_time', 'media_type', 'message', 'permalink', 'permalink_url', 'post', 'post_id', 'timestamp'],
                             ['post'],
                         ],
-                        'filter_contract' => [
-                            'channel' => ['eq'],
-                            'account_type' => ['eq'],
+                        'filter_contract'    => [
+                            'channel'          => ['eq'],
+                            'account_type'     => ['eq'],
                             'channeledAccount' => ['eq', 'in'],
-                            'post' => ['eq', 'is_not_null'],
-                            'period' => ['eq'],
-                            'latest_snapshot' => ['eq'],
-                            'metricDate' => ['between', '>=', '<='],
+                            'post'             => ['eq', 'is_not_null'],
+                            'period'           => ['eq'],
+                            'latest_snapshot'  => ['eq'],
+                            'metricDate'       => ['between', '>=', '<='],
                         ],
                         'reducer_strategies' => [
                             '*' => 'latest_snapshot',
@@ -141,16 +143,16 @@
                     key: 'facebook_organic_linked_pages_flow',
                     label: 'Facebook Organic Linked Pages Flow',
                     overrides: [
-                        'asset_type' => 'account',
-                        'group_patterns' => [
+                        'asset_type'      => 'account',
+                        'group_patterns'  => [
                             ['channeledAccount', 'channeled_account_id', 'page_platform_id', 'linked_fb_page_id'],
                             ['channeledAccount', 'channeled_account_id', 'page_platform_id', 'linked_platform_entity_id'],
                         ],
                         'filter_contract' => [
-                            'channel' => ['eq'],
-                            'account_type' => ['eq'],
+                            'channel'          => ['eq'],
+                            'account_type'     => ['eq'],
                             'channeledAccount' => ['eq', 'in'],
-                            'metricDate' => ['between', '>=', '<='],
+                            'metricDate'       => ['between', '>=', '<='],
                         ],
                     ]
                 ),
@@ -161,32 +163,37 @@
         public static function getCanonicalMetricDictionary(): array
         {
             return [
-                'likes' => ['likes', 'likes_daily', 'post_reactions_by_type_total', 'post_reactions_by_type_total_daily'],
-                'comments' => ['comments', 'comments_daily', 'post_comments', 'post_comments_daily'],
-                'reach' => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily'],
-                'views' => ['plays', 'plays_daily', 'video_views', 'video_views_daily', 'views', 'views_daily', 'post_video_views', 'post_video_views_daily', 'page_video_views', 'page_video_views_daily'],
-                'profile_views' => ['profile_views', 'profile_views_daily'],
-                'website_clicks' => ['website_clicks', 'website_clicks_daily'],
-                'profile_links_taps' => ['profile_links_taps', 'profile_links_taps_daily'],
-                'follows_and_unfollows' => ['follows_and_unfollows', 'follows_and_unfollows_daily'],
-                'saves' => ['saves', 'saves_daily', 'saved', 'saved_daily'],
-                'shares' => ['shares', 'shares_daily', 'post_shares', 'post_shares_daily'],
-                'total_interactions' => ['total_interactions', 'total_interactions_daily', 'post_engagement', 'post_engagement_daily', 'post_engagements', 'post_engagements_daily', 'page_post_engagements', 'page_post_engagements_daily'],
-                'replies' => ['replies', 'replies_daily'],
-                'accounts_engaged' => ['accounts_engaged', 'accounts_engaged_daily'],
-                'post_clicks' => ['post_clicks', 'post_clicks_daily'],
-                'ig_reels_avg_watch_time' => ['ig_reels_avg_watch_time'],
+                'likes'                          => ['likes', 'likes_daily', 'post_reactions_by_type_total', 'post_reactions_by_type_total_daily'],
+                'comments'                       => ['comments', 'comments_daily', 'post_comments', 'post_comments_daily'],
+                'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily'],
+                'views'                          => ['plays', 'plays_daily', 'video_views', 'video_views_daily', 'views', 'views_daily', 'post_video_views', 'post_video_views_daily', 'page_video_views', 'page_video_views_daily'],
+                'profile_views'                  => ['profile_views', 'profile_views_daily'],
+                'website_clicks'                 => ['website_clicks', 'website_clicks_daily'],
+                'profile_links_taps'             => ['profile_links_taps', 'profile_links_taps_daily'],
+                'follows_and_unfollows'          => ['follows_and_unfollows', 'follows_and_unfollows_daily'],
+                'saves'                          => ['saves', 'saves_daily', 'saved', 'saved_daily'],
+                'shares'                         => ['shares', 'shares_daily', 'post_shares', 'post_shares_daily'],
+                'total_interactions'             => ['total_interactions', 'total_interactions_daily', 'post_engagement', 'post_engagement_daily', 'post_engagements', 'post_engagements_daily', 'page_post_engagements', 'page_post_engagements_daily'],
+                'replies'                        => ['replies', 'replies_daily'],
+                'accounts_engaged'               => ['accounts_engaged', 'accounts_engaged_daily'],
+                'post_clicks'                    => ['post_clicks', 'post_clicks_daily'],
+                'ig_reels_avg_watch_time'        => ['ig_reels_avg_watch_time'],
                 'ig_reels_video_view_total_time' => ['ig_reels_video_view_total_time'],
-                'profile_activity' => ['profile_activity', 'profile_activity_daily'],
-                'profile_visits' => ['profile_visits', 'profile_visits_daily'],
-                'reposts' => ['reposts', 'reposts_daily'],
-                'follows' => ['follows', 'follows_daily'],
+                'profile_activity'               => ['profile_activity', 'profile_activity_daily'],
+                'profile_visits'                 => ['profile_visits', 'profile_visits_daily'],
+                'reposts'                        => ['reposts', 'reposts_daily'],
+                'follows'                        => ['follows', 'follows_daily'],
             ];
         }
 
         public static function getPlatformEntityIdField(): string
         {
             return 'facebook_page_id';
+        }
+
+        public static function getDefaultMaxWorkers(): int
+        {
+            return self::DEFAULT_MAX_WORKERS;
         }
 
         /**
@@ -573,7 +580,7 @@
                     $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
                     $resolvedTargetId = $cleanTargetId ? (
-                        (str_contains($cleanTargetId, '_') || is_numeric($cleanTargetId)) 
+                    (str_contains($cleanTargetId, '_') || is_numeric($cleanTargetId))
                         ? self::getPlatformId(['id' => $cleanTargetId], AssetCategory::IDENTITY, MetaEntityType::PAGE->value)
                         : $cleanTargetId
                     ) : null;
@@ -598,7 +605,7 @@
                 $igPlatformId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
                 $resolvedTargetId = $cleanTargetId ? (
-                    (str_contains($cleanTargetId, '_') || is_numeric($cleanTargetId)) 
+                (str_contains($cleanTargetId, '_') || is_numeric($cleanTargetId))
                     ? self::getPlatformId(['id' => $cleanTargetId], AssetCategory::IDENTITY, MetaEntityType::PAGE->value)
                     : $cleanTargetId
                 ) : null;
@@ -1101,6 +1108,7 @@
             return [
                 'global' => [
                     'enabled'             => false,
+                    'max_workers'         => self::DEFAULT_MAX_WORKERS,
                     'cache_history_range' => '2 years',
                     'cache_aggregations'  => false,
                 ],
@@ -1481,7 +1489,7 @@
         public static function getAssetPatterns(): array
         {
             return [
-                MetaEntityType::PAGE->value => [
+                MetaEntityType::PAGE->value              => [
                     'category'          => [AssetCategory::IDENTITY, AssetCategory::PAGEABLE],
                     'key'               => 'pages',
                     'channeled_account' => [
@@ -1754,7 +1762,7 @@
         public static function getPageTypes(): array
         {
             return [
-                MetaEntityType::PAGE->value => 'Facebook Page',
+                MetaEntityType::PAGE->value              => 'Facebook Page',
                 MetaEntityType::INSTAGRAM_ACCOUNT->value => 'Instagram Account'
             ];
         }
@@ -1765,7 +1773,7 @@
         public static function getAccountTypes(): array
         {
             return [
-                MetaEntityType::PAGE->value => 'Facebook Page',
+                MetaEntityType::PAGE->value              => 'Facebook Page',
                 MetaEntityType::INSTAGRAM_ACCOUNT->value => 'Instagram Account'
             ];
         }
@@ -1792,7 +1800,7 @@
             $ui['fb_organic_cron_recent_hour'] = $channelConfig['cron_recent_hour'] ?? 6;
             $ui['fb_organic_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
             $ui['fb_organic_granular_sync'] = $channelConfig['granular_sync'] ?? false;
-            $ui['fb_organic_max_workers'] = (int)($channelConfig['max_workers'] ?? 3);
+            $ui['fb_organic_max_workers'] = (int)($channelConfig['max_workers'] ?? self::DEFAULT_MAX_WORKERS);
 
             $ui['fb_page_ids'] = [];
             foreach (($channelConfig['pages'] ?? []) as $p) {
@@ -1888,7 +1896,8 @@
          */
         public function getConfigurationJs(): string
         {
-            $jsPath = __DIR__ . '/js/FacebookOrganicConfigHandler.js';
+            $jsPath = __DIR__.'/js/FacebookOrganicConfigHandler.js';
+
             return file_exists($jsPath) ? file_get_contents($jsPath) : "";
         }
     }
