@@ -713,6 +713,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
         $cleanTargetId = $targetAccountId ? ltrim($targetAccountId, '#') : null;
         $channeledAccounts = [];
+        $this->logger?->info("DEBUG [syncEntities]: entity={$entity->value}, targetAccountId={$targetAccountId}, cleanTargetId={$cleanTargetId}, hasIdentityMapper=" . ($identityMapper ? 'YES' : 'NO') . ", ad_accounts_count=" . count($config['ad_accounts'] ?? []) . ", ad_accounts_keys=" . implode(',', array_slice(array_keys($config['ad_accounts'] ?? []), 0, 5)));
         if ($identityMapper && !empty($config['ad_accounts'])) {
             $aIds = [];
             foreach ($config['ad_accounts'] as $account) {
@@ -720,14 +721,21 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
                 if ($id) {
                     $cleanId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
                     if ($cleanTargetId && $cleanTargetId !== $cleanId) {
+                        $this->logger?->info("DEBUG [syncEntities]: Skipping account $id (cleanId=$cleanId) - does not match cleanTargetId=$cleanTargetId");
                         continue;
                     }
                     $aIds[] = $cleanId;
                 }
             }
+            $this->logger?->info("DEBUG [syncEntities]: aIds after filter: " . implode(',', $aIds));
             if (!empty($aIds)) {
                 $channeledAccounts = array_values($identityMapper('channeled_accounts', ['platform_ids' => $aIds]) ?? []);
+                $this->logger?->info("DEBUG [syncEntities]: channeledAccounts found: " . count($channeledAccounts));
+            } else {
+                $this->logger?->warning("DEBUG [syncEntities]: aIds is empty after filtering - no accounts passed the target filter");
             }
+        } else {
+            $this->logger?->warning("DEBUG [syncEntities]: Skipped identity lookup - identityMapper=" . ($identityMapper ? 'YES' : 'NO') . ", ad_accounts empty=" . (empty($config['ad_accounts'] ?? []) ? 'YES' : 'NO'));
         }
 
         switch ($entity) {
