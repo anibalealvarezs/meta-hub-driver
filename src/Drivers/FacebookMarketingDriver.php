@@ -689,21 +689,64 @@
 
         private function resolveLevelsToFetch(array $accCfg, array $config): array
         {
-            $adMetrics = (bool)($accCfg[MetaFeature::AD_METRICS->value] ?? $config['AD_ACCOUNT'][MetaFeature::AD_METRICS->value] ?? false);
-            $adsetMetrics = (bool)($accCfg[MetaFeature::ADSET_METRICS->value] ?? $config['AD_ACCOUNT'][MetaFeature::ADSET_METRICS->value] ?? false);
-            $campaignMetrics = (bool)($accCfg[MetaFeature::CAMPAIGN_METRICS->value] ?? $config['AD_ACCOUNT'][MetaFeature::CAMPAIGN_METRICS->value] ?? false);
+            $candidateLevels = [
+                'config.metrics_level' => $this->normalizeMetricsLevel($config['metrics_level'] ?? null),
+                'config.AD_ACCOUNT.metrics_level' => $this->normalizeMetricsLevel($config['AD_ACCOUNT']['metrics_level'] ?? null),
+                'config.AD_ACCOUNT.toggles' => $this->resolveMetricsLevelFromToggles($config['AD_ACCOUNT'] ?? null),
+                'accCfg.AD_ACCOUNT.metrics_level' => $this->normalizeMetricsLevel($accCfg['AD_ACCOUNT']['metrics_level'] ?? null),
+                'accCfg.AD_ACCOUNT.toggles' => $this->resolveMetricsLevelFromToggles($accCfg['AD_ACCOUNT'] ?? null),
+                // Legacy fallback: historical configs may store these at root level.
+                'config.legacy_root_toggles' => $this->resolveMetricsLevelFromToggles($config),
+                'accCfg.legacy_root_toggles' => $this->resolveMetricsLevelFromToggles($accCfg),
+            ];
 
-            $this->logger?->info('DEBUG [resolveLevelsToFetch]: ad_metrics='.($adMetrics ? 'YES' : 'NO').' | adset_metrics='.($adsetMetrics ? 'YES' : 'NO').' | campaign_metrics='.($campaignMetrics ? 'YES' : 'NO'));
-
-            if ($adMetrics) {
-                return ['ad'];
-            } elseif ($adsetMetrics) {
-                return ['adset'];
-            } elseif ($campaignMetrics) {
-                return ['campaign'];
+            foreach ($candidateLevels as $source => $level) {
+                if ($level) {
+                    $this->logger?->info("DEBUG [resolveLevelsToFetch]: resolved metrics level '{$level}' from {$source}");
+                    return [$level];
+                }
             }
 
+            $this->logger?->info("DEBUG [resolveLevelsToFetch]: no explicit metrics level found, defaulting to 'account'");
             return ['account'];
+        }
+
+        private function normalizeMetricsLevel(mixed $value): ?string
+        {
+            if (!is_string($value)) {
+                return null;
+            }
+
+            $normalized = strtolower(trim($value));
+            if ($normalized === 'ad_account') {
+                return 'account';
+            }
+
+            return in_array($normalized, ['account', 'campaign', 'adset', 'ad', 'creative'], true)
+                ? $normalized
+                : null;
+        }
+
+        private function resolveMetricsLevelFromToggles(mixed $source): ?string
+        {
+            if (!is_array($source)) {
+                return null;
+            }
+
+            if (!empty($source[MetaFeature::AD_METRICS->value])) {
+                return 'ad';
+            }
+            if (!empty($source[MetaFeature::ADSET_METRICS->value])) {
+                return 'adset';
+            }
+            if (!empty($source[MetaFeature::CAMPAIGN_METRICS->value])) {
+                return 'campaign';
+            }
+            if (!empty($source[MetaFeature::AD_ACCOUNT_METRICS->value])) {
+                return 'account';
+            }
+
+            return null;
         }
 
         /**
