@@ -711,7 +711,9 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $syncService = FacebookEntitySync::class;
 
         $targetAccountId = $config['account_id'] ?? $config['params']['account_id'] ?? null;
-        $cleanTargetId = $targetAccountId ? ltrim($targetAccountId, '#') : null;
+        $cleanTargetId = $targetAccountId
+            ? self::getPlatformId(['id' => ltrim($targetAccountId, '#')], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value)
+            : null;
         $channeledAccounts = [];
         $this->logger?->info("DEBUG [syncEntities]: entity={$entity->value}, targetAccountId={$targetAccountId}, cleanTargetId={$cleanTargetId}, hasIdentityMapper=" . ($identityMapper ? 'YES' : 'NO') . ", ad_accounts_count=" . count($config['ad_accounts'] ?? []) . ", ad_accounts_keys=" . implode(',', array_slice(array_keys($config['ad_accounts'] ?? []), 0, 5)));
         if ($identityMapper && !empty($config['ad_accounts'])) {
