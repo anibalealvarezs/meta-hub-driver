@@ -689,64 +689,61 @@
 
         private function resolveLevelsToFetch(array $accCfg, array $config): array
         {
-            $candidateLevels = [
-                'config.metrics_level' => $this->normalizeMetricsLevel($config['metrics_level'] ?? null),
-                'config.AD_ACCOUNT.metrics_level' => $this->normalizeMetricsLevel($config['AD_ACCOUNT']['metrics_level'] ?? null),
-                'config.AD_ACCOUNT.toggles' => $this->resolveMetricsLevelFromToggles($config['AD_ACCOUNT'] ?? null),
-                'accCfg.AD_ACCOUNT.metrics_level' => $this->normalizeMetricsLevel($accCfg['AD_ACCOUNT']['metrics_level'] ?? null),
-                'accCfg.AD_ACCOUNT.toggles' => $this->resolveMetricsLevelFromToggles($accCfg['AD_ACCOUNT'] ?? null),
-                // Legacy fallback: historical configs may store these at root level.
-                'config.legacy_root_toggles' => $this->resolveMetricsLevelFromToggles($config),
-                'accCfg.legacy_root_toggles' => $this->resolveMetricsLevelFromToggles($accCfg),
-            ];
+            $toggleConfig = is_array($config['AD_ACCOUNT'] ?? null) ? $config['AD_ACCOUNT'] : [];
 
-            foreach ($candidateLevels as $source => $level) {
-                if ($level) {
-                    $this->logger?->info("DEBUG [resolveLevelsToFetch]: resolved metrics level '{$level}' from {$source}");
-                    return [$level];
+            $campaignMetrics = $this->isEnabled($toggleConfig[MetaFeature::CAMPAIGN_METRICS->value] ?? false);
+            $adsetMetrics = $this->isEnabled($toggleConfig[MetaFeature::ADSET_METRICS->value] ?? false);
+            $adMetrics = $this->isEnabled($toggleConfig[MetaFeature::AD_METRICS->value] ?? false);
+            $accountMetrics = $this->isEnabled($toggleConfig[MetaFeature::AD_ACCOUNT_METRICS->value] ?? false);
+
+            $levels = [];
+            if ($campaignMetrics) {
+                $levels[] = 'campaign';
+            }
+            if ($adsetMetrics) {
+                $levels[] = 'adset';
+            }
+            if ($adMetrics) {
+                $levels[] = 'ad';
+            }
+            if ($accountMetrics) {
+                $levels[] = 'account';
+            }
+
+            if ($levels === []) {
+                $levels = ['account'];
+            }
+
+            $this->logger?->info('DEBUG [resolveLevelsToFetch]: campaign_metrics='.($campaignMetrics ? 'YES' : 'NO').
+                ' | adset_metrics='.($adsetMetrics ? 'YES' : 'NO').
+                ' | ad_metrics='.($adMetrics ? 'YES' : 'NO').
+                ' | ad_account_metrics='.($accountMetrics ? 'YES' : 'NO').
+                ' | levels='.implode(',', $levels));
+
+            return $levels;
+        }
+
+        private function isEnabled(mixed $value): bool
+        {
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            if (is_int($value) || is_float($value)) {
+                return (int)$value === 1;
+            }
+
+            if (is_string($value)) {
+                $normalized = strtolower(trim($value));
+                if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+                    return true;
+                }
+                if (in_array($normalized, ['0', 'false', 'no', 'off', ''], true)) {
+                    return false;
                 }
             }
 
-            $this->logger?->info("DEBUG [resolveLevelsToFetch]: no explicit metrics level found, defaulting to 'account'");
-            return ['account'];
-        }
-
-        private function normalizeMetricsLevel(mixed $value): ?string
-        {
-            if (!is_string($value)) {
-                return null;
-            }
-
-            $normalized = strtolower(trim($value));
-            if ($normalized === 'ad_account') {
-                return 'account';
-            }
-
-            return in_array($normalized, ['account', 'campaign', 'adset', 'ad', 'creative'], true)
-                ? $normalized
-                : null;
-        }
-
-        private function resolveMetricsLevelFromToggles(mixed $source): ?string
-        {
-            if (!is_array($source)) {
-                return null;
-            }
-
-            if (!empty($source[MetaFeature::AD_METRICS->value])) {
-                return 'ad';
-            }
-            if (!empty($source[MetaFeature::ADSET_METRICS->value])) {
-                return 'adset';
-            }
-            if (!empty($source[MetaFeature::CAMPAIGN_METRICS->value])) {
-                return 'campaign';
-            }
-            if (!empty($source[MetaFeature::AD_ACCOUNT_METRICS->value])) {
-                return 'account';
-            }
-
-            return null;
+            return false;
         }
 
         /**
