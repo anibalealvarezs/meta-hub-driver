@@ -680,6 +680,12 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
     private function resolveLevelsToFetch(array $accCfg, array $config): array
     {
+        $this->logger?->info('DEBUG [resolveLevelsToFetch]: ad_metrics=' . json_encode([
+            'accCfg' => $accCfg[MetaFeature::AD_METRICS->value] ?? 'NOT_SET',
+            'AD_ACCOUNT' => $config['AD_ACCOUNT'][MetaFeature::AD_METRICS->value] ?? 'NOT_SET',
+            'adset_accCfg' => $accCfg[MetaFeature::ADSET_METRICS->value] ?? 'NOT_SET',
+            'adset_AD_ACCOUNT' => $config['AD_ACCOUNT'][MetaFeature::ADSET_METRICS->value] ?? 'NOT_SET',
+        ]));
         if (!empty($accCfg[MetaFeature::AD_METRICS->value]) || !empty($config['AD_ACCOUNT'][MetaFeature::AD_METRICS->value])) {
             return ['ad'];
         } elseif (!empty($accCfg[MetaFeature::ADSET_METRICS->value]) || !empty($config['AD_ACCOUNT'][MetaFeature::ADSET_METRICS->value])) {
