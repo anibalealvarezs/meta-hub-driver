@@ -680,17 +680,17 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
 
     private function resolveLevelsToFetch(array $accCfg, array $config): array
     {
-        $this->logger?->info('DEBUG [resolveLevelsToFetch]: ad_metrics=' . json_encode([
-            'accCfg' => $accCfg[MetaFeature::AD_METRICS->value] ?? 'NOT_SET',
-            'AD_ACCOUNT' => $config['AD_ACCOUNT'][MetaFeature::AD_METRICS->value] ?? 'NOT_SET',
-            'adset_accCfg' => $accCfg[MetaFeature::ADSET_METRICS->value] ?? 'NOT_SET',
-            'adset_AD_ACCOUNT' => $config['AD_ACCOUNT'][MetaFeature::ADSET_METRICS->value] ?? 'NOT_SET',
-        ]));
-        if (!empty($accCfg[MetaFeature::AD_METRICS->value]) || !empty($config['AD_ACCOUNT'][MetaFeature::AD_METRICS->value])) {
+        $adMetrics = (bool)($accCfg[MetaFeature::AD_METRICS->value] ?? $config['AD_ACCOUNT'][MetaFeature::AD_METRICS->value] ?? false);
+        $adsetMetrics = (bool)($accCfg[MetaFeature::ADSET_METRICS->value] ?? $config['AD_ACCOUNT'][MetaFeature::ADSET_METRICS->value] ?? false);
+        $campaignMetrics = (bool)($accCfg[MetaFeature::CAMPAIGN_METRICS->value] ?? $config['AD_ACCOUNT'][MetaFeature::CAMPAIGN_METRICS->value] ?? false);
+
+        $this->logger?->info('DEBUG [resolveLevelsToFetch]: ad_metrics=' . ($adMetrics ? 'YES' : 'NO') . ' | adset_metrics=' . ($adsetMetrics ? 'YES' : 'NO') . ' | campaign_metrics=' . ($campaignMetrics ? 'YES' : 'NO'));
+
+        if ($adMetrics) {
             return ['ad'];
-        } elseif (!empty($accCfg[MetaFeature::ADSET_METRICS->value]) || !empty($config['AD_ACCOUNT'][MetaFeature::ADSET_METRICS->value])) {
+        } elseif ($adsetMetrics) {
             return ['adset'];
-        } elseif (!empty($accCfg[MetaFeature::CAMPAIGN_METRICS->value]) || !empty($config['AD_ACCOUNT'][MetaFeature::CAMPAIGN_METRICS->value])) {
+        } elseif ($campaignMetrics) {
             return ['campaign'];
         }
         return ['account'];
@@ -1034,9 +1034,21 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         return [
             'global' => [
                 'enabled' => false,
+                'max_workers' => 3,
                 'cache_history_range' => '2 years',
                 'cache_aggregations' => false,
                 'metrics_strategy' => 'default',
+            ],
+            'AD_ACCOUNT' => [
+                'ad_account_metrics' => false,
+                'campaigns' => true,
+                'campaign_metrics' => false,
+                'adsets' => true,
+                'adset_metrics' => false,
+                'ads' => true,
+                'ad_metrics' => true,
+                'creatives' => false,
+                'creative_metrics' => false,
             ],
             'entity' => [
                 'id' => '',
@@ -1111,6 +1123,20 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
             if ($marketingUserId) {
                 $config['user_id'] = $marketingUserId;
             }
+        }
+
+        if (!isset($config['AD_ACCOUNT'])) {
+            $config['AD_ACCOUNT'] = [
+                'ad_account_metrics' => false,
+                'campaigns' => true,
+                'campaign_metrics' => false,
+                'adsets' => true,
+                'adset_metrics' => false,
+                'ads' => true,
+                'ad_metrics' => true,
+                'creatives' => false,
+                'creative_metrics' => false,
+            ];
         }
 
         if (isset($config['AD_ACCOUNT'])) {
@@ -1433,7 +1459,7 @@ class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountab
         $ui['fb_marketing_cron_recent_minute'] = $channelConfig['cron_recent_minute'] ?? 0;
         $ui['fb_metrics_strategy'] = $channelConfig['metrics_strategy'] ?? 'default';
         $ui['fb_marketing_granular_sync'] = $channelConfig['granular_sync'] ?? false;
-        $ui['fb_marketing_max_workers'] = $channelConfig['max_workers'] ?? 3;
+        $ui['fb_marketing_max_workers'] = (int)($channelConfig['max_workers'] ?? 3);
 
         $ui['fb_cache_chunk_size'] = $channelConfig['cache_chunk_size'] ?? '1 week';
         $ui['fb_ad_account_ids'] = [];
