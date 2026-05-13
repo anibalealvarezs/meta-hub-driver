@@ -536,6 +536,8 @@
             ?callable $identityMapper = null
         ): Response
         {
+            $adAccountConfig = $config['AD_ACCOUNT'] ?? 'MISSING';
+            $this->logger?->debug("[sync] AD_ACCOUNT config: " . (is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
             if (!$this->authProvider) {
                 throw new Exception("AuthProvider not set for FacebookMarketingDriver");
             }
@@ -572,6 +574,8 @@
             ?callable $identityMapper = null
         ): Response
         {
+            $adAccountConfig = $config['AD_ACCOUNT'] ?? 'MISSING';
+            $this->logger?->debug("[syncMetrics] AD_ACCOUNT config: " . (is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
             $api = $this->initializeApi($config);
             $accountsToProcess = $config['ad_accounts'] ?? [];
             $chunkSize = $config['cache_chunk_size'] ?? '1 week';
@@ -689,6 +693,9 @@
 
         private function resolveLevelsToFetch(array $accCfg, array $config): array
         {
+            $adAccountConfig = $config['AD_ACCOUNT'] ?? 'MISSING';
+            $this->logger?->debug("[resolveLevelsToFetch] AD_ACCOUNT config: " . (is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
+
             $toggleConfig = is_array($config['AD_ACCOUNT'] ?? null) ? $config['AD_ACCOUNT'] : [];
 
             $campaignMetrics = $this->isEnabled($toggleConfig[MetaFeature::CAMPAIGN_METRICS->value] ?? false);
