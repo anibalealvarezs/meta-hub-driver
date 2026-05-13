@@ -1142,12 +1142,28 @@
          */
         public function validateConfig(array $config): array
         {
+            $schema = $this->getConfigSchema();
+
+            // 1. Hydrate 'global' (top-level)
             $config = ConfigSchemaRegistryService::hydrate(
                 $this->getChannel(),
                 'global',
                 $config,
-                $this->getConfigSchema()
+                $schema
             );
+
+            // 2. Hydrate 'AD_ACCOUNT' (nested)
+            $config['AD_ACCOUNT'] = array_replace_recursive(
+                $schema['AD_ACCOUNT'] ?? [],
+                $config['AD_ACCOUNT'] ?? []
+            );
+
+            // 3. Hydrate 'entity' (base template)
+            $config['entity'] = array_replace_recursive(
+                $schema['entity'] ?? [],
+                $config['entity'] ?? []
+            );
+
 
             $envOverrides = [
                 'FACEBOOK_APP_ID'         => 'app_id',
@@ -1187,19 +1203,8 @@
                 }
             }
 
-            if (!isset($config['AD_ACCOUNT'])) {
-                $config['AD_ACCOUNT'] = [
-                    'ad_account_metrics' => false,
-                    'campaigns'          => true,
-                    'campaign_metrics'   => false,
-                    'adsets'             => true,
-                    'adset_metrics'      => false,
-                    'ads'                => true,
-                    'ad_metrics'         => true,
-                    'creatives'          => false,
-                    'creative_metrics'   => false,
-                ];
-            }
+            // AD_ACCOUNT is already hydrated from schema at the beginning of validateConfig
+
 
             if (isset($config['AD_ACCOUNT'])) {
                 $globalAdAccountDefaults = $config['AD_ACCOUNT'];
