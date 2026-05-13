@@ -1153,16 +1153,26 @@
             );
 
             // 2. Hydrate 'AD_ACCOUNT' (nested)
-            $config['AD_ACCOUNT'] = array_replace_recursive(
-                $schema['AD_ACCOUNT'] ?? [],
-                $config['AD_ACCOUNT'] ?? []
-            );
+            if (isset($config['AD_ACCOUNT']) && is_array($config['AD_ACCOUNT'])) {
+                $config['AD_ACCOUNT'] = array_replace_recursive(
+                    $schema['AD_ACCOUNT'] ?? [],
+                    $config['AD_ACCOUNT']
+                );
+            } elseif (!isset($config['AD_ACCOUNT'])) {
+                $config['AD_ACCOUNT'] = $schema['AD_ACCOUNT'] ?? [];
+            }
 
-            // 3. Hydrate 'entity' (base template)
-            $config['entity'] = array_replace_recursive(
-                $schema['entity'] ?? [],
-                $config['entity'] ?? []
-            );
+
+            // 3. Hydrate 'entity' (base template) - ONLY if it's an array
+            if (isset($config['entity']) && is_array($config['entity'])) {
+                $config['entity'] = array_replace_recursive(
+                    $schema['entity'] ?? [],
+                    $config['entity']
+                );
+            } elseif (!isset($config['entity'])) {
+                $config['entity'] = $schema['entity'] ?? [];
+            }
+
 
 
             $envOverrides = [
