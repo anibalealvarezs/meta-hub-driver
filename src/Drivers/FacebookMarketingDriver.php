@@ -537,7 +537,7 @@
         ): Response
         {
             $adAccountConfig = $config['AD_ACCOUNT'] ?? 'MISSING';
-            $this->logger?->info("[sync] AD_ACCOUNT config: " . (is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
+            $this->logger?->info("[sync] AD_ACCOUNT config: ".(is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
             if (!$this->authProvider) {
                 throw new Exception("AuthProvider not set for FacebookMarketingDriver");
             }
@@ -575,7 +575,7 @@
         ): Response
         {
             $adAccountConfig = $config['AD_ACCOUNT'] ?? 'MISSING';
-            $this->logger?->info("[syncMetrics] AD_ACCOUNT config: " . (is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
+            $this->logger?->info("[syncMetrics] AD_ACCOUNT config: ".(is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
             $api = $this->initializeApi($config);
             $accountsToProcess = $config['ad_accounts'] ?? [];
             $chunkSize = $config['cache_chunk_size'] ?? '1 week';
@@ -694,7 +694,7 @@
         private function resolveLevelsToFetch(array $accCfg, array $config): array
         {
             $adAccountConfig = $config['AD_ACCOUNT'] ?? 'MISSING';
-            $this->logger?->info("[resolveLevelsToFetch] AD_ACCOUNT config: " . (is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
+            $this->logger?->info("[resolveLevelsToFetch] AD_ACCOUNT config: ".(is_array($adAccountConfig) ? json_encode($adAccountConfig) : $adAccountConfig));
 
             $toggleConfig = is_array($config['AD_ACCOUNT'] ?? null) ? $config['AD_ACCOUNT'] : [];
 
@@ -1143,8 +1143,10 @@
         public function validateConfig(array $config): array
         {
             $schema = $this->getConfigSchema();
+            $this->logger?->info("DEBUG: FacebookMarketingDriver::validateConfig - START (input AD_ACCOUNT adset_metrics: ".json_encode($config['AD_ACCOUNT']['adset_metrics'] ?? 'MISSING').")");
 
             // 1. Hydrate 'global' (top-level)
+
             $config = ConfigSchemaRegistryService::hydrate(
                 $this->getChannel(),
                 'global',
@@ -1162,7 +1164,6 @@
                 $config['AD_ACCOUNT'] = $schema['AD_ACCOUNT'] ?? [];
             }
 
-
             // 3. Hydrate 'entity' (base template) - ONLY if it's an array
             if (isset($config['entity']) && is_array($config['entity'])) {
                 $config['entity'] = array_replace_recursive(
@@ -1172,8 +1173,6 @@
             } elseif (!isset($config['entity'])) {
                 $config['entity'] = $schema['entity'] ?? [];
             }
-
-
 
             $envOverrides = [
                 'FACEBOOK_APP_ID'         => 'app_id',
@@ -1214,7 +1213,6 @@
             }
 
             // AD_ACCOUNT is already hydrated from schema at the beginning of validateConfig
-
 
             if (isset($config['AD_ACCOUNT'])) {
                 $globalAdAccountDefaults = $config['AD_ACCOUNT'];
