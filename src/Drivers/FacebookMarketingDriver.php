@@ -782,7 +782,6 @@
             if ($identityMapper && !empty($config['ad_accounts'])) {
                 $aIds = [];
                 if ($cleanTargetId) {
-                    // O(1) direct lookup — ad_accounts is keyed by 'act_<id>' after validateConfig()
                     $directKey = 'act_'.$cleanTargetId;
                     if (isset($config['ad_accounts'][$directKey])) {
                         $aIds[] = $cleanTargetId;
@@ -1144,6 +1143,7 @@
         {
             $schema = $this->getConfigSchema();
             $this->logger?->info("DEBUG: FacebookMarketingDriver::validateConfig - START (input AD_ACCOUNT adset_metrics: ".json_encode($config['AD_ACCOUNT']['adset_metrics'] ?? 'MISSING').")");
+            $this->logger?->info("DEBUG: FacebookMarketingDriver::validateConfig - START (input AD_ACCOUNT: ".json_encode($config['AD_ACCOUNT'] ?? 'MISSING').")");
 
             // 1. Hydrate 'global' (top-level)
 
@@ -1211,8 +1211,6 @@
                     $config['user_id'] = $marketingUserId;
                 }
             }
-
-            // AD_ACCOUNT is already hydrated from schema at the beginning of validateConfig
 
             if (isset($config['AD_ACCOUNT'])) {
                 $globalAdAccountDefaults = $config['AD_ACCOUNT'];
