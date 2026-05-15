@@ -29,8 +29,6 @@
         ): ArrayCollection
         {
             $platformId = $pagePlatformId ?: $postPlatformId;
-            $pageUrl = is_object($page) && method_exists($page, 'getUrl') ? $page->getUrl() : (string)$page;
-            $postId = is_object($post) && method_exists($post, 'getPostId') ? $post->getPostId() : (string)$post;
             $periodValue = is_object($period) && isset($period->value) ? $period->value : (string)$period;
             $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string)$channeledAccount;
 
@@ -49,8 +47,7 @@
                         'account'            => $account,
                         'channeledAccount'   => $channeledAccount,
                         'channeledAccountId' => $channeledAccountId,
-                    ]),
-                    'channeledAccount'     => $channeledAccount
+                    ])
                 ], $logger);
 
                 foreach ($rowMetrics as $m) $collection->add($m);
@@ -73,7 +70,6 @@
         ): ArrayCollection
         {
             $collection = new ArrayCollection();
-            $accountName = is_object($account) && method_exists($account, 'getName') ? $account->getName() : (string)$account;
             $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string)$channeledAccount;
             $periodValue = is_object($period) && isset($period->value) ? $period->value : (string)$period;
 
@@ -93,8 +89,7 @@
                         'page'               => $page,
                     ],
                     'metrics'              => ['total_value.value' => $row['name'] ?? 'unknown'],
-                    'include_nulls'        => true,
-                    'channeledAccount'     => $channeledAccount
+                    'include_nulls'        => true
                 ];
                 $rowMetrics = UniversalMetricConverter::convert([$row], $config, $logger);
                 foreach ($rowMetrics as $m) $collection->add($m);
@@ -127,8 +122,7 @@
                                     'channeledAccount'   => $channeledAccount,
                                     'channeledAccountId' => $channeledAccountId,
                                     'page'               => $page,
-                                ]),
-                                'channeledAccount'     => $channeledAccount
+                                ])
                             ], $logger);
                             foreach ($rowMetrics as $m) $collection->add($m);
                         }
@@ -165,7 +159,6 @@
                     'date_field'           => 'date',
                     'metrics'              => ['values' => $row['name'] ?? 'unknown'],
                     'include_nulls'        => true,
-                    'channeledAccount'     => $channeledAccount,
                     'context'              => UniversalMetricConverter::getUniversalContext([
                         'account'            => $account,
                         'channeledAccount'   => $channeledAccount,
