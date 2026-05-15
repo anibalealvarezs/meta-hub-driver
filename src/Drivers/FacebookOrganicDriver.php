@@ -657,7 +657,8 @@
                         ($idx === 0 && $isRecent) // Only include lifetime metrics on the first chunk of a recent sync
                     );
 
-                    $collection = new ArrayCollection();
+                    $pageLevelMetrics = new ArrayCollection();
+                    $postLevelMetrics = new ArrayCollection();
 
                     // 1. Process Page Insights
                     if (!empty($pageData['insights'])) {
@@ -669,7 +670,7 @@
                             channeledAccount: $caObj ?? $pagePlatformId,
                             account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')
                         );
-                        foreach ($pageCollection as $m) $collection->add($m);
+                        foreach ($pageCollection as $m) $pageLevelMetrics->add($m);
                     }
 
                     // 2. Process IG Account Insights
@@ -684,7 +685,7 @@
                                 logger: $this->logger,
                                 period: Period::Daily
                             );
-                            foreach ($igCollection as $m) $collection->add($m);
+                            foreach ($igCollection as $m) $pageLevelMetrics->add($m);
                         }
                     }
 
@@ -701,7 +702,7 @@
                                 channeledAccount: $caObj ?? $pagePlatformId,
                                 account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')
                             );
-                            foreach ($postCollection as $m) $collection->add($m);
+                            foreach ($postCollection as $m) $postLevelMetrics->add($m);
                         }
                     }
 
@@ -717,25 +718,41 @@
                                 channeledAccount: $igCaObj ?? $igPlatformId,
                                 logger: $this->logger
                             );
-                            foreach ($igMediaCollection as $m) $collection->add($m);
+                            foreach ($igMediaCollection as $m) $postLevelMetrics->add($m);
                         }
                     }
 
                     // Persist converted collection
-                    if ($this->dataProcessor && $collection->count() > 0) {
-                        $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::POST);
+                    if ($this->dataProcessor) {
+                        if ($pageLevelMetrics->count() > 0) {
+                            $this->validateHierarchicalIntegrity(collection: $pageLevelMetrics, type: HierarchyType::PAGE);
+                            $result = ($this->dataProcessor)($pageLevelMetrics, $this->logger);
 
-                        $result = ($this->dataProcessor)($collection, $this->logger);
+                            $metricsCount = $result['metrics'] ?? $pageLevelMetrics->count();
+                            $rowsCount = $result['rows'] ?? 0;
+                            $duplicatesCount = $result['duplicates'] ?? 0;
 
-                        $metricsCount = $result['metrics'] ?? $collection->count();
-                        $rowsCount = $result['rows'] ?? 0;
-                        $duplicatesCount = $result['duplicates'] ?? 0;
+                            $totalStats['metrics'] += $metricsCount;
+                            $totalStats['rows'] += $rowsCount;
+                            $totalStats['duplicates'] += $duplicatesCount;
 
-                        $totalStats['metrics'] += $metricsCount;
-                        $totalStats['rows'] += $rowsCount;
-                        $totalStats['duplicates'] += $duplicatesCount;
+                            $this->logger?->info("<<< EXITO (Page Level): Sincronización completada para Page ID: $pageId. Métricas: $metricsCount | Filas base: $rowsCount | Duplicados: $duplicatesCount");
+                        }
 
-                        $this->logger?->info("<<< EXITO: Sincronización completada para FB Page: $pageId. Métricas: $metricsCount | Filas base: $rowsCount | Duplicados: $duplicatesCount");
+                        if ($postLevelMetrics->count() > 0) {
+                            $this->validateHierarchicalIntegrity(collection: $postLevelMetrics, type: HierarchyType::POST);
+                            $result = ($this->dataProcessor)($postLevelMetrics, $this->logger);
+
+                            $metricsCount = $result['metrics'] ?? $postLevelMetrics->count();
+                            $rowsCount = $result['rows'] ?? 0;
+                            $duplicatesCount = $result['duplicates'] ?? 0;
+
+                            $totalStats['metrics'] += $metricsCount;
+                            $totalStats['rows'] += $rowsCount;
+                            $totalStats['duplicates'] += $duplicatesCount;
+
+                            $this->logger?->info("<<< EXITO (Post Level): Sincronización completada para posts de Page ID: $pageId. Métricas: $metricsCount | Filas base: $rowsCount | Duplicados: $duplicatesCount");
+                        }
                     }
                 }
             }
