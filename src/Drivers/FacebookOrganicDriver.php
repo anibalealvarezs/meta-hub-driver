@@ -500,7 +500,7 @@
                 foreach ($pagesToProcess as $page) {
                     // Use formal platform ID calculation
                     $pId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
-                    $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
+                    $igId = isset($page['ig_account']) ? self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
                     $resolvedTargetId = $cleanTargetId ? (
                     (str_contains($cleanTargetId, '_') || is_numeric($cleanTargetId))
@@ -525,7 +525,7 @@
             foreach ($pagesToProcess as $page) {
                 // Use formal platform ID calculation (same as Scheduler)
                 $pagePlatformId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
-                $igPlatformId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
+                $igPlatformId = isset($page['ig_account']) ? self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
                 $resolvedTargetId = $cleanTargetId ? (
                 (str_contains($cleanTargetId, '_') || is_numeric($cleanTargetId))
@@ -719,7 +719,7 @@
                 $igPIds = [];
                 foreach ($pagesToProcess as $page) {
                     $pId = self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::PAGE->value);
-                    $igId = isset($page['ig_account']) ? self::getPlatformId(['id' => $page['ig_account']], AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
+                    $igId = isset($page['ig_account']) ? self::getPlatformId($page, AssetCategory::IDENTITY, MetaEntityType::INSTAGRAM_ACCOUNT->value) : null;
 
                     if ($cleanTargetId && $cleanTargetId !== $pId && $cleanTargetId !== $igId) {
                         continue;
