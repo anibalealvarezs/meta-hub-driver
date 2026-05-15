@@ -606,7 +606,7 @@ function render(start, end) {
         const fbBtn = tr.querySelector(`#${fbBtnId}`);
         if (fbBtn) {
             fbBtn.addEventListener('click', () => {
-                toggleOrganicHierarchy(fbBtn, rowId, 'facebook', String(accountId || ''), String(linkedFbPagePlatformId || ''), 'page_platform_id');
+                toggleOrganicHierarchy(fbBtn, rowId, 'facebook', String(accountId || ''), String(linkedFbPagePlatformId || ''), 'page_id');
             });
         }
         const igBtn = tr.querySelector(`#${igBtnId}`);
@@ -694,7 +694,7 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
                 body: JSON.stringify(payload)
             }).then(r => r.json());
 
-            if (res.status === 'success' && res.data) {
+            if (res.status === 'success' && res.data && res.data.length > 0) {
                 renderFacebookSubtable(container, res.data, rowId);
             } else {
                 container.innerHTML = `<div class="empty-state">No linked Facebook Page data found for this period.</div>`;
