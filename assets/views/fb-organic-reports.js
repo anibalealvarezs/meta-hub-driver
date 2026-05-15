@@ -606,7 +606,7 @@ function render(start, end) {
         const fbBtn = tr.querySelector(`#${fbBtnId}`);
         if (fbBtn) {
             fbBtn.addEventListener('click', () => {
-                toggleOrganicHierarchy(fbBtn, rowId, 'facebook', String(accountId || ''), String(linkedFbPagePlatformId || ''), 'page_id');
+                toggleOrganicHierarchy(fbBtn, rowId, 'facebook', String(accountId || ''), String(linkedFbPagePlatformId || ''), 'page_platform_id');
             });
         }
         const igBtn = tr.querySelector(`#${igBtnId}`);
