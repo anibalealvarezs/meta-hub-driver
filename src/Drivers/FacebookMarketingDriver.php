@@ -28,6 +28,7 @@
     use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
     use Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface;
     use Anibalealvarezs\ApiDriverCore\Traits\SyncDriverTrait;
+    use Anibalealvarezs\MetaHubDriver\Traits\MetaSyncDriverTrait;
     use GuzzleHttp\Exception\GuzzleException;
     use Symfony\Component\HttpFoundation\Response;
     use Psr\Log\LoggerInterface;
@@ -41,27 +42,22 @@
     class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface, AggregationProfileProviderInterface, CanonicalMetricDictionaryProviderInterface
     {
         use HasHierarchicalValidationTrait;
-        use SyncDriverTrait;
+        use SyncDriverTrait, MetaSyncDriverTrait {
+            MetaSyncDriverTrait::storeCredentials insteadof SyncDriverTrait;
+            MetaSyncDriverTrait::getEnvMapping insteadof SyncDriverTrait;
+            MetaSyncDriverTrait::getCommonConfigKey insteadof SyncDriverTrait;
+            MetaSyncDriverTrait::getUpdatableCredentials insteadof SyncDriverTrait;
+            MetaSyncDriverTrait::getProviderLabel insteadof SyncDriverTrait;
+            MetaSyncDriverTrait::getProviderName insteadof SyncDriverTrait;
+            MetaSyncDriverTrait::reset insteadof SyncDriverTrait;
+            MetaSyncDriverTrait::getDateFilterMapping insteadof SyncDriverTrait;
+        }
 
+        private ?AuthProviderInterface $authProvider;
+        private ?LoggerInterface $logger;
+        /** @var callable|null */
+        private $dataProcessor = null;
         private const int DEFAULT_MAX_WORKERS = 2;
-
-        public array $updatableCredentials = [
-            'FACEBOOK_USER_TOKEN',
-            'FACEBOOK_USER_ID',
-            'FACEBOOK_ACCOUNTS_GROUP',
-            'FACEBOOK_APP_ID',
-            'FACEBOOK_APP_SECRET'
-        ];
-
-        public function getUpdatableCredentials(): array
-        {
-            return $this->updatableCredentials;
-        }
-
-        public static function getCommonConfigKey(): ?string
-        {
-            return 'facebook';
-        }
 
         public static function getMetricProfiles(): array
         {
@@ -119,35 +115,6 @@
         public static function getDefaultMaxWorkers(): int
         {
             return self::DEFAULT_MAX_WORKERS;
-        }
-
-        /**
-         * Store credentials for this driver.
-         *
-         * @param array $credentials
-         * @return void
-         */
-        public static function storeCredentials(array $credentials): void
-        {
-            $tokenPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? getcwd().'/storage/tokens/facebook_tokens.json';
-            $tokenKey = 'facebook_auth';
-
-            if (!is_dir(dirname($tokenPath))) {
-                mkdir(dirname($tokenPath), 0755, true);
-            }
-
-            $tokens = file_exists($tokenPath) ? (json_decode(file_get_contents($tokenPath), true) ?? []) : [];
-
-            $tokens[$tokenKey] = [
-                'access_token'  => $credentials['access_token'] ?? null,
-                'refresh_token' => $credentials['refresh_token'] ?? null,
-                'user_id'       => $credentials['user_id'] ?? null,
-                'scopes'        => $credentials['scopes'] ?? [],
-                'updated_at'    => date('Y-m-d H:i:s'),
-                'expires_at'    => date('Y-m-d H:i:s', strtotime('+60 days'))
-            ];
-
-            file_put_contents($tokenPath, json_encode($tokens, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         }
 
         /**
@@ -214,6 +181,18 @@
                     'html'       => true
                 ]
             ]);
+        }
+
+        /**
+         * Get the routes that should be whitelisted from rate limiting.
+         *
+         * @return array
+         */
+        public static function getRateLimitWhitelist(): array
+        {
+            return [
+                '/fb-reports',
+            ];
         }
 
         /**
@@ -458,36 +437,6 @@
             return $currentConfig;
         }
 
-        /**
-         * @inheritdoc
-         */
-        public function validateAuthentication(): array
-        {
-            try {
-                $api = $this->getApi();
-                $api->performRequest('GET', 'me', ['fields' => 'id,name']);
-
-                return [
-                    'success' => true,
-                    'message' => 'Authentication is valid.',
-                    'details' => [
-                        'user_id' => $api->getUserId()
-                    ]
-                ];
-            } catch (Exception $e) {
-                return [
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                    'details' => []
-                ];
-            }
-        }
-
-        private ?AuthProviderInterface $authProvider;
-        private ?LoggerInterface $logger;
-        /** @var callable|null */
-        private $dataProcessor = null;
-
         public function __construct(?AuthProviderInterface $authProvider = null, ?LoggerInterface $logger = null)
         {
             $this->authProvider = $authProvider;
@@ -497,31 +446,6 @@
         public function getChannel(): string
         {
             return 'facebook_marketing';
-        }
-
-        public static function getProviderLabel(): string
-        {
-            return 'Meta';
-        }
-
-        public static function getProviderName(): string
-        {
-            return 'facebook';
-        }
-
-        public function setAuthProvider(AuthProviderInterface $provider): void
-        {
-            $this->authProvider = $provider;
-        }
-
-        public function getAuthProvider(): ?AuthProviderInterface
-        {
-            return $this->authProvider;
-        }
-
-        public function setDataProcessor(callable $processor): void
-        {
-            $this->dataProcessor = $processor;
         }
 
         /**
@@ -910,18 +834,6 @@
         /**
          * @throws Exception
          */
-        public function getApi(array $config = []): FacebookGraphApi
-        {
-            if (empty($config) && $this->authProvider instanceof \Anibalealvarezs\ApiDriverCore\Auth\BaseAuthProvider) {
-                $config = $this->authProvider->getConfig();
-            }
-
-            return $this->initializeApi($config);
-        }
-
-        /**
-         * @throws Exception
-         */
         protected function initializeApi(array $config): FacebookGraphApi
         {
             $this->logger?->info("DEBUG: FacebookMarketingDriver::initializeApi - START");
@@ -1174,16 +1086,7 @@
                 $config['entity'] = $schema['entity'] ?? [];
             }
 
-            $envOverrides = [
-                'FACEBOOK_APP_ID'         => 'app_id',
-                'FACEBOOK_APP_SECRET'     => 'app_secret',
-                'FACEBOOK_REDIRECT_URI'   => 'app_redirect_uri',
-                'FACEBOOK_USER_TOKEN'     => 'graph_user_access_token',
-                'FACEBOOK_PAGE_TOKEN'     => 'graph_page_access_token',
-                'FACEBOOK_TOKEN_PATH'     => 'graph_token_path',
-                'FACEBOOK_USER_ID'        => 'user_id',
-                'FACEBOOK_ACCOUNTS_GROUP' => 'accounts_group_name',
-            ];
+            $envOverrides = $this->getEnvMapping();
 
             foreach ($envOverrides as $envKey => $configPath) {
                 $val = getenv($envKey);
@@ -1626,28 +1529,6 @@
 
         /**
          * @inheritdoc
-         * @throws Exception
-         */
-        public function reset(string $mode = 'all', array $config = []): array
-        {
-            $resetCallback = $config['resetCallback'] ?? null;
-            if ($resetCallback instanceof \Closure) {
-                return $resetCallback($this->getChannel(), $mode);
-            }
-
-            throw new Exception("Reset callback not provided for ".$this->getChannel());
-        }
-
-        /**
-         * @inheritdoc
-         */
-        public function getDateFilterMapping(): array
-        {
-            return [];
-        }
-
-        /**
-         * @inheritdoc
          */
         public static function getInstanceRules(): array
         {
@@ -1656,22 +1537,6 @@
                 'entities_sync'      => 'entities',
                 'recent_cron_hour'   => 5,
                 'recent_cron_minute' => 30,
-            ];
-        }
-
-        /**
-         * @inheritdoc
-         */
-        public static function getEnvMapping(): array
-        {
-            return [
-                'facebook' => [
-                    'FACEBOOK_APP_ID'       => 'app_id',
-                    'FACEBOOK_APP_SECRET'   => 'app_secret',
-                    'FACEBOOK_USER_ID'      => 'user_id',
-                    'FACEBOOK_REDIRECT_URI' => 'redirect_uri',
-                    'FACEBOOK_TOKEN_PATH'   => 'token_path',
-                ]
             ];
         }
 
