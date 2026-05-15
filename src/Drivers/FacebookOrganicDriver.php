@@ -585,6 +585,7 @@
 
                     // 1. Process Page Insights
                     if (!empty($pageData['insights'])) {
+                        $this->logger->info('DEBUG: FacebookOrganicDriver::syncMetrics -> Page insights', [json_encode(['channeled_account_object' => $caObj, 'channeled_account_platform_id' => $pagePlatformId])]);
                         $pageCollection = FacebookOrganicMetricConvert::pageMetrics(
                             rows: $pageData['insights'],
                             pagePlatformId: (string)$pageId,
@@ -598,6 +599,7 @@
 
                     // 2. Process IG Account Insights
                     if (!empty($pageData['ig_insights'])) {
+                        $this->logger->info('DEBUG: FacebookOrganicDriver::syncMetrics -> IG Acc insights', [json_encode(['channeled_account_object' => $igCaObj, 'channeled_account_platform_id' => $igPlatformId])]);
                         foreach ($pageData['ig_insights'] as $insight) {
                             $igCollection = FacebookOrganicMetricConvert::igAccountMetrics(
                                 rows: $insight['data'],
@@ -614,6 +616,7 @@
 
                     // 3. Process Facebook Post Insights
                     if (!empty($pageData['fb_post_insights'])) {
+                        $this->logger->info('DEBUG: FacebookOrganicDriver::syncMetrics -> Post insights', [json_encode(['channeled_account_object' => $caObj, 'channeled_account_platform_id' => $pagePlatformId])]);
                         foreach ($pageData['fb_post_insights'] as $postInsight) {
                             $postCollection = FacebookOrganicMetricConvert::pageMetrics(
                                 rows: $postInsight['data'],
@@ -631,6 +634,7 @@
 
                     // 4. Process IG Media Insights
                     if (!empty($pageData['ig_media_insights'])) {
+                        $this->logger->info('DEBUG: FacebookOrganicDriver::syncMetrics -> Media insights', [json_encode(['channeled_account_object' => $igCaObj, 'channeled_account_platform_id' => $igPlatformId])]);
                         foreach ($pageData['ig_media_insights'] as $mediaInsight) {
                             $igMediaCollection = FacebookOrganicMetricConvert::igMediaMetrics(
                                 rows: $mediaInsight['data'],
