@@ -399,12 +399,11 @@
                         $acc['created_time'] = $matchingSelected['created_time'] ?? $acc['created_time'] ?? null;
                         $acc['data'] = $matchingSelected['data'] ?? $acc['data'] ?? [];
                     }
-                    $newAccsList[] = $acc;
                 } else {
                     // Keep it in the list but disabled if it was there before (Status Toggling Support)
                     $acc['enabled'] = false;
-                    $newAccsList[] = $acc;
                 }
+                $newAccsList[] = $acc;
             }
 
             $existingIds = array_column($currentAccs, 'id');

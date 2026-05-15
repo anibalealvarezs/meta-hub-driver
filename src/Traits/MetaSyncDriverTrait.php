@@ -26,7 +26,7 @@
 
         public static function getCommonConfigKey(): ?string
         {
-            return 'facebook';
+            return self::getProviderName();
         }
 
         public static function getProviderLabel(): string
@@ -99,14 +99,16 @@
         public static function getEnvMapping(): array
         {
             return [
-                'FACEBOOK_APP_ID'         => 'app_id',
-                'FACEBOOK_APP_SECRET'     => 'app_secret',
-                'FACEBOOK_REDIRECT_URI'   => 'app_redirect_uri',
-                'FACEBOOK_USER_TOKEN'     => 'graph_user_access_token',
-                'FACEBOOK_PAGE_TOKEN'     => 'graph_page_access_token',
-                'FACEBOOK_TOKEN_PATH'     => 'graph_token_path',
-                'FACEBOOK_USER_ID'        => 'user_id',
-                'FACEBOOK_ACCOUNTS_GROUP' => 'accounts_group_name',
+                self::getProviderName() => [
+                    'FACEBOOK_APP_ID'         => 'app_id',
+                    'FACEBOOK_APP_SECRET'     => 'app_secret',
+                    'FACEBOOK_REDIRECT_URI'   => 'app_redirect_uri',
+                    'FACEBOOK_USER_TOKEN'     => 'graph_user_access_token',
+                    'FACEBOOK_PAGE_TOKEN'     => 'graph_page_access_token',
+                    'FACEBOOK_TOKEN_PATH'     => 'graph_token_path',
+                    'FACEBOOK_USER_ID'        => 'user_id',
+                    'FACEBOOK_ACCOUNTS_GROUP' => 'accounts_group_name',
+                ]
             ];
         }
 
