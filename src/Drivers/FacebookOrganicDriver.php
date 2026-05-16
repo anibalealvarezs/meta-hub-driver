@@ -590,9 +590,9 @@
                             'insights_payload'                     => json_encode($pageData['insights']),
                             'channeled_account_object_is_resolved' => ($caObj && $caObj->getId()),
                         ]);
-                        foreach ($pageData['insights'] as $insight) {
+                        foreach ($pageData['insights']['data'] as $insight) {
                             $pageCollection = FacebookOrganicMetricConvert::pageMetrics(
-                                rows: $insight['data'],
+                                rows: $insight,
                                 pagePlatformId: (string)$pageId,
                                 logger: $this->logger,
                                 page: $pageObj,
