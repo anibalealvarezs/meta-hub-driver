@@ -31,26 +31,64 @@
             $platformId = $pagePlatformId ?: $postPlatformId;
             $periodValue = is_object($period) && isset($period->value) ? $period->value : (string)$period;
             $channeledAccountId = is_object($channeledAccount) && method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string)$channeledAccount;
+            $context = UniversalMetricConverter::getUniversalContext([
+                'page'               => $page,
+                'post'               => $post,
+                'account'            => $account,
+                'channeledAccount'   => $channeledAccount,
+                'channeledAccountId' => $channeledAccountId,
+            ]);
 
             $collection = new ArrayCollection();
-            foreach ($rows as $row) {
-                $rowMetrics = UniversalMetricConverter::convert([$row], [
-                    'channel'              => 'facebook_organic',
-                    'period'               => $periodValue,
-                    'fallback_platform_id' => $platformId,
-                    'row_path'             => 'values',
-                    'nested_date_field'    => 'end_time',
-                    'metrics'              => ['value' => $row['name'] ?? 'unknown'],
-                    'context'              => UniversalMetricConverter::getUniversalContext([
-                        'page'               => $page,
-                        'post'               => $post,
-                        'account'            => $account,
-                        'channeledAccount'   => $channeledAccount,
-                        'channeledAccountId' => $channeledAccountId,
-                    ])
-                ], $logger);
+            // The input can be the raw API response with a 'data' key, or just the array of metrics.
+            $metricRows = $rows['data'] ?? $rows;
+            if (!is_array($metricRows)) {
+                return $collection;
+            }
 
-                foreach ($rowMetrics as $m) $collection->add($m);
+            foreach ($metricRows as $metric) {
+                $metricName = $metric['name'] ?? 'unknown';
+
+                foreach ($metric['values'] ?? [] as $dailyData) {
+                    $dailyValue = $dailyData['value'] ?? null;
+                    $date = $dailyData['end_time'];
+
+                    // Case 1: The value is a simple scalar (e.g., page_impressions).
+                    if (is_scalar($dailyValue) || is_null($dailyValue)) {
+                        $rowMetrics = UniversalMetricConverter::convert([['date' => $date, 'value' => $dailyValue]], [
+                            'channel'              => 'facebook_organic',
+                            'period'               => $periodValue,
+                            'fallback_platform_id' => $platformId,
+                            'date_field'           => 'date',
+                            'metrics'              => ['value' => $metricName],
+                            'context'              => $context,
+                        ], $logger);
+                        foreach ($rowMetrics as $m) $collection->add($m);
+                    } // Case 2: The value is a breakdown object (e.g., page_actions_post_reactions_total).
+                    // This also handles the API quirk where an empty breakdown is an empty array `[]`.
+                    elseif (is_object($dailyValue) || is_array($dailyValue)) {
+                        foreach ((array)$dailyValue as $dimensionName => $value) {
+                            $dimensions = [];
+                            if ($metricName === 'page_actions_post_reactions_total') {
+                                $dimensions[] = ['dimensionKey' => 'reaction_type', 'dimensionValue' => (string)$dimensionName];
+                            } else {
+                                // Generic fallback for other potential breakdown metrics.
+                                $dimensions[] = ['dimensionKey' => 'breakdown', 'dimensionValue' => (string)$dimensionName];
+                            }
+
+                            $rowMetrics = UniversalMetricConverter::convert([['date' => $date, 'value' => $value]], [
+                                'channel'              => 'facebook_organic',
+                                'period'               => $periodValue,
+                                'fallback_platform_id' => $platformId,
+                                'date_field'           => 'date',
+                                'metrics'              => ['value' => $metricName],
+                                'dimensions'           => $dimensions,
+                                'context'              => $context,
+                            ], $logger);
+                            foreach ($rowMetrics as $m) $collection->add($m);
+                        }
+                    }
+                }
             }
 
             return $collection;
