@@ -590,15 +590,17 @@
                             'insights_payload'                     => json_encode($pageData['insights']),
                             'channeled_account_object_is_resolved' => ($caObj && $caObj->getId()),
                         ]);
-                        $pageCollection = FacebookOrganicMetricConvert::pageMetrics(
-                            rows: $pageData['insights'],
-                            pagePlatformId: (string)$pageId,
-                            logger: $this->logger,
-                            page: $pageObj,
-                            channeledAccount: $caObj ?? $pagePlatformId,
-                            account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')
-                        );
-                        foreach ($pageCollection as $m) $pageLevelMetrics->add($m);
+                        foreach ($pageData['insights'] as $insight) {
+                            $pageCollection = FacebookOrganicMetricConvert::pageMetrics(
+                                rows: $insight['data'],
+                                pagePlatformId: (string)$pageId,
+                                logger: $this->logger,
+                                page: $pageObj,
+                                channeledAccount: $caObj ?? $pagePlatformId,
+                                account: ($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')
+                            );
+                            foreach ($pageCollection as $m) $pageLevelMetrics->add($m);
+                        }
                     }
 
                     // 2. Process IG Account Insights
