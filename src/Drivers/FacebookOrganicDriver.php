@@ -849,8 +849,8 @@
             array            $config,
             ?callable        $shouldContinue = null,
             ?callable        $identityMapper = null,
-            int|string|null  $internalPageId = null,
-            int|string|null  $igCaId = null,
+                             $internalPageId = null,
+                             $igCaId = null,
             bool             $includeLifetime = true
         ): array
         {
