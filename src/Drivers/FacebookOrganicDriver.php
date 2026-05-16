@@ -585,7 +585,11 @@
 
                     // 1. Process Page Insights
                     if (!empty($pageData['insights'])) {
-                        $this->logger->info('DEBUG: FacebookOrganicDriver::syncMetrics -> Page insights', [json_encode(['channeled_account_object' => $caObj, 'channeled_account_platform_id' => $pagePlatformId])]);
+                        $this->logger->info('DEBUG: FacebookOrganicDriver::syncMetrics -> Processing Page insights.', [
+                            'channeled_account_platform_id'        => $pagePlatformId,
+                            'insights_payload'                     => json_encode($pageData['insights']),
+                            'channeled_account_object_is_resolved' => ($caObj && $caObj->getId()),
+                        ]);
                         $pageCollection = FacebookOrganicMetricConvert::pageMetrics(
                             rows: $pageData['insights'],
                             pagePlatformId: (string)$pageId,
@@ -845,8 +849,8 @@
             array            $config,
             ?callable        $shouldContinue = null,
             ?callable        $identityMapper = null,
-                             $internalPageId = null,
-                             $igCaId = null,
+            int|string|null  $internalPageId = null,
+            int|string|null  $igCaId = null,
             bool             $includeLifetime = true
         ): array
         {
