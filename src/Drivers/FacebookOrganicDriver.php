@@ -876,6 +876,8 @@
                 $customMetrics = $config['metrics'] ?? [];
                 if (!is_array($customMetrics)) $customMetrics = explode(',', (string)$customMetrics);
 
+                $this->logger?->info("DEBUG: Metrics for page (platform ID: $pagePlatformId) to be synced");
+
                 $data['insights'] = $api->getFacebookPageInsights(
                     pageId: $pagePlatformId,
                     since: $start,
@@ -892,6 +894,8 @@
                 }
                 $igTwoYearsAgo = (new DateTime())->modify('-2 years + 1 day')->format('Y-m-d');
                 $igSince = max($start, $igTwoYearsAgo);
+
+                $this->logger?->info("DEBUG: Metrics for ig account (ID: $page[ig_account]) to be synced from $igSince to $end");
 
                 foreach ([1, 2, 3, 4, 5] as $option) {
                     if ($shouldContinue && !$shouldContinue()) {
@@ -934,6 +938,8 @@
                                     'trim',
                                     explode(',', FacebookPostPermission::DEFAULT->insightsFields($metricSet))
                                 )));
+
+                            $this->logger?->info("DEBUG: Metrics for FB Page post (ID: $postId) to be synced");
 
                             $filteredMetrics = $this->filterFacebookPostMetricsForRawData(
                                 metrics: $requestedMetrics,
@@ -986,6 +992,8 @@
                             $metricSet = isset($config['metric_set']) ? (MetricSet::tryFrom($config['metric_set']) ?: MetricSet::BASIC) : MetricSet::BASIC;
                             $customMetrics = $config['metrics'] ?? [];
                             if (!is_array($customMetrics)) $customMetrics = explode(',', (string)$customMetrics);
+
+                            $this->logger?->info("DEBUG: Metrics for Instagram Media (ID: $mediaId) to be synced");
 
                             $mediaInsights = $api->getInstagramMediaInsights(
                                 mediaId: (string)$mediaId,
