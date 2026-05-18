@@ -300,60 +300,10 @@ function getActiveMetrics(level = 'instagram', isFb = false, postsAggregateMode 
         return [
             // FB page-level metrics persisted with post_id = NULL
             {key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false},
-            {key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false},
-            {
-                key: 'profile_views',
-                label: 'PRF VIEW',
-                format: 'number',
-                precision: 0,
-                original: 'profile_views',
-                sparkline: false
-            },
-            {
-                key: 'website_clicks',
-                label: 'WEB CLK',
-                format: 'number',
-                precision: 0,
-                original: 'website_clicks',
-                sparkline: false
-            },
-            {
-                key: 'profile_links_taps',
-                label: 'LNK TAPS',
-                format: 'number',
-                precision: 0,
-                original: 'profile_links_taps',
-                sparkline: false
-            },
-            {
-                key: 'follows_and_unfollows',
-                label: 'FOLLOWS',
-                format: 'number',
-                precision: 0,
-                original: 'follows_and_unfollows',
-                sparkline: true
-            },
-            {key: 'replies', label: 'REPLIES', format: 'number', precision: 0, original: 'replies', sparkline: false},
-            {
-                key: 'accounts_engaged',
-                label: 'ENGAGED',
-                format: 'number',
-                precision: 0,
-                original: 'accounts_engaged',
-                sparkline: false
-            },
-            {
-                key: 'total_interactions',
-                label: 'INTER',
-                format: 'number',
-                precision: 0,
-                original: 'total_interactions',
-                sparkline: true
-            },
-            {key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes', sparkline: false},
-            {key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments', sparkline: false},
-            {key: 'shares', label: 'SHAR', format: 'number', precision: 0, original: 'shares', sparkline: false},
-            {key: 'saves', label: 'SAVES', format: 'number', precision: 0, original: 'saves', sparkline: false}
+            {key: 'views', label: 'PAGE VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false},
+            {key: 'follows_and_unfollows', label: 'FOLLOWS', format: 'number', precision: 0, original: 'follows_and_unfollows', sparkline: false},
+            {key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions', sparkline: false},
+            {key: 'likes', label: 'REACTIONS', format: 'number', precision: 0, original: 'likes', sparkline: false}
         ];
     }
     // Level Content

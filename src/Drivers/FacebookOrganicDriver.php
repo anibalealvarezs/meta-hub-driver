@@ -158,14 +158,14 @@
         public static function getCanonicalMetricDictionary(): array
         {
             return [
-                'likes'                          => ['likes', 'likes_daily', 'post_reactions_by_type_total', 'post_reactions_by_type_total_daily'],
+                'likes'                          => ['likes', 'likes_daily', 'post_reactions_by_type_total', 'post_reactions_by_type_total_daily', 'page_actions_post_reactions_total', 'page_actions_post_reactions_total_daily'],
                 'comments'                       => ['comments', 'comments_daily', 'post_comments', 'post_comments_daily'],
-                'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily'],
-                'views'                          => ['plays', 'plays_daily', 'video_views', 'video_views_daily', 'views', 'views_daily', 'post_video_views', 'post_video_views_daily', 'page_video_views', 'page_video_views_daily'],
+                'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily', 'page_impressions_unique', 'page_impressions_unique_daily'],
+                'views'                          => ['plays', 'plays_daily', 'video_views', 'video_views_daily', 'views', 'views_daily', 'post_video_views', 'post_video_views_daily', 'page_video_views', 'page_video_views_daily', 'page_views_total', 'page_views_total_daily'],
                 'profile_views'                  => ['profile_views', 'profile_views_daily'],
                 'website_clicks'                 => ['website_clicks', 'website_clicks_daily'],
                 'profile_links_taps'             => ['profile_links_taps', 'profile_links_taps_daily'],
-                'follows_and_unfollows'          => ['follows_and_unfollows', 'follows_and_unfollows_daily'],
+                'follows_and_unfollows'          => ['follows_and_unfollows', 'follows_and_unfollows_daily', 'page_follows', 'page_follows_daily'],
                 'saves'                          => ['saves', 'saves_daily', 'saved', 'saved_daily'],
                 'shares'                         => ['shares', 'shares_daily', 'post_shares', 'post_shares_daily'],
                 'total_interactions'             => ['total_interactions', 'total_interactions_daily', 'post_engagement', 'post_engagement_daily', 'post_engagements', 'post_engagements_daily', 'page_post_engagements', 'page_post_engagements_daily'],
