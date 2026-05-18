@@ -22,5 +22,6 @@
 - **Redeclaration Fix**: Resolved a fatal error caused by duplicate `getCanonicalMetricDictionary` and `getAggregationProfiles` methods in `FacebookMarketingDriver` and `FacebookOrganicDriver` following the transition to the new interfaces.
 - **Redeclaration Fix (updateConfiguration)**: Resolved a fatal error in both `FacebookMarketingDriver.php` and `FacebookOrganicDriver.php` caused by duplicate `updateConfiguration` methods that were erroneously appended during deployment.
 - **FB Organic Page Metrics Correction**: Isolated `page_views_total` and `page_video_views` (as `video_views`) into separate canonical metrics in both `meta-hub-driver` and `api-driver-core`. Aligned `fb-organic-reports.js` subtable columns to render the correct 6 metrics (`reach`, `page_views_total`, `video_views`, `follows_and_unfollows`, `total_interactions`, and `likes`), and explicitly added `channel: 'facebook_organic'` and `period: 'daily'` filters to ensure stable aggregation resolution.
+- **Meta Ad Account ID Prefix Normalization**: Updated `FacebookMarketingDriver::updateConfiguration` to normalize ad account IDs (stripping the `act_` prefix) when performing existence/change checks against fresh and selected accounts, while prepending `act_` for new ad accounts written to the YAML configuration to align with integration tests and preserve legacy compatibility.
 
 

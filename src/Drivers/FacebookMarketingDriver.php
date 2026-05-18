@@ -372,14 +372,16 @@
             // Ad Accounts management
             $currentAccs = $chanCfg['ad_accounts'] ?? [];
             $newAccsList = [];
-            $selectedIds = array_map('strval', array_column($selectedAssets, 'id'));
+            $selectedIds = array_map(fn($id) => str_replace('act_', '', (string)$id), array_column($selectedAssets, 'id'));
 
             foreach ($currentAccs as $acc) {
-                if (in_array((string)$acc['id'], $selectedIds)) {
+                $cleanAccId = str_replace('act_', '', (string)$acc['id']);
+                if (in_array($cleanAccId, $selectedIds)) {
                     $lostAccess = false;
                     $matchingSelected = null;
                     foreach ($selectedAssets as $sa) {
-                        if ((string)$sa['id'] === (string)$acc['id']) {
+                        $cleanSaId = str_replace('act_', '', (string)$sa['id']);
+                        if ($cleanSaId === $cleanAccId) {
                             $lostAccess = filter_var($sa['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN);
                             $matchingSelected = $sa;
                             break;
@@ -398,15 +400,17 @@
                 $newAccsList[] = $acc;
             }
 
-            $existingIds = array_column($currentAccs, 'id');
+            $existingIds = array_map(fn($acc) => str_replace('act_', '', (string)$acc['id']), $currentAccs);
             foreach ($selectedAssets as $newAcc) {
-                $accId = $newAcc['id'];
+                $accId = (string)$newAcc['id'];
+                $cleanAccId = str_replace('act_', '', $accId);
                 $isLostAccess = filter_var($newAcc['lost_access'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-                if (!in_array($accId, $existingIds)) {
+                if (!in_array($cleanAccId, $existingIds)) {
+                    $finalAccId = str_starts_with($accId, 'act_') ? $accId : 'act_' . $accId;
                     $item = [
-                        'id'           => $accId,
-                        'name'         => $newAcc['name'] ?? ("Ad Account ".$accId),
+                        'id'           => $finalAccId,
+                        'name'         => $newAcc['name'] ?? ("Ad Account ".$finalAccId),
                         'hostname'     => $newAcc['hostname'] ?? null,
                         'enabled'      => filter_var($newAcc['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN),
                         'created_time' => $newAcc['created_time'] ?? null,
