@@ -160,8 +160,8 @@
             return [
                 'likes'                          => ['likes', 'likes_daily', 'post_reactions_by_type_total', 'post_reactions_by_type_total_daily', 'page_actions_post_reactions_total', 'page_actions_post_reactions_total_daily'],
                 'comments'                       => ['comments', 'comments_daily', 'post_comments', 'post_comments_daily'],
-                'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily', 'page_impressions_unique', 'page_impressions_unique_daily'],
-                'views'                          => ['plays', 'plays_daily', 'views', 'views_daily'],
+                'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily', 'page_impressions_unique', 'page_impressions_unique_daily', 'post_impressions_unique', 'post_impressions_unique_daily'],
+                'views'                          => ['plays', 'plays_daily', 'views', 'views_daily', 'post_media_view', 'post_media_view_daily'],
                 'page_views_total'               => ['page_views_total', 'page_views_total_daily'],
                 'video_views'                    => ['video_views', 'video_views_daily', 'page_video_views', 'page_video_views_daily', 'post_video_views', 'post_video_views_daily'],
                 'profile_views'                  => ['profile_views', 'profile_views_daily'],
@@ -175,6 +175,7 @@
                 'accounts_engaged'               => ['accounts_engaged', 'accounts_engaged_daily'],
                 'post_clicks'                    => ['post_clicks', 'post_clicks_daily'],
                 'ig_reels_avg_watch_time'        => ['ig_reels_avg_watch_time'],
+                'post_video_avg_time_watched'    => ['post_video_avg_time_watched', 'post_video_avg_time_watched_daily'],
                 'ig_reels_video_view_total_time' => ['ig_reels_video_view_total_time'],
                 'profile_activity'               => ['profile_activity', 'profile_activity_daily'],
                 'profile_visits'                 => ['profile_visits', 'profile_visits_daily'],
