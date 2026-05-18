@@ -300,7 +300,8 @@ function getActiveMetrics(level = 'instagram', isFb = false, postsAggregateMode 
         return [
             // FB page-level metrics persisted with post_id = NULL
             {key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false},
-            {key: 'views', label: 'PAGE VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false},
+            {key: 'page_views_total', label: 'PAGE VIEWS', format: 'number', precision: 0, original: 'page_views_total', sparkline: false},
+            {key: 'video_views', label: 'VID VIEWS', format: 'number', precision: 0, original: 'video_views', sparkline: false},
             {key: 'follows_and_unfollows', label: 'FOLLOWS', format: 'number', precision: 0, original: 'follows_and_unfollows', sparkline: false},
             {key: 'total_interactions', label: 'INTER', format: 'number', precision: 0, original: 'total_interactions', sparkline: false},
             {key: 'likes', label: 'REACTIONS', format: 'number', precision: 0, original: 'likes', sparkline: false}
@@ -634,7 +635,12 @@ async function toggleOrganicHierarchy(btn, rowId, level, parentId, childPlatform
             // Search for the specific linked FB Page
             const payload = {
                 aggregations: aggs,
-                filters: {[childFilterKey]: childPlatformId, account_type: FACEBOOK_PAGE_ACCOUNT_TYPE},
+                filters: {
+                    [childFilterKey]: childPlatformId,
+                    account_type: FACEBOOK_PAGE_ACCOUNT_TYPE,
+                    channel: 'facebook_organic',
+                    period: 'daily'
+                },
                 groupBy: ["page", "page_id", "page_title"],
                 startDate: start, endDate: end
             };
