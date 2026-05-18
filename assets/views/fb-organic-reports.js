@@ -312,86 +312,13 @@ function getActiveMetrics(level = 'instagram', isFb = false, postsAggregateMode 
         if (isFb) {
             const baseMetrics = [
                 // FB post-level report must consume non-daily metrics only.
-                {key: 'comments', label: 'COMM', format: 'number', precision: 0, original: 'comments'},
-                {key: 'follows', label: 'FOL', format: 'number', precision: 0, original: 'follows'},
-                {
-                    key: 'ig_reels_avg_watch_time',
-                    label: 'REEL AVG WT',
-                    format: 'duration_ms',
-                    precision: 0,
-                    original: 'ig_reels_avg_watch_time'
-                },
-                {
-                    key: 'ig_reels_video_view_total_time',
-                    label: 'REEL TOT WT',
-                    format: 'duration_ms',
-                    precision: 0,
-                    original: 'ig_reels_video_view_total_time'
-                },
-                {key: 'likes', label: 'LIKES', format: 'number', precision: 0, original: 'likes'},
-                {key: 'post_clicks', label: 'PST CLK', format: 'number', precision: 0, original: 'post_clicks'},
-                {
-                    key: 'post_engagements',
-                    label: 'PST ENG',
-                    format: 'number',
-                    precision: 0,
-                    original: 'post_engagements'
-                },
-                {
-                    key: 'post_impressions_unique',
-                    label: 'PST U IMPR',
-                    format: 'number',
-                    precision: 0,
-                    original: 'post_impressions_unique'
-                },
-                {
-                    key: 'post_media_view',
-                    label: 'PST VIEW',
-                    format: 'number',
-                    precision: 0,
-                    original: 'post_media_view'
-                },
-                {
-                    key: 'post_reactions_by_type_total',
-                    label: 'PST REACT',
-                    format: 'number',
-                    precision: 0,
-                    original: 'post_reactions_by_type_total'
-                },
-                {
-                    key: 'post_video_avg_time_watched',
-                    label: 'VID AVG WT',
-                    format: 'duration_ms',
-                    precision: 0,
-                    original: 'post_video_avg_time_watched'
-                },
-                {
-                    key: 'post_video_views',
-                    label: 'VID VIEWS',
-                    format: 'number',
-                    precision: 0,
-                    original: 'post_video_views'
-                },
-                {
-                    key: 'profile_activity',
-                    label: 'PRF ACT',
-                    format: 'number',
-                    precision: 0,
-                    original: 'profile_activity'
-                },
-                {key: 'profile_visits', label: 'PRF VIS', format: 'number', precision: 0, original: 'profile_visits'},
                 {key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach'},
-                {key: 'reposts', label: 'REPOST', format: 'number', precision: 0, original: 'reposts'},
-                {key: 'saved', label: 'SAVED', format: 'number', precision: 0, original: 'saved'},
-                {key: 'shares', label: 'SHARES', format: 'number', precision: 0, original: 'shares'},
-                {
-                    key: 'total_interactions',
-                    label: 'INTER',
-                    format: 'number',
-                    precision: 0,
-                    original: 'total_interactions'
-                },
-                {key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views'}
+                {key: 'total_interactions', label: 'INTERACT', format: 'number', precision: 0, original: 'total_interactions'},
+                {key: 'likes', label: 'REACTIONS', format: 'number', precision: 0, original: 'likes'},
+                {key: 'post_clicks', label: 'CLICKS', format: 'number', precision: 0, original: 'post_clicks'},
+                {key: 'views', label: 'MEDIA VIEWS', format: 'number', precision: 0, original: 'views'},
+                {key: 'video_views', label: 'VID VIEWS', format: 'number', precision: 0, original: 'video_views'},
+                {key: 'post_video_avg_time_watched', label: 'VID AVG WT', format: 'duration_ms', precision: 0, original: 'post_video_avg_time_watched'}
             ];
             return buildContentMetricsByMode(baseMetrics, postsAggregateMode);
         }
