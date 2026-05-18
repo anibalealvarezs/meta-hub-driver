@@ -268,29 +268,21 @@
                     error_log("TRACE: [facebook_marketing] No target pages in config. Skipping page fetch.");
                 }
 
-                // 3. Batch Fetch Ad Accounts (Only if explicitly in config)
-                if (!empty($targetAdAccountIds)) {
-                    error_log("TRACE: [facebook_marketing] Batch fetching ".count($targetAdAccountIds)." ad accounts via getBatch...");
-                    $fields = 'id,name,account_id,account_status,currency,created_time';
-                    $relativeUrls = array_map(fn($id) => "{$id}?fields={$fields}", $targetAdAccountIds);
-
-                    $batchResults = $api->getBatch($relativeUrls);
-                    foreach ($batchResults as $res) {
-                        if (($res['code'] ?? 0) === 200 && !empty($res['body'])) {
-                            $adAccount = json_decode($res['body'], true);
-                            if ($adAccount) {
-                                $adAccount['id'] = self::getPlatformId($adAccount, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
-                                $assets['ad_accounts'][] = [
-                                    'id'           => $adAccount['id'],
-                                    'name'         => $adAccount['name'] ?? ('Ad Account '.$adAccount['id']),
-                                    'created_time' => $adAccount['created_time'] ?? null,
-                                    'data'         => $adAccount,
-                                ];
-                            }
-                        }
+                // 3. Discover Ad Accounts
+                error_log("TRACE: [facebook_marketing] Discovering Ad Accounts...");
+                $fields = 'id,name,account_id,account_status,currency,created_time';
+                $adAccountsData = $api->getAdAccounts(userId: $userId, fields: $fields);
+                
+                if (!empty($adAccountsData['data'])) {
+                    foreach ($adAccountsData['data'] as $adAccount) {
+                        $adAccount['id'] = self::getPlatformId($adAccount, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
+                        $assets['ad_accounts'][] = [
+                            'id'           => $adAccount['id'],
+                            'name'         => $adAccount['name'] ?? ('Ad Account '.$adAccount['id']),
+                            'created_time' => $adAccount['created_time'] ?? null,
+                            'data'         => $adAccount,
+                        ];
                     }
-                } else {
-                    error_log("TRACE: [facebook_marketing] No target ad accounts in config. Skipping ad account fetch.");
                 }
 
                 $totalTime = round(microtime(true) - $startTime, 2);
