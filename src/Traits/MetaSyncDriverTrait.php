@@ -75,10 +75,6 @@
             $tokenPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? getcwd().'/storage/tokens/facebook_tokens.json';
             $tokenKey = 'facebook_auth';
 
-            if (!is_dir(dirname($tokenPath))) {
-                mkdir(dirname($tokenPath), 0755, true);
-            }
-
             $tokens = file_exists($tokenPath) ? (json_decode(file_get_contents($tokenPath), true) ?? []) : [];
 
             $tokens[$tokenKey] = [
@@ -90,7 +86,7 @@
                 'expires_at'    => date('Y-m-d H:i:s', strtotime('+60 days'))
             ];
 
-            file_put_contents($tokenPath, json_encode($tokens, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            \Anibalealvarezs\ApiDriverCore\Helpers\Helpers::writeTokenFile($tokenPath, $tokens, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         }
 
         /**
@@ -117,6 +113,14 @@
          */
         public function validateAuthentication(): array
         {
+            if (!$this->authProvider || !$this->authProvider->getAccessToken()) {
+                return [
+                    'success' => false,
+                    'message' => 'Credentials not configured. Please login to Facebook to authenticate first.',
+                    'details' => []
+                ];
+            }
+
             try {
                 $api = $this->getApi();
                 $api->performRequest('GET', 'me', ['fields' => 'id,name']);
