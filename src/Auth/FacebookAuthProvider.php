@@ -19,6 +19,12 @@ class FacebookAuthProvider extends BaseAuthProvider implements OAuthProviderInte
             ?? "";
     }
 
+    public function hasCredentials(): bool
+    {
+        return !empty($this->data['facebook_auth']['access_token']) 
+            || !empty($this->data['facebook_marketing']['access_token']);
+    }
+
     public function getUserId(): string
     {
         return $this->data['facebook_auth']['user_id'] 

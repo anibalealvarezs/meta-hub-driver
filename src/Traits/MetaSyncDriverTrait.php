@@ -113,7 +113,7 @@
          */
         public function validateAuthentication(): array
         {
-            if (!$this->authProvider || !$this->authProvider->getAccessToken()) {
+            if (!$this->authProvider || !$this->authProvider->hasCredentials()) {
                 return [
                     'success' => false,
                     'message' => 'Credentials not configured. Please login to Facebook to authenticate first.',
