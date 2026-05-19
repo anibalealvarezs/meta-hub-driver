@@ -21,6 +21,9 @@ class FacebookAuthProvider extends BaseAuthProvider implements OAuthProviderInte
 
     public function hasCredentials(): bool
     {
+        if (!$this->filePath || !file_exists($this->filePath)) {
+            return false;
+        }
         return !empty($this->data['facebook_auth']['access_token']) 
             || !empty($this->data['facebook_marketing']['access_token']);
     }
