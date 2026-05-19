@@ -201,7 +201,7 @@
          */
         public function fetchAvailableAssets(bool $throwOnError = false, array $config = []): array
         {
-            if (!$this->authProvider) {
+            if (!$this->authProvider || !$this->authProvider->hasCredentials()) {
                 return [];
             }
 
