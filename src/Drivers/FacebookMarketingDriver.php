@@ -831,6 +831,10 @@
          */
         protected function initializeApi(array $config): FacebookGraphApi
         {
+            if (!$this->authProvider || !$this->authProvider->hasCredentials()) {
+                throw new Exception("Credentials not configured.");
+            }
+
             $this->logger?->info("DEBUG: FacebookMarketingDriver::initializeApi - START");
 
             return new FacebookGraphApi(

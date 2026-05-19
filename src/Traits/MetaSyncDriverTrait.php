@@ -59,6 +59,10 @@
          */
         public function getApi(array $config = []): FacebookGraphApi
         {
+            if (!$this->authProvider || !$this->authProvider->hasCredentials()) {
+                throw new Exception("Credentials not configured.");
+            }
+
             if (empty($config) && $this->authProvider instanceof BaseAuthProvider) {
                 $config = $this->authProvider->getConfig();
             }
