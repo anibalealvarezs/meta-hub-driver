@@ -48,10 +48,19 @@
 
             foreach ($metricRows as $metric) {
                 $metricName = $metric['name'] ?? 'unknown';
+                $metricPeriod = $metric['period'] ?? null;
 
                 foreach ($metric['values'] ?? [] as $dailyData) {
                     $dailyValue = $dailyData['value'] ?? null;
-                    $date = $dailyData['end_time'];
+                    if (!isset($dailyData['end_time'])) {
+                        if ($periodValue === 'lifetime' || $metricPeriod === 'lifetime') {
+                            $date = date('Y-m-d');
+                        } else {
+                            throw new \Exception("Missing 'end_time' in metric values for non-lifetime metric: {$metricName} (Period: " . ($metricPeriod ?? $periodValue) . ")");
+                        }
+                    } else {
+                        $date = $dailyData['end_time'];
+                    }
 
                     // Case 1: The value is a simple scalar (e.g., page_impressions).
                     if (is_scalar($dailyValue) || is_null($dailyValue)) {
