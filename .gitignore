@@ -4,3 +4,5 @@ vendor/
 .phpunit.result.cache
 *.log
 **/.php-cs-fixer.dist.php
+
+.copilot/composer-path-repositories.backup.json

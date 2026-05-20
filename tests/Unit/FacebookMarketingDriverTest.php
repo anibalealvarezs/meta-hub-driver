@@ -44,4 +44,175 @@ class FacebookMarketingDriverTest extends TestCase
         $this->assertContains('results', $dictionary['conversions']);
         $this->assertContains('purchase_roas', $dictionary['roas_purchase']);
     }
+
+    public function testMetaSyncDriverTraitMethods()
+    {
+        // 1. Updatable credentials
+        $creds = $this->driver->getUpdatableCredentials();
+        $this->assertContains('FACEBOOK_USER_TOKEN', $creds);
+        $this->assertContains('FACEBOOK_USER_ID', $creds);
+
+        // 2. Common config keys & labels
+        $this->assertEquals('facebook', FacebookMarketingDriver::getCommonConfigKey());
+        $this->assertEquals('Meta', FacebookMarketingDriver::getProviderLabel());
+        $this->assertEquals('facebook', FacebookMarketingDriver::getProviderName());
+
+        // 3. Auth provider injection
+        $authMock = $this->createMock(\Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface::class);
+        $this->driver->setAuthProvider($authMock);
+        $this->assertSame($authMock, $this->driver->getAuthProvider());
+
+        // 4. Data processor injection
+        $hasRun = false;
+        $processor = function() use (&$hasRun) { $hasRun = true; };
+        $this->driver->setDataProcessor($processor);
+        $ref = new \ReflectionProperty($this->driver, 'dataProcessor');
+        $ref->setAccessible(true);
+        $injectedProcessor = $ref->getValue($this->driver);
+        $this->assertSame($processor, $injectedProcessor);
+        $injectedProcessor();
+        $this->assertTrue($hasRun);
+
+        // 5. Env mapping
+        $mapping = FacebookMarketingDriver::getEnvMapping();
+        $this->assertArrayHasKey('facebook', $mapping);
+        $this->assertEquals('app_id', $mapping['facebook']['FACEBOOK_APP_ID']);
+        $this->assertEquals('app_secret', $mapping['facebook']['FACEBOOK_APP_SECRET']);
+
+        // 6. Date filter mapping
+        $this->assertEquals([], $this->driver->getDateFilterMapping());
+    }
+
+    public function testResetThrowsExceptionWithoutCallback()
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Reset callback not provided for facebook_marketing');
+        
+        $this->driver->reset();
+    }
+
+    public function testResetInvokesCallback()
+    {
+        $callbackCalled = false;
+        $config = [
+            'resetCallback' => function($channel, $mode) use (&$callbackCalled) {
+                $callbackCalled = true;
+                return ['channel' => $channel, 'mode' => $mode, 'success' => true];
+            }
+        ];
+
+        $res = $this->driver->reset('custom_mode', $config);
+        $this->assertTrue($callbackCalled);
+        $this->assertEquals('facebook_marketing', $res['channel']);
+        $this->assertEquals('custom_mode', $res['mode']);
+        $this->assertTrue($res['success']);
+    }
+
+    public function testValidateConfig()
+    {
+        $inputConfig = [
+            'metrics_strategy' => 'custom_strategy',
+            'AD_ACCOUNT' => [
+                'campaign_metrics' => true,
+                'adset_metrics' => false
+            ],
+            'entity' => [
+                'pages' => ['limit' => 50]
+            ]
+        ];
+
+        $validated = $this->driver->validateConfig($inputConfig);
+
+        $this->assertEquals('custom_strategy', $validated['metrics_strategy']);
+        $this->assertTrue($validated['AD_ACCOUNT']['campaign_metrics']);
+        $this->assertFalse($validated['AD_ACCOUNT']['adset_metrics']);
+        $this->assertEquals(50, $validated['entity']['pages']['limit']);
+    }
+
+    public function testValidateAuthenticationWithoutCredentials()
+    {
+        // 1. Without AuthProvider set
+        $res = $this->driver->validateAuthentication();
+        $this->assertFalse($res['success']);
+        $this->assertStringContainsString('Credentials not configured', $res['message']);
+
+        // 2. With AuthProvider set but no credentials
+        $authMock = $this->createMock(\Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface::class);
+        $authMock->method('hasCredentials')->willReturn(false);
+        $this->driver->setAuthProvider($authMock);
+
+        $res = $this->driver->validateAuthentication();
+        $this->assertFalse($res['success']);
+    }
+
+    public function testValidateAuthenticationSuccess()
+    {
+        $authMock = $this->createMock(\Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface::class);
+        $authMock->method('hasCredentials')->willReturn(true);
+
+        $apiMock = $this->createMock(\Anibalealvarezs\FacebookGraphApi\FacebookGraphApi::class);
+        $apiMock->method('getUserId')->willReturn('fb_user_123');
+
+        $driverMock = $this->getMockBuilder(FacebookMarketingDriver::class)
+            ->setConstructorArgs([null, $this->logger])
+            ->onlyMethods(['initializeApi'])
+            ->getMock();
+
+        $driverMock->method('initializeApi')->willReturn($apiMock);
+        $driverMock->setAuthProvider($authMock);
+
+        $res = $driverMock->validateAuthentication();
+        $this->assertTrue($res['success']);
+        $this->assertEquals('fb_user_123', $res['details']['user_id']);
+    }
+
+    public function testValidateAuthenticationException()
+    {
+        $authMock = $this->createMock(\Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface::class);
+        $authMock->method('hasCredentials')->willReturn(true);
+
+        $driverMock = $this->getMockBuilder(FacebookMarketingDriver::class)
+            ->setConstructorArgs([null, $this->logger])
+            ->onlyMethods(['initializeApi'])
+            ->getMock();
+
+        $driverMock->method('initializeApi')->willThrowException(new \Exception("API connection timeout"));
+        $driverMock->setAuthProvider($authMock);
+
+        $res = $driverMock->validateAuthentication();
+        $this->assertFalse($res['success']);
+        $this->assertEquals('API connection timeout', $res['message']);
+    }
+
+    public function testStoreCredentials()
+    {
+        $tempPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fb_store_tokens_' . uniqid() . '.json';
+        $_ENV['FACEBOOK_TOKEN_PATH'] = $tempPath;
+
+        try {
+            FacebookMarketingDriver::storeCredentials([
+                'access_token' => 'custom_token',
+                'user_id' => 'custom_user_id',
+                'scopes' => ['ads_read', 'business_management']
+            ]);
+
+            $this->assertFileExists($tempPath);
+            $content = json_decode(file_get_contents($tempPath), true);
+
+            $this->assertArrayHasKey('facebook_auth', $content);
+            $authData = $content['facebook_auth'];
+
+            $this->assertEquals('custom_token', $authData['access_token']);
+            $this->assertEquals('custom_user_id', $authData['user_id']);
+            $this->assertEquals(['ads_read', 'business_management'], $authData['scopes']);
+            $this->assertNotEmpty($authData['updated_at']);
+            $this->assertNotEmpty($authData['expires_at']);
+
+        } finally {
+            if (file_exists($tempPath)) {
+                unlink($tempPath);
+            }
+            unset($_ENV['FACEBOOK_TOKEN_PATH']);
+        }
+    }
 }
