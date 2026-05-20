@@ -12,6 +12,17 @@ use Anibalealvarezs\FacebookGraphApi\Enums\PagePermission;
 
 class FacebookAuthProvider extends BaseAuthProvider implements OAuthProviderInterface, AuthProviderInterface
 {
+    public function __construct(array|string $configOrPath = "")
+    {
+        if (is_array($configOrPath)) {
+            $configOrPath = $configOrPath['token_path'] ?? $_ENV['FACEBOOK_TOKEN_PATH'] ?? getenv('FACEBOOK_TOKEN_PATH') ?: (getcwd() . '/storage/tokens/facebook_tokens.json');
+        } elseif (!$configOrPath || (is_string($configOrPath) && empty($configOrPath))) {
+            $configOrPath = $_ENV['FACEBOOK_TOKEN_PATH'] ?? getenv('FACEBOOK_TOKEN_PATH') ?: (getcwd() . '/storage/tokens/facebook_tokens.json');
+        }
+        
+        parent::__construct($configOrPath);
+    }
+
     public function getAccessToken(): string
     {
         return $this->data['facebook_auth']['access_token'] 
@@ -142,7 +153,9 @@ class FacebookAuthProvider extends BaseAuthProvider implements OAuthProviderInte
 
     public function isExpired(): bool
     {
-        $expiry = $this->data['facebook_auth']['expires_at'] ?? null;
+        $expiry = $this->data['facebook_auth']['expires_at'] 
+            ?? $this->data['facebook_marketing']['expires_at'] 
+            ?? null;
         if (!$expiry) return false;
         return strtotime($expiry) < time();
     }
