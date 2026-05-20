@@ -806,7 +806,8 @@
                                                     posts: [$p],
                                                     pageId: $channeledPage->getId(),
                                                     accountId: $pageAccountId,
-                                                    channeledAccountId: $specificChanneledAccountId
+                                                    channeledAccountId: $specificChanneledAccountId,
+                                                    account: (method_exists($channeledPage, 'getAccount') ? $channeledPage->getAccount() : null)
                                                 );
 
                                                 foreach ($converted as $item) {

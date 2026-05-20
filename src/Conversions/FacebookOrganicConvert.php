@@ -22,13 +22,15 @@ class FacebookOrganicConvert
         array $posts,
         int|string|null $pageId = null,
         int|string|null $accountId = null,
-        int|string|null $channeledAccountId = null
+        int|string|null $channeledAccountId = null,
+        object|null $account = null
     ): ArrayCollection {
         return UniversalEntityConverter::convert($posts, [
             'channel' => 'facebook_organic',
             'platform_id_field' => 'id',
             'date_field' => 'created_time',
             'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
+                'account' => $account,
                 'pagePlatformId' => $pageId,
                 'accountPlatformId' => $accountId,
                 'channeledAccountId' => $channeledAccountId,
