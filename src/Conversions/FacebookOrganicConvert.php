@@ -31,7 +31,9 @@ class FacebookOrganicConvert
             'date_field' => 'created_time',
             'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'account' => $account,
+                'pageId' => $pageId,
                 'pagePlatformId' => $pageId,
+                'accountId' => $accountId,
                 'accountPlatformId' => $accountId,
                 'channeledAccountId' => $channeledAccountId,
             ]),
