@@ -554,7 +554,7 @@
                                             }
 
                                             if ($buffer->count() >= 100 && $entityProcessor) {
-                                                ($entityProcessor)($buffer, MetaEntityType::AD_CREATIVE->value);
+                                                ($entityProcessor)($buffer, MetaEntityType::CREATIVE->value);
                                                 $buffer->clear();
                                             }
                                         } else {
@@ -567,7 +567,7 @@
                             );
 
                             if ($buffer->count() > 0 && $entityProcessor) {
-                                ($entityProcessor)($buffer, MetaEntityType::AD_CREATIVE->value);
+                                ($entityProcessor)($buffer, MetaEntityType::CREATIVE->value);
                                 $buffer->clear();
                             }
                             $fetched = true;
