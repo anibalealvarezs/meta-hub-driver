@@ -215,4 +215,49 @@ class FacebookMarketingDriverTest extends TestCase
             unset($_ENV['FACEBOOK_TOKEN_PATH']);
         }
     }
+
+    public function testInitializeApiPassesTokenRefresherCallback()
+    {
+        $authMock = $this->createMock(\Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface::class);
+        $callback = function () { return 'new_token'; };
+        $authMock->method('getTokenRefresherCallback')->willReturn($callback);
+        $authMock->method('getAccessToken')->willReturn('fake_token');
+        $authMock->method('getUserId')->willReturn('fake_user_id');
+        $authMock->method('hasCredentials')->willReturn(true);
+
+        $this->driver->setAuthProvider($authMock);
+
+        $ref = new \ReflectionMethod($this->driver, 'initializeApi');
+        $ref->setAccessible(true);
+
+        /** @var \Anibalealvarezs\FacebookGraphApi\FacebookGraphApi $api */
+        $api = $ref->invoke($this->driver, []);
+
+        $apiRef = new \ReflectionProperty($api, 'tokenRefresherCallback');
+        $apiRef->setAccessible(true);
+        
+        $this->assertSame($callback, $apiRef->getValue($api));
+    }
+
+    public function testInitializeApiWithNullTokenRefresherCallback()
+    {
+        $authMock = $this->createMock(\Anibalealvarezs\ApiDriverCore\Interfaces\AuthProviderInterface::class);
+        $authMock->method('getTokenRefresherCallback')->willReturn(null);
+        $authMock->method('getAccessToken')->willReturn('fake_token');
+        $authMock->method('getUserId')->willReturn('fake_user_id');
+        $authMock->method('hasCredentials')->willReturn(true);
+
+        $this->driver->setAuthProvider($authMock);
+
+        $ref = new \ReflectionMethod($this->driver, 'initializeApi');
+        $ref->setAccessible(true);
+
+        /** @var \Anibalealvarezs\FacebookGraphApi\FacebookGraphApi $api */
+        $api = $ref->invoke($this->driver, []);
+
+        $apiRef = new \ReflectionProperty($api, 'tokenRefresherCallback');
+        $apiRef->setAccessible(true);
+        
+        $this->assertNull($apiRef->getValue($api));
+    }
 }

@@ -843,7 +843,10 @@
                 appSecret: $config['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
                 redirectUrl: $config['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
                 userAccessToken: $config['access_token'] ?? $config['graph_user_access_token'] ?? $this->authProvider->getAccessToken(),
-                apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0'
+                tokenIdentifier: $config['token_identifier'] ?? $config['facebook']['token_identifier'] ?? $_ENV['FACEBOOK_TOKEN_IDENTIFIER'] ?? getenv('FACEBOOK_TOKEN_IDENTIFIER') ?: "",
+                apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0',
+                logger: $this->logger,
+                tokenRefresherCallback: $this->authProvider->getTokenRefresherCallback()
             );
         }
 

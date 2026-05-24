@@ -830,13 +830,15 @@
             $this->logger?->info("DEBUG: FacebookOrganicDriver::initializeApi - START");
 
             return new FacebookGraphApi(
-                userId: $config['user_id'] ?? $config['facebook']['user_id'] ?? 'system',
+                userId: $config['user_id'] ?? $config['facebook']['user_id'] ?? $this->authProvider->getUserId() ?: 'system',
                 appId: $config['app_id'] ?? $config['facebook']['app_id'] ?? '',
                 appSecret: $config['app_secret'] ?? $config['facebook']['app_secret'] ?? '',
                 redirectUrl: $config['redirect_uri'] ?? $config['facebook']['redirect_uri'] ?? '',
                 userAccessToken: $config['access_token'] ?? $config['graph_user_access_token'] ?? $this->authProvider->getAccessToken(),
+                tokenIdentifier: $config['token_identifier'] ?? $config['facebook']['token_identifier'] ?? $_ENV['FACEBOOK_TOKEN_IDENTIFIER'] ?? getenv('FACEBOOK_TOKEN_IDENTIFIER') ?: "",
                 apiVersion: $config['api_version'] ?? $config['facebook']['api_version'] ?? 'v18.0',
-                logger: $this->logger
+                logger: $this->logger,
+                tokenRefresherCallback: $this->authProvider->getTokenRefresherCallback()
             );
         }
 
