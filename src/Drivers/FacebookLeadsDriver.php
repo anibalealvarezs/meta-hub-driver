@@ -358,8 +358,25 @@ class FacebookLeadsDriver implements SyncDriverInterface, ChanneledAccountableIn
         ];
     }
 
+    public static function getAssetPatterns(): array
+    {
+        return [
+            'facebook_leads' => [
+                'key'          => 'pages',
+                'prefix'       => 'fb:page',
+                'hostnames'    => [],
+                'url_id_regex' => '/facebook\.com\/(?:profile\.php\?id=)?([^\/\?]+)/',
+                'type'         => 'page'
+            ]
+        ];
+    }
+
     public function getConfigurationJs(): string
     {
+        $file = __DIR__ . '/js/FacebookLeadsConfigHandler.js';
+        if (file_exists($file)) {
+            return file_get_contents($file);
+        }
         return "";
     }
 
