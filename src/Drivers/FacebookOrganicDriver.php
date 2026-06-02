@@ -403,12 +403,15 @@
                 if (!empty($pagesData['data'])) {
                     foreach ($pagesData['data'] as $page) {
                         $igAccount = $page['instagram_business_account'] ?? null;
-                        $igUsername = $igAccount['username'] ?? null;
-                        $igHostname = $igUsername ? 'https://www.instagram.com/' . $igUsername : ($igAccount['website'] ?? null);
-
-                        if ($igAccount) {
+                        
+                        if (is_array($igAccount)) {
+                            $igUsername = $igAccount['username'] ?? null;
+                            $igHostname = $igUsername ? 'https://www.instagram.com/' . $igUsername : ($igAccount['website'] ?? null);
                             $igAccount['website'] = $igHostname;
                             $page['instagram_business_account'] = $igAccount;
+                        } else {
+                            $igUsername = null;
+                            $igHostname = null;
                         }
 
                         $assets['pages'][] = [
@@ -419,10 +422,10 @@
                             'link'            => $page['link'],
                             'created_time'    => $page['created_time'] ?? null,
                             'data'            => $page,
-                            'ig_account'      => $igAccount['id'] ?? null,
-                            'ig_account_name' => $igUsername ?? $igAccount['name'] ?? null,
+                            'ig_account'      => is_array($igAccount) ? ($igAccount['id'] ?? null) : $igAccount,
+                            'ig_account_name' => $igUsername ?? (is_array($igAccount) ? ($igAccount['name'] ?? null) : null),
                             'ig_hostname'     => $igHostname,
-                            'ig_data'         => $igAccount,
+                            'ig_data'         => is_array($igAccount) ? $igAccount : null,
                         ];
                     }
                 }
