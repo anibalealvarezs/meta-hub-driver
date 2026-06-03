@@ -920,6 +920,7 @@
                         $insights = $api->getDailyInstagramAccountTotalValueInsights(
                             instagramAccountId: (string)$page['ig_account'],
                             since: $igSince,
+                            until: $chunk['end'],
                             option: $option
                         );
                         if (!empty($insights['data'])) {
