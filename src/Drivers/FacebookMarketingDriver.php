@@ -1015,8 +1015,32 @@
                     $row['cost_per_result'] = $row['results'] > 0 ? ((float) ($row['spend'] ?? 0)) / $row['results'] : 0;
                 }
                 
-                $impressions = (float)($row['impressions'] ?? 0);
-                $row['result_rate'] = $impressions > 0 ? ($results / $impressions) * 100 : 0;
+                $nativeResultRate = 0;
+                $hasNativeResultRate = false;
+                if (!empty($row['result_rate']) && is_array($row['result_rate'])) {
+                    foreach ($row['result_rate'] as $rr) {
+                        if (isset($rr['values']) && is_array($rr['values'])) {
+                            foreach ($rr['values'] as $val) {
+                                if (isset($val['value'])) {
+                                    $nativeResultRate += (float) $val['value'];
+                                    $hasNativeResultRate = true;
+                                    break 2;
+                                }
+                            }
+                        } elseif (isset($rr['value'])) {
+                            $nativeResultRate += (float) $rr['value'];
+                            $hasNativeResultRate = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if ($hasNativeResultRate && $nativeResultRate > 0) {
+                    $row['result_rate'] = $nativeResultRate;
+                } else {
+                    $impressions = (float)($row['impressions'] ?? 0);
+                    $row['result_rate'] = $impressions > 0 ? ($row['results'] / $impressions) * 100 : 0;
+                }
 
                 $roas = 0;
                 if (!empty($row['purchase_roas']) && is_array($row['purchase_roas'])) {
