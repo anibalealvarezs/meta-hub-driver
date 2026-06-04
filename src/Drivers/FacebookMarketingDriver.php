@@ -906,7 +906,18 @@
             $baseFields = 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name';
 
             if ($metricSet === MetricSet::CUSTOM && !empty($customMetrics)) {
-                $fields = $baseFields.','.(is_array($customMetrics) ? implode(',', $customMetrics) : $customMetrics);
+                // Force inclusion of fields required for internal driver calculations 
+                // regardless of what the user requested for the UI output
+                $requiredInternalMetrics = ['results', 'cost_per_result', 'actions', 'action_values'];
+                $customMetricsArray = is_array($customMetrics) ? $customMetrics : explode(',', $customMetrics);
+                foreach ($requiredInternalMetrics as $reqMetric) {
+                    if (!in_array($reqMetric, $customMetricsArray)) {
+                        $customMetricsArray[] = $reqMetric;
+                    }
+                }
+                $customMetrics = $customMetricsArray;
+                
+                $fields = $baseFields.','.implode(',', $customMetricsArray);
             } else {
                 $fields = $baseFields.','.AdAccountPermission::DEFAULT->insightsFields($metricSet).',cpm,action_values';
             }
@@ -934,7 +945,14 @@
                 $hasNativeResults = false;
                 if (!empty($row['results']) && is_array($row['results'])) {
                     foreach ($row['results'] as $res) {
-                        if (isset($res['value'])) {
+                        if (isset($res['values']) && is_array($res['values'])) {
+                            foreach ($res['values'] as $val) {
+                                if (isset($val['value'])) {
+                                    $nativeResults += (float) $val['value'];
+                                    $hasNativeResults = true;
+                                }
+                            }
+                        } elseif (isset($res['value'])) {
                             $nativeResults += (float) $res['value'];
                             $hasNativeResults = true;
                         }
@@ -950,7 +968,8 @@
                         }
                     }
 
-                    // Prioritize highly-valued actions
+                    // We should not cascade down to link_clicks if higher value actions are missing,
+                    // as a missing action means 0 results for that action type.
                     if (isset($actionValues['omni_purchase'])) {
                         $results = $actionValues['omni_purchase'];
                     } elseif (isset($actionValues['purchase'])) {
@@ -965,10 +984,6 @@
                         $results = $actionValues['offsite_conversion.fb_pixel_lead'];
                     } elseif (isset($actionValues['onsite_conversion.lead'])) {
                         $results = $actionValues['onsite_conversion.lead'];
-                    } elseif (isset($actionValues['offsite_conversion'])) {
-                        $results = $actionValues['offsite_conversion'];
-                    } elseif (isset($actionValues['link_click'])) {
-                        $results = $actionValues['link_click'];
                     }
                 }
                 
@@ -978,10 +993,18 @@
                 $hasNativeCpr = false;
                 if (!empty($row['cost_per_result']) && is_array($row['cost_per_result'])) {
                     foreach ($row['cost_per_result'] as $cpr) {
-                        if (isset($cpr['value'])) {
+                        if (isset($cpr['values']) && is_array($cpr['values'])) {
+                            foreach ($cpr['values'] as $val) {
+                                if (isset($val['value'])) {
+                                    $nativeCpr += (float) $val['value'];
+                                    $hasNativeCpr = true;
+                                    break 2; // Usually there's only one cost_per_result that matters for the objective
+                                }
+                            }
+                        } elseif (isset($cpr['value'])) {
                             $nativeCpr += (float) $cpr['value'];
                             $hasNativeCpr = true;
-                            break; // Usually there's only one cost_per_result that matters for the objective
+                            break;
                         }
                     }
                 }
