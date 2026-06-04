@@ -940,16 +940,22 @@
                     }
 
                     // Prioritize highly-valued actions
-                    if (isset($actionValues['offsite_conversion'])) {
-                        $results = $actionValues['offsite_conversion'];
+                    if (isset($actionValues['omni_purchase'])) {
+                        $results = $actionValues['omni_purchase'];
                     } elseif (isset($actionValues['purchase'])) {
                         $results = $actionValues['purchase'];
-                    } elseif (isset($actionValues['lead'])) {
-                        $results = $actionValues['lead'];
+                    } elseif (isset($actionValues['offsite_conversion.fb_pixel_purchase'])) {
+                        $results = $actionValues['offsite_conversion.fb_pixel_purchase'];
                     } elseif (isset($actionValues['onsite_conversion.purchase'])) {
                         $results = $actionValues['onsite_conversion.purchase'];
-                    } elseif (isset($actionValues['omni_purchase'])) {
-                        $results = $actionValues['omni_purchase'];
+                    } elseif (isset($actionValues['lead'])) {
+                        $results = $actionValues['lead'];
+                    } elseif (isset($actionValues['offsite_conversion.fb_pixel_lead'])) {
+                        $results = $actionValues['offsite_conversion.fb_pixel_lead'];
+                    } elseif (isset($actionValues['onsite_conversion.lead'])) {
+                        $results = $actionValues['onsite_conversion.lead'];
+                    } elseif (isset($actionValues['offsite_conversion'])) {
+                        $results = $actionValues['offsite_conversion'];
                     } elseif (isset($actionValues['link_click'])) {
                         $results = $actionValues['link_click'];
                     }
