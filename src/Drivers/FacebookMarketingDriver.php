@@ -930,6 +930,17 @@
         {
             // Calculate results and cost_per_result before filtering
             $rows = array_map(function($row) {
+                $nativeResults = 0;
+                $hasNativeResults = false;
+                if (!empty($row['results']) && is_array($row['results'])) {
+                    foreach ($row['results'] as $res) {
+                        if (isset($res['value'])) {
+                            $nativeResults += (float) $res['value'];
+                            $hasNativeResults = true;
+                        }
+                    }
+                }
+
                 $results = 0;
                 if (!empty($row['actions']) && is_array($row['actions'])) {
                     $actionValues = [];
@@ -961,8 +972,25 @@
                     }
                 }
                 
-                $row['results'] = $results;
-                $row['cost_per_result'] = $results > 0 ? ((float) ($row['spend'] ?? 0)) / $results : 0;
+                $row['results'] = $hasNativeResults ? $nativeResults : $results;
+
+                $nativeCpr = 0;
+                $hasNativeCpr = false;
+                if (!empty($row['cost_per_result']) && is_array($row['cost_per_result'])) {
+                    foreach ($row['cost_per_result'] as $cpr) {
+                        if (isset($cpr['value'])) {
+                            $nativeCpr += (float) $cpr['value'];
+                            $hasNativeCpr = true;
+                            break; // Usually there's only one cost_per_result that matters for the objective
+                        }
+                    }
+                }
+                
+                if ($hasNativeCpr && $nativeCpr > 0) {
+                    $row['cost_per_result'] = $nativeCpr;
+                } else {
+                    $row['cost_per_result'] = $row['results'] > 0 ? ((float) ($row['spend'] ?? 0)) / $row['results'] : 0;
+                }
                 
                 $impressions = (float)($row['impressions'] ?? 0);
                 $row['result_rate'] = $impressions > 0 ? ($results / $impressions) * 100 : 0;
