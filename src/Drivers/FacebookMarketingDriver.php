@@ -928,6 +928,62 @@
 
         private function filterInsightRows(array $rows, string $level, array $config): array
         {
+            // Calculate results and cost_per_result before filtering
+            $rows = array_map(function($row) {
+                $results = 0;
+                if (!empty($row['actions']) && is_array($row['actions'])) {
+                    $actionValues = [];
+                    foreach ($row['actions'] as $action) {
+                        if (isset($action['action_type']) && isset($action['value'])) {
+                            $actionValues[$action['action_type']] = (float) $action['value'];
+                        }
+                    }
+
+                    // Prioritize highly-valued actions
+                    if (isset($actionValues['offsite_conversion'])) {
+                        $results = $actionValues['offsite_conversion'];
+                    } elseif (isset($actionValues['purchase'])) {
+                        $results = $actionValues['purchase'];
+                    } elseif (isset($actionValues['lead'])) {
+                        $results = $actionValues['lead'];
+                    } elseif (isset($actionValues['onsite_conversion.purchase'])) {
+                        $results = $actionValues['onsite_conversion.purchase'];
+                    } elseif (isset($actionValues['omni_purchase'])) {
+                        $results = $actionValues['omni_purchase'];
+                    } elseif (isset($actionValues['link_click'])) {
+                        $results = $actionValues['link_click'];
+                    }
+                }
+                
+                $row['results'] = $results;
+                $row['cost_per_result'] = $results > 0 ? ((float) ($row['spend'] ?? 0)) / $results : 0;
+                
+                $impressions = (float)($row['impressions'] ?? 0);
+                $row['result_rate'] = $impressions > 0 ? ($results / $impressions) * 100 : 0;
+
+                $roas = 0;
+                if (!empty($row['purchase_roas']) && is_array($row['purchase_roas'])) {
+                    $roasValues = [];
+                    foreach ($row['purchase_roas'] as $roasItem) {
+                        if (isset($roasItem['action_type']) && isset($roasItem['value'])) {
+                            $roasValues[$roasItem['action_type']] = (float) $roasItem['value'];
+                        }
+                    }
+                    if (isset($roasValues['omni_purchase'])) {
+                        $roas = $roasValues['omni_purchase'];
+                    } elseif (isset($roasValues['purchase'])) {
+                        $roas = $roasValues['purchase'];
+                    } elseif (isset($roasValues['offsite_conversion.fb_pixel_purchase'])) {
+                        $roas = $roasValues['offsite_conversion.fb_pixel_purchase'];
+                    } elseif (isset($roasValues['offsite_conversion'])) {
+                        $roas = $roasValues['offsite_conversion'];
+                    }
+                }
+                $row['purchase_roas'] = $roas > 0 ? $roas : $row['purchase_roas'];
+                
+                return $row;
+            }, $rows);
+
             // 1. Get filters for all relevant levels to ensure hierarchical consistency
             $campaignInclude = FacebookEntitySync::getFacebookFilter($config, 'CAMPAIGN', 'cache_include');
             $campaignExclude = FacebookEntitySync::getFacebookFilter($config, 'CAMPAIGN', 'cache_exclude');

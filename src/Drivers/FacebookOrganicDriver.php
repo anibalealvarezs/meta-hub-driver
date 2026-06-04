@@ -622,7 +622,7 @@
                         foreach ($pageData['ig_insights'] as $insight) {
                             $igCollection = FacebookOrganicMetricConvert::igAccountMetrics(
                                 rows: $insight['data'],
-                                date: $chunk['start'],
+                                date: $insight['date'] ?? $chunk['start'],
                                 page: $igPageObj ?? $pageObj,
                                 account: ($igCaObj && method_exists($igCaObj, 'getAccount')) ? $igCaObj->getAccount() : (($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')),
                                 channeledAccount: $igCaObj ?? $igPlatformId,
@@ -912,22 +912,29 @@
 
                 $this->logger?->info("DEBUG: Metrics for ig account (ID: $page[ig_account]) to be synced from $igSince to $end");
 
-                foreach ([1, 2, 3, 4, 5] as $option) {
-                    if ($shouldContinue && !$shouldContinue()) {
-                        throw new Exception("Sync aborted by the orchestrator.");
-                    }
-                    try {
-                        $insights = $api->getDailyInstagramAccountTotalValueInsights(
-                            instagramAccountId: (string)$page['ig_account'],
-                            since: $igSince,
-                            until: $end,
-                            option: $option
-                        );
-                        if (!empty($insights['data'])) {
-                            $data['ig_insights'][] = ['option' => $option, 'data' => $insights['data']];
+                $igChunks = DateHelper::getDateChunks($igSince, $end, '1 day');
+                foreach ($igChunks as $igChunk) {
+                    foreach ([1, 2, 3, 4, 5] as $option) {
+                        if ($shouldContinue && !$shouldContinue()) {
+                            throw new Exception("Sync aborted by the orchestrator.");
                         }
-                    } catch (Exception $e) {
-                        $this->logger?->warning("IG Insight option $option failed: ".$e->getMessage());
+                        try {
+                            $insights = $api->getDailyInstagramAccountTotalValueInsights(
+                                instagramAccountId: (string)$page['ig_account'],
+                                since: $igChunk['start'],
+                                until: $igChunk['end'],
+                                option: $option
+                            );
+                            if (!empty($insights['data'])) {
+                                $data['ig_insights'][] = [
+                                    'date'   => $igChunk['start'],
+                                    'option' => $option,
+                                    'data'   => $insights['data']
+                                ];
+                            }
+                        } catch (Exception $e) {
+                            $this->logger?->warning("IG Insight option $option failed: ".$e->getMessage());
+                        }
                     }
                 }
             }
