@@ -260,4 +260,91 @@ class FacebookMarketingDriverTest extends TestCase
         
         $this->assertNull($apiRef->getValue($api));
     }
+
+    public function testFilterInsightRowsMetricExtraction()
+    {
+        $ref = new \ReflectionMethod($this->driver, 'filterInsightRows');
+        $ref->setAccessible(true);
+
+        // 1. Fully populated metrics scenario
+        $populatedRow = [
+            "impressions" => "595",
+            "spend" => "4.34",
+            "results" => [
+                [
+                    "indicator" => "conversions:offsite_conversion.fb_pixel_custom.TypeformSubmit",
+                    "values" => [["value" => "1"]]
+                ]
+            ],
+            "cost_per_result" => [
+                [
+                    "indicator" => "conversions:offsite_conversion.fb_pixel_custom.TypeformSubmit",
+                    "values" => [["value" => "4.34"]]
+                ]
+            ],
+            "result_rate" => [
+                [
+                    "indicator" => "conversions:offsite_conversion.fb_pixel_custom.TypeformSubmit",
+                    "values" => [["value" => "0.16806723"]]
+                ]
+            ],
+            "actions" => [
+                ["action_type" => "offsite_conversion.fb_pixel_custom", "value" => "1"],
+            ]
+        ];
+
+        $filteredPopulated = $ref->invoke($this->driver, [$populatedRow], 'AD', []);
+        $resultPopulated = $filteredPopulated[0];
+
+        $this->assertEquals(1.0, $resultPopulated['results']);
+        $this->assertEquals(4.34, $resultPopulated['cost_per_result']);
+        $this->assertEquals(0.16806723, $resultPopulated['result_rate']);
+
+        // 2. Empty metrics scenario (fallback test)
+        $emptyRow = [
+            "impressions" => "5",
+            "spend" => "0.03",
+            "results" => [
+                ["indicator" => "conversions:offsite_conversion.fb_pixel_custom.TypeformSubmit"]
+            ],
+            "cost_per_result" => [
+                ["indicator" => "conversions:offsite_conversion.fb_pixel_custom.TypeformSubmit"]
+            ],
+            "result_rate" => [
+                ["indicator" => "conversions:offsite_conversion.fb_pixel_custom.TypeformSubmit"]
+            ],
+            // In the empty case, actions might also not contain the target action, leading to 0 results
+            "actions" => []
+        ];
+
+        $filteredEmpty = $ref->invoke($this->driver, [$emptyRow], 'AD', []);
+        $resultEmpty = $filteredEmpty[0];
+
+        $this->assertEquals(0, $resultEmpty['results']);
+        $this->assertEquals(0, $resultEmpty['cost_per_result']);
+        $this->assertEquals(0, $resultEmpty['result_rate']);
+        $this->assertEquals(0, $resultEmpty['purchase_roas'] ?? 0); // Testing the missing key fallback
+
+        // 3. Calculated fallback scenario
+        $fallbackRow = [
+            "impressions" => "1000",
+            "spend" => "50",
+            "results" => [],
+            "cost_per_result" => [],
+            "result_rate" => [],
+            "actions" => [
+                ["action_type" => "purchase", "value" => "5"],
+            ]
+        ];
+
+        $filteredFallback = $ref->invoke($this->driver, [$fallbackRow], 'AD', []);
+        $resultFallback = $filteredFallback[0];
+
+        // results comes from actions fallback = 5
+        $this->assertEquals(5.0, $resultFallback['results']);
+        // cost_per_result = spend / results = 50 / 5 = 10
+        $this->assertEquals(10.0, $resultFallback['cost_per_result']);
+        // result_rate = (results / impressions) * 100 = (5 / 1000) * 100 = 0.5
+        $this->assertEquals(0.5, $resultFallback['result_rate']);
+    }
 }
