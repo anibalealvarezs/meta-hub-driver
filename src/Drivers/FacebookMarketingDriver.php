@@ -1060,7 +1060,7 @@
                         $roas = $roasValues['offsite_conversion'];
                     }
                 }
-                $row['purchase_roas'] = $roas > 0 ? $roas : $row['purchase_roas'];
+                $row['purchase_roas'] = $roas > 0 ? $roas : ($row['purchase_roas'] ?? 0);
                 
                 return $row;
             }, $rows);
