@@ -124,8 +124,14 @@
                 $row['date'] = $date;
 
                 // 1. Handle standard total value or nulls
-                $valuePath = isset($row['total_value']) ? 'total_value.value' : 'value';
-                if (!isset($row['total_value']) && !isset($row['value'])) {
+                $valuePath = 'value'; // Fallback
+                if (isset($row['total_value'])) {
+                    $valuePath = 'total_value.value';
+                } elseif (isset($row['values']) && is_array($row['values']) && isset($row['values'][0]['value'])) {
+                    $valuePath = 'values.0.value';
+                }
+                
+                if (!isset($row['total_value']) && !isset($row['values']) && !isset($row['value'])) {
                     $row['value'] = null; // inject a mock value if completely missing
                 }
                 
