@@ -124,6 +124,11 @@
                 $row['date'] = $date;
 
                 // 1. Handle standard total value or nulls
+                $valuePath = isset($row['total_value']) ? 'total_value.value' : 'value';
+                if (!isset($row['total_value']) && !isset($row['value'])) {
+                    $row['value'] = null; // inject a mock value if completely missing
+                }
+                
                 $config = [
                     'channel'              => 'facebook_organic',
                     'period'               => $periodValue,
@@ -135,7 +140,7 @@
                         'channeledAccountId' => $channeledAccountId,
                         'page'               => $page,
                     ],
-                    'metrics'              => ['total_value.value' => $row['name'] ?? 'unknown'],
+                    'metrics'              => [$valuePath => $row['name'] ?? 'unknown'],
                     'include_nulls'        => true
                 ];
                 $rowMetrics = UniversalMetricConverter::convert([$row], $config, $logger);
