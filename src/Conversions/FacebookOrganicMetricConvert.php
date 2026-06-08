@@ -5,6 +5,7 @@
     namespace Anibalealvarezs\MetaHubDriver\Conversions;
 
     use Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter;
+    use Carbon\Carbon;
     use Doctrine\Common\Collections\ArrayCollection;
     use Psr\Log\LoggerInterface;
 
@@ -49,12 +50,16 @@
             foreach ($metricRows as $metric) {
                 $metricName = $metric['name'] ?? 'unknown';
                 $metricPeriod = $metric['period'] ?? null;
+                $resolvedPeriod = self::resolveMetricPeriod($metricName, is_string($metricPeriod) ? $metricPeriod : null, $periodValue);
+                $isDailyMetric = self::isDailyMetric($metricName, $resolvedPeriod);
+                $previousScalarValue = null;
+                $previousBreakdownValues = [];
 
                 foreach ($metric['values'] ?? [] as $dailyData) {
                     $dailyValue = $dailyData['value'] ?? null;
                     if (!isset($dailyData['end_time'])) {
-                        if ($periodValue === 'lifetime' || $metricPeriod === 'lifetime') {
-                            $date = date('Y-m-d');
+                        if ($resolvedPeriod === 'lifetime') {
+                            $date = Carbon::now()->toDateString();
                         } else {
                             throw new \Exception("Missing 'end_time' in metric values for non-lifetime metric: {$metricName} (Period: " . ($metricPeriod ?? $periodValue) . ")");
                         }
@@ -64,14 +69,24 @@
 
                     // Case 1: The value is a simple scalar (e.g., page_impressions).
                     if (is_scalar($dailyValue) || is_null($dailyValue)) {
+                        $convertedValue = self::normalizeDailySeriesValue($dailyValue, $previousScalarValue, $isDailyMetric);
+                        if ($isDailyMetric && (is_numeric($dailyValue) || is_null($dailyValue))) {
+                            $previousScalarValue = $dailyValue;
+                        }
                         $rowMetrics = UniversalMetricConverter::convert([['date' => $date, 'value' => $dailyValue]], [
                             'channel'              => 'facebook_organic',
-                            'period'               => $periodValue,
+                            'period'               => $resolvedPeriod,
                             'fallback_platform_id' => $platformId,
                             'date_field'           => 'date',
                             'metrics'              => ['value' => $metricName],
                             'context'              => $context,
                         ], $logger);
+                        if ($isDailyMetric) {
+                            foreach ($rowMetrics as $rowMetric) {
+                                $rowMetric->value = $convertedValue;
+                                $rowMetric->period = $resolvedPeriod;
+                            }
+                        }
                         foreach ($rowMetrics as $m) $collection->add($m);
                     } // Case 2: The value is a breakdown object (e.g., page_actions_post_reactions_total).
                     // This also handles the API quirk where an empty breakdown is an empty array `[]`.
@@ -85,15 +100,26 @@
                                 $dimensions[] = ['dimensionKey' => 'breakdown', 'dimensionValue' => (string)$dimensionName];
                             }
 
+                            $convertedValue = self::normalizeDailySeriesValue($value, $previousBreakdownValues[(string)$dimensionName] ?? null, $isDailyMetric, (string)$dimensionName);
+                            if ($isDailyMetric && (is_numeric($value) || is_null($value))) {
+                                $previousBreakdownValues[(string)$dimensionName] = $value;
+                            }
+
                             $rowMetrics = UniversalMetricConverter::convert([['date' => $date, 'value' => $value]], [
                                 'channel'              => 'facebook_organic',
-                                'period'               => $periodValue,
+                                'period'               => $resolvedPeriod,
                                 'fallback_platform_id' => $platformId,
                                 'date_field'           => 'date',
                                 'metrics'              => ['value' => $metricName],
                                 'dimensions'           => $dimensions,
                                 'context'              => $context,
                             ], $logger);
+                            if ($isDailyMetric) {
+                                foreach ($rowMetrics as $rowMetric) {
+                                    $rowMetric->value = $convertedValue;
+                                    $rowMetric->period = $resolvedPeriod;
+                                }
+                            }
                             foreach ($rowMetrics as $m) $collection->add($m);
                         }
                     }
@@ -210,12 +236,15 @@
 
             foreach ($rows as $row) {
                 $row['date'] = $date;
+                $metricName = (string)($row['name'] ?? 'unknown');
+                $metricPeriod = is_string($row['period'] ?? null) ? $row['period'] : null;
+                $resolvedPeriod = self::resolveMetricPeriod($metricName, $metricPeriod, 'lifetime');
                 $rowMetrics = UniversalMetricConverter::convert([$row], [
                     'channel'              => 'facebook_organic',
-                    'period'               => 'lifetime',
+                    'period'               => $resolvedPeriod,
                     'fallback_platform_id' => $postId,
                     'date_field'           => 'date',
-                    'metrics'              => ['values' => $row['name'] ?? 'unknown'],
+                    'metrics'              => ['values' => $metricName],
                     'include_nulls'        => true,
                     'context'              => UniversalMetricConverter::getUniversalContext([
                         'account'            => $account,
@@ -225,6 +254,11 @@
                         'post'               => $post,
                     ])
                 ], $logger);
+                if (self::isDailyMetric($metricName, $resolvedPeriod)) {
+                    foreach ($rowMetrics as $rowMetric) {
+                        $rowMetric->period = $resolvedPeriod;
+                    }
+                }
                 foreach ($rowMetrics as $m) $collection->add($m);
             }
 
@@ -286,5 +320,41 @@
             }
 
             return $collection;
+        }
+
+        private static function resolveMetricPeriod(string $metricName, ?string $metricPeriod, string $fallbackPeriod): string
+        {
+            if (self::isDailyMetricName($metricName)) {
+                return 'daily';
+            }
+
+            if ($metricPeriod !== null && $metricPeriod !== '') {
+                return $metricPeriod;
+            }
+
+            return $fallbackPeriod;
+        }
+
+        private static function isDailyMetric(string $metricName, string $period): bool
+        {
+            return self::isDailyMetricName($metricName) || $period === 'daily';
+        }
+
+        private static function isDailyMetricName(string $metricName): bool
+        {
+            return str_ends_with($metricName, '_daily');
+        }
+
+        private static function normalizeDailySeriesValue(mixed $currentValue, mixed $previousValue, bool $isDailyMetric): mixed
+        {
+            if (!$isDailyMetric || !is_numeric($currentValue)) {
+                return $currentValue;
+            }
+
+            if ($previousValue === null || !is_numeric($previousValue)) {
+                return $currentValue;
+            }
+
+            return $currentValue - $previousValue;
         }
     }
