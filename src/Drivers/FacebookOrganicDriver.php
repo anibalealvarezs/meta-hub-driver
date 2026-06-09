@@ -162,6 +162,7 @@
                 'comments'                       => ['comments', 'comments_daily', 'post_comments', 'post_comments_daily'],
                 'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily', 'page_impressions_unique', 'page_impressions_unique_daily', 'post_impressions_unique', 'post_impressions_unique_daily'],
                 'views'                          => ['plays', 'plays_daily', 'views', 'views_daily', 'post_media_view', 'post_media_view_daily'],
+                'content_views'                  => ['content_views', 'content_views_daily'],
                 'page_views_total'               => ['page_views_total', 'page_views_total_daily'],
                 'video_views'                    => ['video_views', 'video_views_daily', 'page_video_views', 'page_video_views_daily', 'post_video_views', 'post_video_views_daily'],
                 'profile_views'                  => ['profile_views', 'profile_views_daily'],
