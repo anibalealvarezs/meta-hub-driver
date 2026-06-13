@@ -701,12 +701,15 @@
             if ($identityMapper && !empty($config['ad_accounts'])) {
                 $aIds = [];
                 if ($cleanTargetId) {
-                    $directKey = 'act_'.$cleanTargetId;
-                    if (isset($config['ad_accounts'][$directKey])) {
-                        $aIds[] = $cleanTargetId;
-                    } elseif (isset($config['ad_accounts'][$cleanTargetId])) {
-                        // Fallback: keyed without prefix
-                        $aIds[] = $cleanTargetId;
+                    foreach ($config['ad_accounts'] as $account) {
+                        $id = (string)($account['id'] ?? $account);
+                        if ($id) {
+                            $accId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
+                            if ($accId === $cleanTargetId) {
+                                $aIds[] = $cleanTargetId;
+                                break;
+                            }
+                        }
                     }
                 } else {
                     // No target filter — include all accounts
