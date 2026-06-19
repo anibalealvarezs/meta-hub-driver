@@ -13,7 +13,6 @@ use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\ApiDriverCore\Conversions\UniversalEntityConverter;
-use Doctrine\Common\Collections\ArrayCollection;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use DateTime;
@@ -386,11 +385,6 @@ class FacebookLeadsDriver implements SyncDriverInterface, ChanneledAccountableIn
             return file_get_contents($file);
         }
         return "";
-    }
-
-    public function getRequiredInstanceTier(): InstanceTier
-    {
-        return InstanceTier::BASIC;
     }
 
     public static function getPages(array $asset): array
