@@ -9,6 +9,7 @@ use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Traits\SyncDriverTrait;
 use Anibalealvarezs\MetaHubDriver\Traits\MetaSyncDriverTrait;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\ApiDriverCore\Conversions\UniversalEntityConverter;
@@ -361,12 +362,19 @@ class FacebookLeadsDriver implements SyncDriverInterface, ChanneledAccountableIn
     public static function getAssetPatterns(): array
     {
         return [
-            'facebook_leads' => [
-                'key'          => 'pages',
-                'prefix'       => 'fb:page',
-                'hostnames'    => [],
-                'url_id_regex' => '/facebook\.com\/(?:profile\.php\?id=)?([^\/\?]+)/',
-                'type'         => 'page'
+            MetaEntityType::PAGE->value => [
+                'category'          => AssetCategory::IDENTITY,
+                'key'               => 'pages',
+                'channeled_account' => [
+                    'platform_id'             => [
+                        'type' => 'raw',
+                        'key'  => 'id'
+                    ],
+                    'platform_created_at_key' => 'created_time',
+                    'name_key'                => 'title',
+                    'type'                    => MetaEntityType::PAGE->value,
+                    'data_key'                => 'data'
+                ]
             ]
         ];
     }
