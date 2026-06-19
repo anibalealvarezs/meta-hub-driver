@@ -390,7 +390,7 @@ class FacebookLeadsDriver implements SyncDriverInterface, ChanneledAccountableIn
 
     public function getRequiredInstanceTier(): InstanceTier
     {
-        return InstanceTier::TIER_2;
+        return InstanceTier::BASIC;
     }
 
     public static function getPages(array $asset): array
