@@ -302,7 +302,9 @@
                                             $converted = FacebookMarketingConvert::adsets([$a], $adAccount->getId());
                                             foreach ($converted as $item) {
                                                 $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $adAccount]));
-                                                $buffer->add($item);
+                                                if (!$buffer->containsKey($item->getPlatformId())) {
+                                                    $buffer->set($item->getPlatformId(), $item);
+                                                }
                                             }
 
                                             if ($buffer->count() >= 100 && $entityProcessor) {
@@ -444,7 +446,9 @@
                                             $converted = FacebookMarketingConvert::ads([$a], $channeledAccountItem->getId());
                                             foreach ($converted as $item) {
                                                 $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccountItem]));
-                                                $buffer->add($item);
+                                                if (!$buffer->containsKey($item->getPlatformId())) {
+                                                    $buffer->set($item->getPlatformId(), $item);
+                                                }
                                             }
 
                                             if ($buffer->count() >= 100 && $entityProcessor) {
@@ -550,7 +554,9 @@
                                             $converted = FacebookMarketingConvert::creatives([$c], $channeledAccount->getId());
                                             foreach ($converted as $item) {
                                                 $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                                $buffer->add($item);
+                                                if (!$buffer->containsKey($item->getPlatformId())) {
+                                                    $buffer->set($item->getPlatformId(), $item);
+                                                }
                                             }
 
                                             if ($buffer->count() >= 100 && $entityProcessor) {
@@ -688,7 +694,9 @@
                                                 $converted = FacebookOrganicConvert::pages([$p], $channeledAccount->getId());
                                                 foreach ($converted as $item) {
                                                     $item->setContext(array_merge($item->getContext(), ['channeledAccount' => $channeledAccount]));
-                                                    $buffer->add($item);
+                                                    if (!$buffer->containsKey($item->getPlatformId())) {
+                                                        $buffer->set($item->getPlatformId(), $item);
+                                                    }
                                                 }
 
                                                 if ($buffer->count() >= 100 && $entityProcessor) {
@@ -812,7 +820,9 @@
 
                                                 foreach ($converted as $item) {
                                                     $item->setContext(array_merge($item->getContext(), ['facebookPage' => $channeledPage]));
-                                                    $buffer->add($item);
+                                                    if (!$buffer->containsKey($item->getPlatformId())) {
+                                                        $buffer->set($item->getPlatformId(), $item);
+                                                    }
                                                 }
 
                                                 if ($buffer->count() >= 100 && $entityProcessor) {
