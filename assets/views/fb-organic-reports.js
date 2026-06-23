@@ -300,6 +300,7 @@ function getActiveMetrics(level = 'instagram', isFb = false, postsAggregateMode 
         return [
             // FB page-level metrics persisted with post_id = NULL
             {key: 'reach', label: 'REACH', format: 'number', precision: 0, original: 'reach', sparkline: false},
+            {key: 'views', label: 'VIEWS', format: 'number', precision: 0, original: 'views', sparkline: false},
             {key: 'page_views_total', label: 'PAGE VIEWS', format: 'number', precision: 0, original: 'page_views_total', sparkline: false},
             {key: 'video_views', label: 'VID VIEWS', format: 'number', precision: 0, original: 'video_views', sparkline: false},
             {key: 'follows_and_unfollows', label: 'FOLLOWS', format: 'number', precision: 0, original: 'follows_and_unfollows', sparkline: false},
@@ -842,7 +843,7 @@ function renderSummaryFields() {
     }, {reach: 0, views: 0, inter: 0, follows: 0});
 
     document.getElementById('total-reach').textContent = formatNum(sums.reach);
-    document.getElementById('total-impressions').textContent = formatNum(sums.views);
+    document.getElementById('total-views').textContent = formatNum(sums.views);
     document.getElementById('total-interactions').textContent = formatNum(sums.inter);
     document.getElementById('total-followers').textContent = formatNum(sums.follows);
     document.getElementById('total-eng-rate').textContent = ((sums.inter / (sums.reach || 1)) * 100).toFixed(2) + '%';
