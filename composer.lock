@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5f44ba96a2a3074c530d145e26ed021c",
+    "content-hash": "14510dd840dbc82fc8f7343e2d0dac53",
     "packages": [
         {
             "name": "anibalealvarezs/api-client-skeleton",
@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "03c2bc1397087859467a54733869763b85915e81"
+                "reference": "8410a502dbdaa2cee3fd2ac2140ffeaab5706cc1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-03c2bc1397087859467a54733869763b85915e81-zip-b267eb.zip",
-                "reference": "03c2bc1397087859467a54733869763b85915e81",
-                "shasum": "1b154a50c47e143a234f9d20d0b90d7a6d062683"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-8410a502dbdaa2cee3fd2ac2140ffeaab5706cc1-zip-3e8cbc.zip",
+                "reference": "8410a502dbdaa2cee3fd2ac2140ffeaab5706cc1",
+                "shasum": "0504c32394e7581fe4fcc4ea014722fe95496623"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "^1.0.0",
@@ -115,7 +115,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-06-30T03:25:36+00:00"
+            "time": "2026-07-01T10:51:08+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
