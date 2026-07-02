@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "14510dd840dbc82fc8f7343e2d0dac53",
+    "content-hash": "5f44ba96a2a3074c530d145e26ed021c",
     "packages": [
         {
             "name": "anibalealvarezs/api-client-skeleton",
@@ -123,13 +123,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "0df4e83037408ceefd41905e0c4a25ef76452deb"
+                "reference": "38def1edfc5ce2f23647c68845efb93c5568a61b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-0df4e83037408ceefd41905e0c4a25ef76452deb-zip-a5e551.zip",
-                "reference": "0df4e83037408ceefd41905e0c4a25ef76452deb",
-                "shasum": "aa3512608f80c99b18032df0acf1d498d85d2abd"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-38def1edfc5ce2f23647c68845efb93c5568a61b-zip-148615.zip",
+                "reference": "38def1edfc5ce2f23647c68845efb93c5568a61b",
+                "shasum": "7f8c712e3889eb162260634b602a6a58f0e72858"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "^1.0.0",
@@ -180,7 +180,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-06-28T05:31:51+00:00"
+            "time": "2026-07-02T19:22:13+00:00"
         },
         {
             "name": "anibalealvarezs/oauth-v1",

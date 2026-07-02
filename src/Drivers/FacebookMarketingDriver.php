@@ -23,6 +23,7 @@
     use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
     use Anibalealvarezs\FacebookGraphApi\Enums\AdAccountPermission;
     use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingMetricConvert;
+    use Anibalealvarezs\ApiSkeleton\Classes\Exceptions\PermanentAuthenticationException;
     use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
     use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
     use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
@@ -599,7 +600,7 @@
                     $consecutiveFailures = 0; // Reset on success
                 } catch (Exception $e) {
                     if (str_contains($e->getMessage(), 'Sync aborted')) throw $e;
-                    if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                    if ($e instanceof PermanentAuthenticationException) {
                         throw $e;
                     }
                     $this->logger?->error("Unhandled error syncing Ad Account $accountPlatformId: ".$e->getMessage());

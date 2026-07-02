@@ -13,6 +13,7 @@ use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\ApiDriverCore\Conversions\UniversalEntityConverter;
+use Anibalealvarezs\ApiSkeleton\Classes\Exceptions\PermanentAuthenticationException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use DateTime;
@@ -294,7 +295,7 @@ class FacebookLeadsDriver implements SyncDriverInterface, ChanneledAccountableIn
                     } while ($after !== null);
                 }
             } catch (Exception $e) {
-                if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                if ($e instanceof PermanentAuthenticationException) {
                     throw $e;
                 }
                 $this->logger?->error("FacebookLeadsDriver: Error syncing page {$pageId}: " . $e->getMessage());

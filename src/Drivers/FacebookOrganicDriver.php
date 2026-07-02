@@ -23,6 +23,7 @@
     use Anibalealvarezs\FacebookGraphApi\Enums\TokenSample;
     use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
     use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
+    use Anibalealvarezs\ApiSkeleton\Classes\Exceptions\PermanentAuthenticationException;
     use Anibalealvarezs\FacebookGraphApi\Enums\FacebookPostPermission;
     use Anibalealvarezs\FacebookGraphApi\Support\FacebookInsightMetricGuard;
     use Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController;
@@ -934,7 +935,7 @@
                                 ];
                             }
                         } catch (Exception $e) {
-                            if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                            if ($e instanceof PermanentAuthenticationException) {
                                 throw $e;
                             }
                             $this->logger?->warning("IG Insight option $option failed: ".$e->getMessage());
@@ -990,7 +991,7 @@
                                 ];
                             }
                         } catch (Exception $e) {
-                            if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                            if ($e instanceof PermanentAuthenticationException) {
                                 throw $e;
                             }
                             $this->logger?->warning("FB Post Insight failed for $postId: ".$e->getMessage());
@@ -1040,7 +1041,7 @@
                                 ];
                             }
                         } catch (Exception $e) {
-                            if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                            if ($e instanceof PermanentAuthenticationException) {
                                 throw $e;
                             }
                             $this->logger?->warning("IG Media Insight failed for $mediaId: ".$e->getMessage());
