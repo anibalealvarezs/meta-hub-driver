@@ -294,6 +294,9 @@ class FacebookLeadsDriver implements SyncDriverInterface, ChanneledAccountableIn
                     } while ($after !== null);
                 }
             } catch (Exception $e) {
+                if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                    throw $e;
+                }
                 $this->logger?->error("FacebookLeadsDriver: Error syncing page {$pageId}: " . $e->getMessage());
             }
         }

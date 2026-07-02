@@ -934,6 +934,9 @@
                                 ];
                             }
                         } catch (Exception $e) {
+                            if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                                throw $e;
+                            }
                             $this->logger?->warning("IG Insight option $option failed: ".$e->getMessage());
                         }
                     }
@@ -987,7 +990,10 @@
                                 ];
                             }
                         } catch (Exception $e) {
-                            $this->logger?->warning("Failed to fetch insights for Post $postId: ".$e->getMessage());
+                            if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                                throw $e;
+                            }
+                            $this->logger?->warning("FB Post Insight failed for $postId: ".$e->getMessage());
                         }
                     }
                 }
@@ -1034,7 +1040,10 @@
                                 ];
                             }
                         } catch (Exception $e) {
-                            $this->logger?->warning("Failed to fetch insights for IG Media $mediaId: ".$e->getMessage());
+                            if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                                throw $e;
+                            }
+                            $this->logger?->warning("IG Media Insight failed for $mediaId: ".$e->getMessage());
                         }
                     }
                 }

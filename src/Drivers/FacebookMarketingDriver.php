@@ -599,6 +599,9 @@
                     $consecutiveFailures = 0; // Reset on success
                 } catch (Exception $e) {
                     if (str_contains($e->getMessage(), 'Sync aborted')) throw $e;
+                    if (str_contains($e->getMessage(), 'Error validating access token') || (str_contains($e->getMessage(), 'OAuthException') && str_contains($e->getMessage(), 'Code: 190'))) {
+                        throw $e;
+                    }
                     $this->logger?->error("Unhandled error syncing Ad Account $accountPlatformId: ".$e->getMessage());
                     $consecutiveFailures++;
                     if ($consecutiveFailures >= $maxConsecutiveFailures) {
@@ -936,6 +939,10 @@
         private function isFatal(Exception $e): bool
         {
             $msg = $e->getMessage();
+
+            if (str_contains($msg, 'Error validating access token') || (str_contains($msg, 'OAuthException') && str_contains($msg, 'Code: 190'))) {
+                return true;
+            }
 
             return (stripos($msg, '(#100)') !== false || stripos($msg, 'valid insights metric') !== false || stripos($msg, 'permissions') !== false);
         }
