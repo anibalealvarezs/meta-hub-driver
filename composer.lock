@@ -123,13 +123,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "38def1edfc5ce2f23647c68845efb93c5568a61b"
+                "reference": "f4bdc6bb7eb767b876b152cc46f951fe00079510"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-38def1edfc5ce2f23647c68845efb93c5568a61b-zip-148615.zip",
-                "reference": "38def1edfc5ce2f23647c68845efb93c5568a61b",
-                "shasum": "7f8c712e3889eb162260634b602a6a58f0e72858"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-f4bdc6bb7eb767b876b152cc46f951fe00079510-zip-42f13c.zip",
+                "reference": "f4bdc6bb7eb767b876b152cc46f951fe00079510",
+                "shasum": "a64b14d14e22cf767011e0ce46b5de945491bea9"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "^1.0.0",
@@ -180,7 +180,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-07-02T19:22:13+00:00"
+            "time": "2026-07-02T20:03:35+00:00"
         },
         {
             "name": "anibalealvarezs/oauth-v1",
