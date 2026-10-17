@@ -271,12 +271,15 @@
 
                 // 3. Discover Ad Accounts
                 error_log("TRACE: [facebook_marketing] Discovering Ad Accounts...");
-                $fields = 'id,name,account_id,account_status,currency,created_time';
+                $fields = 'id,name,account_id,account_status,currency,created_time,business{id,name}';
                 $adAccountsData = $api->getAdAccounts(userId: $userId, fields: $fields);
                 
                 if (!empty($adAccountsData['data'])) {
                     foreach ($adAccountsData['data'] as $adAccount) {
                         $adAccount['id'] = self::getPlatformId($adAccount, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
+                        if (!empty($adAccount['business']['name'])) {
+                            $adAccount['business_name'] = $adAccount['business']['name'];
+                        }
                         $assets['ad_accounts'][] = [
                             'id'           => $adAccount['id'],
                             'name'         => $adAccount['name'] ?? ('Ad Account '.$adAccount['id']),
