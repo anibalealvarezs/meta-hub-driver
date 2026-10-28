@@ -533,6 +533,9 @@
 
             $consecutiveFailures = 0;
             $maxConsecutiveFailures = 5;
+            $attemptedAccounts = 0;
+            $successfulAccounts = 0;
+            $failedAccounts = 0;
 
             foreach ($accountsToProcess as $account) {
                 $accountPlatformIdRaw = (string)($account['id'] ?? $account);
@@ -557,6 +560,8 @@
                         $this->logger?->info("Skipping metrics sync for account $accountPlatformId (lost access)");
                         continue;
                     }
+
+                    $attemptedAccounts++;
 
                     // Resolve Internal Ad Account Entity object from pre-loaded map
                     $caObject = $caMap[$accountPlatformId] ?? (new UniversalEntity())->setPlatformId($accountPlatformId);
@@ -628,17 +633,23 @@
                         }
                     }
                     $consecutiveFailures = 0; // Reset on success
+                    $successfulAccounts++;
                 } catch (Exception $e) {
                     if (str_contains($e->getMessage(), 'Sync aborted')) throw $e;
                     if ($e instanceof PermanentAuthenticationException) {
                         throw $e;
                     }
                     $this->logger?->error("Unhandled error syncing Ad Account $accountPlatformId: ".$e->getMessage());
+                    $failedAccounts++;
                     $consecutiveFailures++;
                     if ($consecutiveFailures >= $maxConsecutiveFailures) {
                         throw new Exception("Terminating marketing sync due to $consecutiveFailures consecutive unhandled failures.");
                     }
                 }
+            }
+
+            if ($attemptedAccounts > 0 && $successfulAccounts === 0 && $failedAccounts > 0) {
+                throw new Exception("Marketing sync failed: All $failedAccounts attempted ad account(s) encountered unhandled errors.");
             }
 
             return new Response(json_encode(['status' => 'success', 'data' => $totalStats]));
@@ -1032,7 +1043,8 @@
                 
                 $fields = $baseFields.','.implode(',', $customMetricsArray);
             } else {
-                $fields = $baseFields.','.AdAccountPermission::DEFAULT->insightsFields($metricSet).',cpm,action_values';
+                $rawFields = $baseFields . ',' . AdAccountPermission::DEFAULT->insightsFields($metricSet) . ',cpm,action_values';
+                $fields = implode(',', array_unique(array_filter(array_map('trim', explode(',', $rawFields)))));
             }
 
             $resolvedBreakdowns = $breakdownsOverride !== null
