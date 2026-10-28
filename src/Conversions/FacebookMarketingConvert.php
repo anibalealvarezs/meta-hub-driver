@@ -86,7 +86,21 @@ class FacebookMarketingConvert
             'platform_id_field' => 'id',
             'date_field' => 'created_time',
             'mapping' => [
-                'name' => 'name',
+                'name' => fn($r) => $r['name'] ?? ($r['title'] ?? 'Unnamed Creative'),
+                'title' => fn($r) => $r['title'] ?? ($r['name'] ?? null),
+                'body' => 'body',
+                'thumbnail_url' => fn($r) => $r['thumbnail_url'] ?? ($r['image_url'] ?? null),
+                'image_url' => 'image_url',
+                'url_tags' => 'url_tags',
+                'call_to_action_type' => 'call_to_action_type',
+                'data' => fn($r) => [
+                    'title' => $r['title'] ?? null,
+                    'body' => $r['body'] ?? null,
+                    'thumbnail_url' => $r['thumbnail_url'] ?? ($r['image_url'] ?? null),
+                    'image_url' => $r['image_url'] ?? null,
+                    'url_tags' => $r['url_tags'] ?? null,
+                    'call_to_action_type' => $r['call_to_action_type'] ?? null,
+                ],
             ],
             'context' => \Anibalealvarezs\ApiDriverCore\Conversions\UniversalMetricConverter::getUniversalContext([
                 'channeledAccountId' => $channeledAccountId,

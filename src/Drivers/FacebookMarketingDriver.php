@@ -104,6 +104,11 @@
                 'cost_per_conversion' => ['cost_per_result'],
                 'conversion_rate'     => ['result_rate'],
                 'roas_purchase'       => ['purchase_roas', 'purchase_roas_daily', 'website_purchase_roas', 'website_purchase_roas_daily'],
+                'purchases'           => ['purchases', 'purchases_daily'],
+                'purchase_value'      => ['purchase_value', 'purchase_value_daily'],
+                'cost_per_purchase'   => ['cost_per_purchase'],
+                'leads'               => ['leads', 'leads_daily'],
+                'cost_per_lead'       => ['cost_per_lead'],
                 'actions'             => ['actions', 'actions_daily'],
             ];
         }
@@ -558,45 +563,67 @@
 
                     $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
                     $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
+                    $breakdownPasses = $this->resolveBreakdownPasses($accCfg, $config);
 
                     foreach ($chunks as $chunk) {
                         foreach ($levelsToFetch as $level) {
-                            if ($shouldContinue && !$shouldContinue()) {
-                                throw new Exception("Sync aborted by the orchestrator.");
-                            }
-                            $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountPlatformId (Level: $level | Timeframe: {$chunk['start']} a {$chunk['end']})");
-                            $response = $this->fetchInsights($api, $accountPlatformId, $chunk['start'], $chunk['end'], $config, $level, $shouldContinue);
-                            $rows = $response['data'] ?? [];
-
-                            if (!empty($rows)) {
-                                $rows = $this->filterInsightRows($rows, $level, $config);
-                            }
-
-                            if (!empty($rows)) {
-                                $collection = FacebookMarketingMetricConvert::metrics(
-                                    rows: $rows,
-                                    channeledAccount: $caObject ?? $accountPlatformId,
-                                    level: $level,
-                                    logger: $this->logger,
-                                    account: (method_exists($caObject, 'getAccount')) ? $caObject->getAccount() : ($config['accounts_group_name'] ?? 'Default')
-                                );
-                                if ($this->dataProcessor && $collection->count() > 0) {
-                                    $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::MARKETING);
-
-                                    $result = ($this->dataProcessor)($collection, $this->logger);
-
-                                    $metricsCount = $result['metrics'] ?? $collection->count();
-                                    $processedRows = $result['rows'] ?? count($rows);
-                                    $duplicates = $result['duplicates'] ?? 0;
-
-                                    $totalStats['metrics'] += $metricsCount;
-                                    $totalStats['rows'] += $processedRows;
-                                    $totalStats['duplicates'] += $duplicates;
-
-                                    $this->logger?->info("<<< EXITO: Sincronización completada para Ad Account: $accountPlatformId (Level: $level). Métricas: $metricsCount | Filas: $processedRows | Duplicados: $duplicates");
+                            foreach ($breakdownPasses as $passKey => $passConfig) {
+                                if ($shouldContinue && !$shouldContinue()) {
+                                    throw new Exception("Sync aborted by the orchestrator.");
                                 }
-                            } else {
-                                $this->logger?->info("--- INFO: No se encontraron datos de Marketing para Ad Account: $accountPlatformId (Level: $level)");
+
+                                $breakdownList = $passConfig['breakdowns'] ?? null;
+                                $dimensionKeys = $passConfig['dimension_keys'] ?? [];
+                                $passLabel = $passConfig['label'] ?? $passKey;
+
+                                $this->logger?->info(">>> INICIO: Sincronizando métricas de Marketing para Ad Account: $accountPlatformId (Level: $level | Pass: $passLabel | Timeframe: {$chunk['start']} a {$chunk['end']})");
+
+                                $response = $this->fetchInsights(
+                                    api: $api,
+                                    accountId: $accountPlatformId,
+                                    startDate: $chunk['start'],
+                                    endDate: $chunk['end'],
+                                    config: $config,
+                                    level: $level,
+                                    shouldContinue: $shouldContinue,
+                                    breakdownsOverride: $breakdownList
+                                );
+                                $rows = $response['data'] ?? [];
+
+                                if (!empty($rows)) {
+                                    $rows = $this->filterInsightRows($rows, $level, $config);
+                                }
+
+                                if (!empty($rows)) {
+                                    $metricCfg = $this->getMetricsConfig($config, $breakdownList);
+                                    $collection = FacebookMarketingMetricConvert::metrics(
+                                        rows: $rows,
+                                        channeledAccount: $caObject ?? $accountPlatformId,
+                                        level: $level,
+                                        logger: $this->logger,
+                                        account: (method_exists($caObject, 'getAccount')) ? $caObject->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
+                                        metricSet: $metricCfg['metricSet'],
+                                        metricsToProcess: $metricCfg['metrics'],
+                                        dimensions: $dimensionKeys
+                                    );
+                                    if ($this->dataProcessor && $collection->count() > 0) {
+                                        $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::MARKETING);
+
+                                        $result = ($this->dataProcessor)($collection, $this->logger);
+
+                                        $metricsCount = $result['metrics'] ?? $collection->count();
+                                        $processedRows = $result['rows'] ?? count($rows);
+                                        $duplicates = $result['duplicates'] ?? 0;
+
+                                        $totalStats['metrics'] += $metricsCount;
+                                        $totalStats['rows'] += $processedRows;
+                                        $totalStats['duplicates'] += $duplicates;
+
+                                        $this->logger?->info("<<< EXITO: Sincronización completada para Ad Account: $accountPlatformId (Level: $level | Pass: $passLabel). Métricas: $metricsCount | Filas: $processedRows | Duplicados: $duplicates");
+                                    }
+                                } else {
+                                    $this->logger?->info("--- INFO: No se encontraron datos de Marketing para Ad Account: $accountPlatformId (Level: $level | Pass: $passLabel)");
+                                }
                             }
                         }
                     }
@@ -861,13 +888,72 @@
         }
 
         /**
+         * Resolves the independent breakdown passes to execute for the sync.
+         */
+        protected function resolveBreakdownPasses(array $accCfg, array $config): array
+        {
+            $passes = [
+                'unbroken' => [
+                    'label'          => 'Unbroken (Baseline)',
+                    'breakdowns'     => null,
+                    'dimension_keys' => [],
+                ]
+            ];
+
+            $enabledPasses = $accCfg['breakdown_passes'] ?? ($config['breakdown_passes'] ?? null);
+
+            // If explicitly configured, honor configured passes
+            if (is_array($enabledPasses)) {
+                if (!empty($enabledPasses['demographics'])) {
+                    $passes['demographics'] = [
+                        'label'          => 'Demographics (Age & Gender)',
+                        'breakdowns'     => [MetricBreakdown::AGE, MetricBreakdown::GENDER],
+                        'dimension_keys' => ['age', 'gender'],
+                    ];
+                }
+                if (!empty($enabledPasses['placement'])) {
+                    $passes['placement'] = [
+                        'label'          => 'Placement & Position',
+                        'breakdowns'     => ['publisher_platform', 'platform_position'],
+                        'dimension_keys' => ['publisher_platform', 'platform_position'],
+                    ];
+                }
+                if (!empty($enabledPasses['geography'])) {
+                    $passes['geography'] = [
+                        'label'          => 'Geography (Country)',
+                        'breakdowns'     => [MetricBreakdown::COUNTRY],
+                        'dimension_keys' => ['country'],
+                    ];
+                }
+            } else {
+                // Default: preserve backwards compatibility by running Demographics pass
+                $passes['demographics'] = [
+                    'label'          => 'Demographics (Age & Gender)',
+                    'breakdowns'     => [MetricBreakdown::AGE, MetricBreakdown::GENDER],
+                    'dimension_keys' => ['age', 'gender'],
+                ];
+            }
+
+            return $passes;
+        }
+
+        /**
          * @throws GuzzleException
          * @throws Exception
          */
-        protected function fetchInsights(FacebookGraphApi $api, string $accountId, string $startDate, string $endDate, array $config, string $level = 'account', ?callable $shouldContinue = null): array
+        protected function fetchInsights(
+            FacebookGraphApi $api,
+            string           $accountId,
+            string           $startDate,
+            string           $endDate,
+            array            $config,
+            string           $level = 'account',
+            ?callable        $shouldContinue = null,
+            ?array           $breakdownsOverride = null
+        ): array
         {
             $this->logger?->info("DEBUG: FacebookMarketingDriver::fetchInsights - Requesting level '$level' for '$accountId' from $startDate to $endDate");
-            $metricConfig = $this->getMetricsConfig($config);
+            $metricConfig = $this->getMetricsConfig($config, $breakdownsOverride);
 
             $params = [
                 'time_range' => json_encode(['since' => $startDate, 'until' => $endDate]),
@@ -908,10 +994,12 @@
             return ['data' => []];
         }
 
-        private function getMetricsConfig(array $config): array
+        private function getMetricsConfig(array $config, ?array $breakdownsOverride = null): array
         {
             $customMetrics = $config['metrics'] ?? [];
-            $metricSet = isset($config['metric_set']) ? (MetricSet::tryFrom($config['metric_set']) ?: MetricSet::BASIC) : (!empty($customMetrics) ? MetricSet::CUSTOM : MetricSet::BASIC);
+            $metricSet = isset($config['metric_set'])
+                ? (MetricSet::tryFrom((string)$config['metric_set']) ?: MetricSet::KEY)
+                : (!empty($customMetrics) ? MetricSet::CUSTOM : MetricSet::KEY);
 
             $baseFields = 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name';
 
@@ -932,9 +1020,13 @@
                 $fields = $baseFields.','.AdAccountPermission::DEFAULT->insightsFields($metricSet).',cpm,action_values';
             }
 
+            $resolvedBreakdowns = $breakdownsOverride !== null
+                ? $breakdownsOverride
+                : ($config['breakdowns'] ?? [MetricBreakdown::AGE, MetricBreakdown::GENDER]);
+
             return [
                 'metricSet'  => $metricSet,
-                'breakdowns' => $config['breakdowns'] ?? [MetricBreakdown::AGE, MetricBreakdown::GENDER],
+                'breakdowns' => $resolvedBreakdowns,
                 'fields'     => $fields,
                 'metrics'    => is_array($customMetrics) ? $customMetrics : explode(',', (string)$customMetrics)
             ];
