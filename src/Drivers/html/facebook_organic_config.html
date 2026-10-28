@@ -1,0 +1,142 @@
+      <div id="tab-facebook" class="tab-content" style="display: none">
+        <div class="settings-horizontal-grid">
+          <div class="card compact-card cfg-toggle-card">
+            <div>
+              <div class="section-title small cfg-toggle-label">
+                <i data-lucide="power"></i> Channel Status
+              </div>
+              <div class="cfg-subtitle">Enable FB Organic Data Extraction</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="fb-organic-enabled" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="card compact-card cfg-toggle-card">
+            <div>
+              <div class="section-title small hierarchy-item-premium cfg-toggle-label">
+                <i data-lucide="shield-check"></i> Account Isolation
+              </div>
+              <div class="cfg-subtitle">Enable Granular Sync (1 Job per Page)</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="fb-organic-granular-sync" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="card compact-card">
+            <div class="section-title small"><i data-lucide="calendar"></i> Sync Window</div>
+            <div class="cfg-select-row">
+              <select id="fb-organic-history-range" class="cfg-select-full">
+                <option value="1 month">1 Month</option>
+                <option value="3 months">3 Months</option>
+                <option value="6 months">6 Months</option>
+                <option value="1 year">1 Year</option>
+                <option value="2 years">2 Years</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card compact-card">
+            <div class="section-title small"><i data-lucide="users"></i> Max Workers</div>
+            <div class="cfg-bottom-content">
+              <input type="number" id="fb-organic-max-workers" min="1" max="10" placeholder="3" class="cfg-number-input" />
+            </div>
+          </div>
+
+          <div class="card compact-card">
+            <div class="section-title small"><i data-lucide="clock"></i> Cron Scheduling (Hours)</div>
+            <div class="cfg-cron-grid-dual">
+              <div>
+                <div class="cfg-cron-label">Entities</div>
+                <div class="cfg-cron-row">
+                  <input type="number" id="fb-organic-entities-cron-hour" min="0" max="23" placeholder="2" class="config-cron-mini-input" />
+                  <span class="cfg-time-sep">:</span>
+                  <input type="number" id="fb-organic-entities-cron-minute" min="0" max="59" placeholder="0" class="config-cron-mini-input" />
+                  <span id="fb-organic-entities-cron-status" class="cron-dot" title="Status check"></span>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-cron-label">Metrics</div>
+                <div class="cfg-cron-row">
+                  <input type="number" id="fb-organic-recent-cron-hour" min="0" max="23" placeholder="6" class="config-cron-mini-input" />
+                  <span class="cfg-time-sep">:</span>
+                  <input type="number" id="fb-organic-recent-cron-minute" min="0" max="59" placeholder="0" class="config-cron-mini-input" />
+                  <span id="fb-organic-recent-cron-status" class="cron-dot" title="Status check"></span>
+                </div>
+              </div>
+            </div>
+            <div id="fb-organic-cron-sync-warning" class="cron-warning-box cfg-cron-warning">
+              <i data-lucide="alert-triangle" size="12"></i> Deployment required
+            </div>
+          </div>
+
+          <div class="card compact-card cfg-span-2">
+            <div class="section-title small"><i data-lucide="layers"></i> Extraction Granularity</div>
+            <div class="cfg-granularity-grid">
+              <!-- FB Organic Depth -->
+              <div class="cfg-granularity-col-left">
+                <div class="cfg-granularity-label">
+                  <i data-lucide="layout" size="10"></i> FB Page Depth (Organic)
+                </div>
+                <select id="fb-organic-level" onchange="handleFbOrganicLevelChange()" class="cfg-granularity-select">
+                  <option value="page">Level 1: Page Info Only</option>
+                  <option value="page_metrics">Level 2: Page Metrics</option>
+                  <option value="posts">Level 3: Posts Content</option>
+                  <option value="post_metrics">Level 4: Full Posts &amp; Metrics</option>
+                </select>
+                <div class="granularity-compact-row">
+                  <div class="level-indicator-dot" id="org-fb-ind-1" title="Page Info" onclick="setFbOrganicLevel('page')">I</div>
+                  <div class="level-indicator-dot" id="org-fb-ind-2" title="Page Metrics" onclick="setFbOrganicLevel('page_metrics')">M</div>
+                  <div class="level-indicator-dot" id="org-fb-ind-3" title="Posts" onclick="setFbOrganicLevel('posts')">P</div>
+                  <div class="level-indicator-dot" id="org-fb-ind-4" title="Post Metrics" onclick="setFbOrganicLevel('post_metrics')">S</div>
+                </div>
+              </div>
+              <!-- IG Organic Depth -->
+              <div>
+                <div class="cfg-granularity-label">
+                  <i data-lucide="instagram" size="10"></i> Instagram Depth (Business)
+                </div>
+                <select id="fb-ig-level" onchange="handleFbOrganicLevelChange()" class="cfg-granularity-select">
+                  <option value="accounts">Level 1: Account Info</option>
+                  <option value="metrics">Level 2: Account Metrics</option>
+                  <option value="media">Level 3: Media Content</option>
+                  <option value="media_metrics">Level 4: Full Media &amp; Metrics</option>
+                </select>
+                <div class="granularity-compact-row">
+                  <div class="level-indicator-dot" id="org-ig-ind-1" title="Account" onclick="setIgLevel('accounts')">A</div>
+                  <div class="level-indicator-dot" id="org-ig-ind-2" title="Metrics" onclick="setIgLevel('metrics')">M</div>
+                  <div class="level-indicator-dot" id="org-ig-ind-3" title="Media" onclick="setIgLevel('media')">C</div>
+                  <div class="level-indicator-dot" id="org-ig-ind-4" title="Media Metrics" onclick="setIgLevel('media_metrics')">S</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title small"><i data-lucide="layout"></i> Connected Pages</div>
+          <div class="cfg-toolbar">
+            <div class="cfg-action-btns">
+              <button class="btn btn-mini btn-outline" onclick="selectUnselectAllOrganicPages(true)" title="Select All Discovered Pages">
+                <i data-lucide="check-square" size="14"></i> Select All
+              </button>
+              <button class="btn btn-mini btn-outline" onclick="selectUnselectAllOrganicPages(false)" title="Unselect All Pages">
+                <i data-lucide="square" size="14"></i> Unselect All
+              </button>
+            </div>
+            <button class="btn btn-mini btn-sync" onclick="forceRefresh('facebook_organic')">
+              <i data-lucide="refresh-cw" size="14"></i> Sync from Meta
+            </button>
+            <button class="btn btn-mini btn-disabled-feature" disabled title="Force Sync (Feature disabled for now.)">
+              <i data-lucide="zap" size="14"></i> Force Data Sync
+            </button>
+          </div>
+          <div id="fb-pages-list" class="asset-grid"></div>
+        </div>
+        <button class="btn btn-save-fixed" onclick="updateConfig('facebook_organic')">
+          <i data-lucide="save"></i> Save Organic Settings
+        </button>
+      </div>

@@ -23,6 +23,7 @@
     use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
     use Anibalealvarezs\FacebookGraphApi\Enums\AdAccountPermission;
     use Anibalealvarezs\MetaHubDriver\Conversions\FacebookMarketingMetricConvert;
+    use Anibalealvarezs\ApiSkeleton\Classes\Exceptions\PermanentAuthenticationException;
     use Anibalealvarezs\ApiDriverCore\Helpers\DateHelper;
     use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
     use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
@@ -270,12 +271,15 @@
 
                 // 3. Discover Ad Accounts
                 error_log("TRACE: [facebook_marketing] Discovering Ad Accounts...");
-                $fields = 'id,name,account_id,account_status,currency,created_time';
+                $fields = 'id,name,account_id,account_status,currency,created_time,business{id,name}';
                 $adAccountsData = $api->getAdAccounts(userId: $userId, fields: $fields);
                 
                 if (!empty($adAccountsData['data'])) {
                     foreach ($adAccountsData['data'] as $adAccount) {
                         $adAccount['id'] = self::getPlatformId($adAccount, AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
+                        if (!empty($adAccount['business']['name'])) {
+                            $adAccount['business_name'] = $adAccount['business']['name'];
+                        }
                         $assets['ad_accounts'][] = [
                             'id'           => $adAccount['id'],
                             'name'         => $adAccount['name'] ?? ('Ad Account '.$adAccount['id']),
@@ -599,6 +603,9 @@
                     $consecutiveFailures = 0; // Reset on success
                 } catch (Exception $e) {
                     if (str_contains($e->getMessage(), 'Sync aborted')) throw $e;
+                    if ($e instanceof PermanentAuthenticationException) {
+                        throw $e;
+                    }
                     $this->logger?->error("Unhandled error syncing Ad Account $accountPlatformId: ".$e->getMessage());
                     $consecutiveFailures++;
                     if ($consecutiveFailures >= $maxConsecutiveFailures) {
@@ -701,12 +708,15 @@
             if ($identityMapper && !empty($config['ad_accounts'])) {
                 $aIds = [];
                 if ($cleanTargetId) {
-                    $directKey = 'act_'.$cleanTargetId;
-                    if (isset($config['ad_accounts'][$directKey])) {
-                        $aIds[] = $cleanTargetId;
-                    } elseif (isset($config['ad_accounts'][$cleanTargetId])) {
-                        // Fallback: keyed without prefix
-                        $aIds[] = $cleanTargetId;
+                    foreach ($config['ad_accounts'] as $account) {
+                        $id = (string)($account['id'] ?? $account);
+                        if ($id) {
+                            $accId = self::getPlatformId(['id' => $id], AssetCategory::IDENTITY, MetaEntityType::META_AD_ACCOUNT->value);
+                            if ($accId === $cleanTargetId) {
+                                $aIds[] = $cleanTargetId;
+                                break;
+                            }
+                        }
                     }
                 } else {
                     // No target filter — include all accounts
@@ -906,7 +916,18 @@
             $baseFields = 'account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name';
 
             if ($metricSet === MetricSet::CUSTOM && !empty($customMetrics)) {
-                $fields = $baseFields.','.(is_array($customMetrics) ? implode(',', $customMetrics) : $customMetrics);
+                // Force inclusion of fields required for internal driver calculations 
+                // regardless of what the user requested for the UI output
+                $requiredInternalMetrics = ['results', 'cost_per_result', 'actions', 'action_values'];
+                $customMetricsArray = is_array($customMetrics) ? $customMetrics : explode(',', $customMetrics);
+                foreach ($requiredInternalMetrics as $reqMetric) {
+                    if (!in_array($reqMetric, $customMetricsArray)) {
+                        $customMetricsArray[] = $reqMetric;
+                    }
+                }
+                $customMetrics = $customMetricsArray;
+                
+                $fields = $baseFields.','.implode(',', $customMetricsArray);
             } else {
                 $fields = $baseFields.','.AdAccountPermission::DEFAULT->insightsFields($metricSet).',cpm,action_values';
             }
@@ -923,11 +944,141 @@
         {
             $msg = $e->getMessage();
 
+            if (str_contains($msg, 'Error validating access token') || (str_contains($msg, 'OAuthException') && str_contains($msg, 'Code: 190'))) {
+                return true;
+            }
+
             return (stripos($msg, '(#100)') !== false || stripos($msg, 'valid insights metric') !== false || stripos($msg, 'permissions') !== false);
         }
 
         private function filterInsightRows(array $rows, string $level, array $config): array
         {
+            // Calculate results and cost_per_result before filtering
+            $rows = array_map(function($row) {
+                $nativeResults = 0;
+                $hasNativeResults = false;
+                if (!empty($row['results']) && is_array($row['results'])) {
+                    foreach ($row['results'] as $res) {
+                        if (isset($res['values']) && is_array($res['values'])) {
+                            foreach ($res['values'] as $val) {
+                                if (isset($val['value'])) {
+                                    $nativeResults += (float) $val['value'];
+                                    $hasNativeResults = true;
+                                }
+                            }
+                        } elseif (isset($res['value'])) {
+                            $nativeResults += (float) $res['value'];
+                            $hasNativeResults = true;
+                        }
+                    }
+                }
+
+                $results = 0;
+                if (!empty($row['actions']) && is_array($row['actions'])) {
+                    $actionValues = [];
+                    foreach ($row['actions'] as $action) {
+                        if (isset($action['action_type']) && isset($action['value'])) {
+                            $actionValues[$action['action_type']] = (float) $action['value'];
+                        }
+                    }
+
+                    // We should not cascade down to link_clicks if higher value actions are missing,
+                    // as a missing action means 0 results for that action type.
+                    if (isset($actionValues['omni_purchase'])) {
+                        $results = $actionValues['omni_purchase'];
+                    } elseif (isset($actionValues['purchase'])) {
+                        $results = $actionValues['purchase'];
+                    } elseif (isset($actionValues['offsite_conversion.fb_pixel_purchase'])) {
+                        $results = $actionValues['offsite_conversion.fb_pixel_purchase'];
+                    } elseif (isset($actionValues['onsite_conversion.purchase'])) {
+                        $results = $actionValues['onsite_conversion.purchase'];
+                    } elseif (isset($actionValues['lead'])) {
+                        $results = $actionValues['lead'];
+                    } elseif (isset($actionValues['offsite_conversion.fb_pixel_lead'])) {
+                        $results = $actionValues['offsite_conversion.fb_pixel_lead'];
+                    } elseif (isset($actionValues['onsite_conversion.lead'])) {
+                        $results = $actionValues['onsite_conversion.lead'];
+                    }
+                }
+                
+                $row['results'] = $hasNativeResults ? $nativeResults : $results;
+
+                $nativeCpr = 0;
+                $hasNativeCpr = false;
+                if (!empty($row['cost_per_result']) && is_array($row['cost_per_result'])) {
+                    foreach ($row['cost_per_result'] as $cpr) {
+                        if (isset($cpr['values']) && is_array($cpr['values'])) {
+                            foreach ($cpr['values'] as $val) {
+                                if (isset($val['value'])) {
+                                    $nativeCpr += (float) $val['value'];
+                                    $hasNativeCpr = true;
+                                    break 2; // Usually there's only one cost_per_result that matters for the objective
+                                }
+                            }
+                        } elseif (isset($cpr['value'])) {
+                            $nativeCpr += (float) $cpr['value'];
+                            $hasNativeCpr = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if ($hasNativeCpr && $nativeCpr > 0) {
+                    $row['cost_per_result'] = $nativeCpr;
+                } else {
+                    $row['cost_per_result'] = $row['results'] > 0 ? ((float) ($row['spend'] ?? 0)) / $row['results'] : 0;
+                }
+                
+                $nativeResultRate = 0;
+                $hasNativeResultRate = false;
+                if (!empty($row['result_rate']) && is_array($row['result_rate'])) {
+                    foreach ($row['result_rate'] as $rr) {
+                        if (isset($rr['values']) && is_array($rr['values'])) {
+                            foreach ($rr['values'] as $val) {
+                                if (isset($val['value'])) {
+                                    $nativeResultRate += (float) $val['value'];
+                                    $hasNativeResultRate = true;
+                                    break 2;
+                                }
+                            }
+                        } elseif (isset($rr['value'])) {
+                            $nativeResultRate += (float) $rr['value'];
+                            $hasNativeResultRate = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if ($hasNativeResultRate && $nativeResultRate > 0) {
+                    $row['result_rate'] = $nativeResultRate;
+                } else {
+                    $impressions = (float)($row['impressions'] ?? 0);
+                    $row['result_rate'] = $impressions > 0 ? ($row['results'] / $impressions) * 100 : 0;
+                }
+
+                $roas = 0;
+                if (!empty($row['purchase_roas']) && is_array($row['purchase_roas'])) {
+                    $roasValues = [];
+                    foreach ($row['purchase_roas'] as $roasItem) {
+                        if (isset($roasItem['action_type']) && isset($roasItem['value'])) {
+                            $roasValues[$roasItem['action_type']] = (float) $roasItem['value'];
+                        }
+                    }
+                    if (isset($roasValues['omni_purchase'])) {
+                        $roas = $roasValues['omni_purchase'];
+                    } elseif (isset($roasValues['purchase'])) {
+                        $roas = $roasValues['purchase'];
+                    } elseif (isset($roasValues['offsite_conversion.fb_pixel_purchase'])) {
+                        $roas = $roasValues['offsite_conversion.fb_pixel_purchase'];
+                    } elseif (isset($roasValues['offsite_conversion'])) {
+                        $roas = $roasValues['offsite_conversion'];
+                    }
+                }
+                $row['purchase_roas'] = $roas > 0 ? $roas : ($row['purchase_roas'] ?? 0);
+                
+                return $row;
+            }, $rows);
+
             // 1. Get filters for all relevant levels to ensure hierarchical consistency
             $campaignInclude = FacebookEntitySync::getFacebookFilter($config, 'CAMPAIGN', 'cache_include');
             $campaignExclude = FacebookEntitySync::getFacebookFilter($config, 'CAMPAIGN', 'cache_exclude');

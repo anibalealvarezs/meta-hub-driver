@@ -1,0 +1,195 @@
+      <div id="tab-facebook-marketing" class="tab-content" style="display: none">
+        <div class="settings-horizontal-grid">
+          <div class="card compact-card cfg-toggle-card">
+            <div>
+              <div class="section-title small cfg-toggle-label">
+                <i data-lucide="power"></i> Channel Status
+              </div>
+              <div class="cfg-subtitle">Enable FB Ads Extraction</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="fb-marketing-enabled" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="card compact-card cfg-toggle-card">
+            <div>
+              <div class="section-title small hierarchy-item-premium cfg-toggle-label">
+                <i data-lucide="shield-check"></i> Account Isolation
+              </div>
+              <div class="cfg-subtitle">Enable Granular Sync (1 Job per Ad Account)</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="fb-marketing-granular-sync" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="card compact-card">
+            <div class="section-title small"><i data-lucide="calendar"></i> Sync Window</div>
+            <div class="cfg-select-row">
+              <select id="fb-marketing-history-range" class="cfg-select-full">
+                <option value="1 day">1 Day</option>
+                <option value="1 month">1 Month</option>
+                <option value="3 months">3 Months</option>
+                <option value="6 months">6 Months</option>
+                <option value="1 year">1 Year</option>
+                <option value="2 years">2 Years</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card compact-card">
+            <div class="section-title small"><i data-lucide="clock"></i> Cron Scheduling (Hours)</div>
+            <div class="cfg-cron-grid-dual">
+              <div>
+                <div class="cfg-cron-label">Entities</div>
+                <div class="cfg-cron-row">
+                  <input type="number" id="fb-marketing-entities-cron-hour" min="0" max="23" placeholder="2" class="config-cron-mini-input" />
+                  <span class="cfg-time-sep">:</span>
+                  <input type="number" id="fb-marketing-entities-cron-minute" min="0" max="59" placeholder="0" class="config-cron-mini-input" />
+                  <span id="fb-marketing-entities-cron-status" class="cron-dot" title="Status check"></span>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-cron-label">Metrics</div>
+                <div class="cfg-cron-row">
+                  <input type="number" id="fb-marketing-recent-cron-hour" min="0" max="23" placeholder="5" class="config-cron-mini-input" />
+                  <span class="cfg-time-sep">:</span>
+                  <input type="number" id="fb-marketing-recent-cron-minute" min="0" max="59" placeholder="0" class="config-cron-mini-input" />
+                  <span id="fb-marketing-recent-cron-status" class="cron-dot" title="Status check"></span>
+                </div>
+              </div>
+            </div>
+            <div id="fb-marketing-cron-sync-warning" class="cron-warning-box cfg-cron-warning">
+              <i data-lucide="alert-triangle" size="12"></i> Deployment required
+            </div>
+          </div>
+
+          <div class="card compact-card">
+            <div class="section-title small"><i data-lucide="users"></i> Max Workers</div>
+            <div class="cfg-bottom-content">
+              <input type="number" id="fb-marketing-max-workers" min="1" max="10" placeholder="3" class="cfg-number-input" />
+            </div>
+          </div>
+
+          <div class="card compact-card cfg-span-2">
+            <div class="section-title small"><i data-lucide="layers"></i> Extraction Granularity</div>
+            <div class="cfg-granularity-grid">
+              <!-- Entity Sync Depth -->
+              <div class="cfg-granularity-col-left">
+                <div class="cfg-granularity-label">
+                  <i data-lucide="database" size="10"></i> Entity Sync Depth (Infrastructure)
+                </div>
+                <select id="fb-marketing-level" onchange="handleFbLevelChange()" class="cfg-granularity-select">
+                  <option value="ad_account">Level 1: Account Only</option>
+                  <option value="campaign">Level 2: Campaigns</option>
+                  <option value="adset">Level 3: AdSets</option>
+                  <option value="ad">Level 4: Ads</option>
+                  <option value="creative">Level 5: Creatives</option>
+                </select>
+                <div class="granularity-compact-row">
+                  <div class="level-indicator-dot" id="ent-ind-1" title="Campaigns" onclick="setFbLevel('campaign')">C</div>
+                  <div class="level-indicator-dot" id="ent-ind-2" title="AdSets" onclick="setFbLevel('adset')">S</div>
+                  <div class="level-indicator-dot" id="ent-ind-3" title="Ads" onclick="setFbLevel('ad')">A</div>
+                  <div class="level-indicator-dot" id="ent-ind-4" title="Creatives" onclick="setFbLevel('creative')">R</div>
+                </div>
+              </div>
+              <!-- Metrics Caching Depth -->
+              <div>
+                <div class="cfg-granularity-label">
+                  <i data-lucide="bar-chart-3" size="10"></i> Metrics Level (Reporting)
+                </div>
+                <select id="fb-marketing-metrics-level" onchange="handleFbLevelChange()" class="cfg-granularity-select">
+                  <option value="ad_account">Level 1: Account Metrics</option>
+                  <option value="campaign">Level 2: Campaign Metrics</option>
+                  <option value="adset">Level 3: AdSet Metrics</option>
+                  <option value="ad">Level 4: Ad Metrics</option>
+                  <option value="creative">Level 5: Creative Metrics</option>
+                </select>
+                <div class="granularity-compact-row">
+                  <div class="level-indicator-dot" id="met-ind-1" title="Campaign Metrics" onclick="setMetricLevel('campaign')">C</div>
+                  <div class="level-indicator-dot" id="met-ind-2" title="AdSet Metrics" onclick="setMetricLevel('adset')">S</div>
+                  <div class="level-indicator-dot" id="met-ind-3" title="Ad Metrics" onclick="setMetricLevel('ad')">A</div>
+                  <div class="level-indicator-dot" id="met-ind-4" title="Creative Metrics" onclick="setMetricLevel('creative')">R</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extraction Filters Section -->
+        <div class="card">
+          <div class="section-title small"><i data-lucide="filter"></i> Extraction Asset Filters</div>
+          <div class="cfg-subtitle cfg-filter-description">
+            Only assets matching these inclusion patterns will be cached in the database. Leave empty for all.
+          </div>
+          <div class="asset-grid">
+            <div class="filter-group">
+              <div class="rule-group-label cfg-filter-label"><i data-lucide="target" size="12"></i> Campaigns</div>
+              <div class="config-filter-icon-input">
+                <input type="text" id="fb-marketing-campaign-filter" placeholder="e.g. CAMP-" class="config-filter-raw-input" />
+              </div>
+            </div>
+            <div class="filter-group">
+              <div class="rule-group-label cfg-filter-label"><i data-lucide="layers" size="12"></i> AdSets</div>
+              <div class="cfg-filter-input-wrap">
+                <input type="text" id="fb-marketing-adset-filter" placeholder="Pattern" class="cfg-filter-input" />
+              </div>
+            </div>
+            <div class="filter-group">
+              <div class="rule-group-label cfg-filter-label"><i data-lucide="megaphone" size="12"></i> Ads</div>
+              <div class="cfg-filter-input-wrap">
+                <input type="text" id="fb-marketing-ad-filter" placeholder="Pattern" class="cfg-filter-input" />
+              </div>
+            </div>
+            <div class="filter-group">
+              <div class="rule-group-label cfg-filter-label"><i data-lucide="image" size="12"></i> Creatives</div>
+              <div class="cfg-filter-input-wrap">
+                <input type="text" id="fb-marketing-creative-filter" placeholder="Pattern" class="cfg-filter-input" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="marketing-split-layout">
+          <div class="card">
+            <div class="section-title small"><i data-lucide="target"></i> Ad Accounts</div>
+            <div class="cfg-toolbar-split">
+              <div class="cfg-action-btns">
+                <button class="btn btn-mini btn-sync" onclick="forceRefresh('facebook_marketing')">
+                  <i data-lucide="refresh-cw" size="14"></i> Sync from Meta
+                </button>
+                <button class="btn btn-mini btn-disabled-feature" disabled title="Force Sync (Feature disabled for now.)">
+                  <i data-lucide="zap" size="14"></i> Force Data Sync
+                </button>
+              </div>
+              <button class="btn btn-mini" onclick="toggleAllAds()" title="Select/Deselect All">
+                <i data-lucide="check-square" size="14"></i> Select All
+              </button>
+            </div>
+            <div id="fb-ad-accounts-list" class="asset-grid three-cols"></div>
+          </div>
+
+          <div class="card">
+            <div class="section-title small"><i data-lucide="shield"></i> Rules Config</div>
+            <div class="cfg-strategy-group">
+              <label class="strategy-option">
+                <input type="radio" name="fb_metrics_strategy" id="fb-strategy-default" value="default" checked onchange="handleFbStrategyChange()" />
+                <span>Standard</span>
+              </label>
+              <label class="strategy-option">
+                <input type="radio" name="fb_metrics_strategy" id="fb-strategy-custom" value="custom" onchange="handleFbStrategyChange()" />
+                <span>Custom</span>
+              </label>
+            </div>
+            <div id="fb-custom-metrics-area" style="display: none">
+              <div class="metric-config-grid" id="fb-metrics-custom-grid"></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-save-fixed" onclick="updateConfig('facebook_marketing')">
+          <i data-lucide="save"></i> Save Strategy
+        </button>
+      </div>

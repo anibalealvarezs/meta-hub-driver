@@ -23,6 +23,7 @@
     use Anibalealvarezs\FacebookGraphApi\Enums\TokenSample;
     use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
     use Anibalealvarezs\FacebookGraphApi\Enums\MetricSet;
+    use Anibalealvarezs\ApiSkeleton\Classes\Exceptions\PermanentAuthenticationException;
     use Anibalealvarezs\FacebookGraphApi\Enums\FacebookPostPermission;
     use Anibalealvarezs\FacebookGraphApi\Support\FacebookInsightMetricGuard;
     use Anibalealvarezs\MetaHubDriver\Controllers\FacebookAuthController;
@@ -160,8 +161,9 @@
             return [
                 'likes'                          => ['likes', 'likes_daily', 'post_reactions_by_type_total', 'post_reactions_by_type_total_daily', 'page_actions_post_reactions_total', 'page_actions_post_reactions_total_daily'],
                 'comments'                       => ['comments', 'comments_daily', 'post_comments', 'post_comments_daily'],
-                'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily', 'page_impressions_unique', 'page_impressions_unique_daily', 'post_impressions_unique', 'post_impressions_unique_daily'],
-                'views'                          => ['plays', 'plays_daily', 'views', 'views_daily', 'post_media_view', 'post_media_view_daily'],
+                'reach'                          => ['reach', 'reach_daily', 'post_reach', 'post_reach_daily', 'page_total_media_view_unique', 'page_total_media_view_unique_daily', 'post_total_media_view_unique', 'post_total_media_view_unique_daily'],
+                'views'                          => ['plays', 'plays_daily', 'views', 'views_daily', 'page_media_view', 'page_media_view_daily', 'post_media_view', 'post_media_view_daily'],
+                'content_views'                  => ['content_views', 'content_views_daily'],
                 'page_views_total'               => ['page_views_total', 'page_views_total_daily'],
                 'video_views'                    => ['video_views', 'video_views_daily', 'page_video_views', 'page_video_views_daily', 'post_video_views', 'post_video_views_daily'],
                 'profile_views'                  => ['profile_views', 'profile_views_daily'],
@@ -402,6 +404,18 @@
 
                 if (!empty($pagesData['data'])) {
                     foreach ($pagesData['data'] as $page) {
+                        $igAccount = $page['instagram_business_account'] ?? null;
+                        
+                        if (is_array($igAccount)) {
+                            $igUsername = $igAccount['username'] ?? null;
+                            $igHostname = $igUsername ? 'https://www.instagram.com/' . $igUsername : ($igAccount['website'] ?? null);
+                            $igAccount['website'] = $igHostname;
+                            $page['instagram_business_account'] = $igAccount;
+                        } else {
+                            $igUsername = null;
+                            $igHostname = null;
+                        }
+
                         $assets['pages'][] = [
                             'id'              => $page['id'],
                             'title'           => $page['name'],
@@ -410,10 +424,10 @@
                             'link'            => $page['link'],
                             'created_time'    => $page['created_time'] ?? null,
                             'data'            => $page,
-                            'ig_account'      => $page['instagram_business_account']['id'] ?? null,
-                            'ig_account_name' => $page['instagram_business_account']['username'] ?? $page['instagram_business_account']['name'] ?? null,
-                            'ig_hostname'     => $page['instagram_business_account']['website'] ?? null,
-                            'ig_data'         => $page['instagram_business_account'] ?? null,
+                            'ig_account'      => is_array($igAccount) ? ($igAccount['id'] ?? null) : $igAccount,
+                            'ig_account_name' => $igUsername ?? (is_array($igAccount) ? ($igAccount['name'] ?? null) : null),
+                            'ig_hostname'     => $igHostname,
+                            'ig_data'         => is_array($igAccount) ? $igAccount : null,
                         ];
                     }
                 }
@@ -610,7 +624,7 @@
                         foreach ($pageData['ig_insights'] as $insight) {
                             $igCollection = FacebookOrganicMetricConvert::igAccountMetrics(
                                 rows: $insight['data'],
-                                date: $chunk['start'],
+                                date: $insight['date'] ?? $chunk['start'],
                                 page: $igPageObj ?? $pageObj,
                                 account: ($igCaObj && method_exists($igCaObj, 'getAccount')) ? $igCaObj->getAccount() : (($caObj && method_exists($caObj, 'getAccount')) ? $caObj->getAccount() : ($config['accounts_group_name'] ?? 'Default')),
                                 channeledAccount: $igCaObj ?? $igPlatformId,
@@ -900,21 +914,32 @@
 
                 $this->logger?->info("DEBUG: Metrics for ig account (ID: $page[ig_account]) to be synced from $igSince to $end");
 
-                foreach ([1, 2, 3, 4, 5] as $option) {
-                    if ($shouldContinue && !$shouldContinue()) {
-                        throw new Exception("Sync aborted by the orchestrator.");
-                    }
-                    try {
-                        $insights = $api->getDailyInstagramAccountTotalValueInsights(
-                            instagramAccountId: (string)$page['ig_account'],
-                            since: $igSince,
-                            option: $option
-                        );
-                        if (!empty($insights['data'])) {
-                            $data['ig_insights'][] = ['option' => $option, 'data' => $insights['data']];
+                $igChunks = DateHelper::getDateChunks($igSince, $end, '1 day');
+                foreach ($igChunks as $igChunk) {
+                    foreach ([1, 2, 3, 4, 5] as $option) {
+                        if ($shouldContinue && !$shouldContinue()) {
+                            throw new Exception("Sync aborted by the orchestrator.");
                         }
-                    } catch (Exception $e) {
-                        $this->logger?->warning("IG Insight option $option failed: ".$e->getMessage());
+                        try {
+                            $insights = $api->getDailyInstagramAccountTotalValueInsights(
+                                instagramAccountId: (string)$page['ig_account'],
+                                since: $igChunk['start'],
+                                until: $igChunk['end'],
+                                option: $option
+                            );
+                            if (!empty($insights['data'])) {
+                                $data['ig_insights'][] = [
+                                    'date'   => $igChunk['start'],
+                                    'option' => $option,
+                                    'data'   => $insights['data']
+                                ];
+                            }
+                        } catch (Exception $e) {
+                            if ($e instanceof PermanentAuthenticationException) {
+                                throw $e;
+                            }
+                            $this->logger?->warning("IG Insight option $option failed: ".$e->getMessage());
+                        }
                     }
                 }
             }
@@ -966,7 +991,10 @@
                                 ];
                             }
                         } catch (Exception $e) {
-                            $this->logger?->warning("Failed to fetch insights for Post $postId: ".$e->getMessage());
+                            if ($e instanceof PermanentAuthenticationException) {
+                                throw $e;
+                            }
+                            $this->logger?->warning("FB Post Insight failed for $postId: ".$e->getMessage());
                         }
                     }
                 }
@@ -1013,7 +1041,10 @@
                                 ];
                             }
                         } catch (Exception $e) {
-                            $this->logger?->warning("Failed to fetch insights for IG Media $mediaId: ".$e->getMessage());
+                            if ($e instanceof PermanentAuthenticationException) {
+                                throw $e;
+                            }
+                            $this->logger?->warning("IG Media Insight failed for $mediaId: ".$e->getMessage());
                         }
                     }
                 }

@@ -9,10 +9,11 @@ use Anibalealvarezs\ApiDriverCore\Interfaces\ChanneledAccountableInterface;
 use Anibalealvarezs\ApiDriverCore\Interfaces\SyncDriverInterface;
 use Anibalealvarezs\ApiDriverCore\Traits\SyncDriverTrait;
 use Anibalealvarezs\MetaHubDriver\Traits\MetaSyncDriverTrait;
+use Anibalealvarezs\MetaHubDriver\Enums\MetaEntityType;
 use Anibalealvarezs\FacebookGraphApi\FacebookGraphApi;
 use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
 use Anibalealvarezs\ApiDriverCore\Conversions\UniversalEntityConverter;
-use Doctrine\Common\Collections\ArrayCollection;
+use Anibalealvarezs\ApiSkeleton\Classes\Exceptions\PermanentAuthenticationException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use DateTime;
@@ -294,6 +295,9 @@ class FacebookLeadsDriver implements SyncDriverInterface, ChanneledAccountableIn
                     } while ($after !== null);
                 }
             } catch (Exception $e) {
+                if ($e instanceof PermanentAuthenticationException) {
+                    throw $e;
+                }
                 $this->logger?->error("FacebookLeadsDriver: Error syncing page {$pageId}: " . $e->getMessage());
             }
         }
@@ -358,14 +362,33 @@ class FacebookLeadsDriver implements SyncDriverInterface, ChanneledAccountableIn
         ];
     }
 
-    public function getConfigurationJs(): string
+    public static function getAssetPatterns(): array
     {
-        return "";
+        return [
+            MetaEntityType::PAGE->value => [
+                'category'          => AssetCategory::IDENTITY,
+                'key'               => 'pages',
+                'channeled_account' => [
+                    'platform_id'             => [
+                        'type' => 'raw',
+                        'key'  => 'id'
+                    ],
+                    'platform_created_at_key' => 'created_time',
+                    'name_key'                => 'title',
+                    'type'                    => MetaEntityType::PAGE->value,
+                    'data_key'                => 'data'
+                ]
+            ]
+        ];
     }
 
-    public function getRequiredInstanceTier(): InstanceTier
+    public function getConfigurationJs(): string
     {
-        return InstanceTier::TIER_2;
+        $file = __DIR__ . '/js/FacebookLeadsConfigHandler.js';
+        if (file_exists($file)) {
+            return file_get_contents($file);
+        }
+        return "";
     }
 
     public static function getPages(array $asset): array
