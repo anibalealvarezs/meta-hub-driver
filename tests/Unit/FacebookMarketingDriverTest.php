@@ -41,8 +41,42 @@ class FacebookMarketingDriverTest extends TestCase
 
         $this->assertArrayHasKey('conversions', $dictionary);
         $this->assertArrayHasKey('roas_purchase', $dictionary);
+        $this->assertArrayHasKey('purchases', $dictionary);
+        $this->assertArrayHasKey('purchase_value', $dictionary);
+        $this->assertArrayHasKey('cost_per_purchase', $dictionary);
+        $this->assertArrayHasKey('leads', $dictionary);
+        $this->assertArrayHasKey('cost_per_lead', $dictionary);
         $this->assertContains('results', $dictionary['conversions']);
         $this->assertContains('purchase_roas', $dictionary['roas_purchase']);
+        $this->assertContains('purchases', $dictionary['purchases']);
+        $this->assertContains('leads', $dictionary['leads']);
+    }
+
+    public function testResolveBreakdownPasses()
+    {
+        $ref = new \ReflectionMethod($this->driver, 'resolveBreakdownPasses');
+        $ref->setAccessible(true);
+
+        // 1. Default (Unbroken + Demographics)
+        $defaultPasses = $ref->invoke($this->driver, [], []);
+        $this->assertArrayHasKey('unbroken', $defaultPasses);
+        $this->assertArrayHasKey('demographics', $defaultPasses);
+        $this->assertNull($defaultPasses['unbroken']['breakdowns']);
+        $this->assertEquals([], $defaultPasses['unbroken']['dimension_keys']);
+
+        // 2. Custom enabled passes
+        $customPasses = $ref->invoke($this->driver, [
+            'breakdown_passes' => [
+                'demographics' => true,
+                'placement' => true,
+                'geography' => true,
+            ]
+        ], []);
+        $this->assertArrayHasKey('unbroken', $customPasses);
+        $this->assertArrayHasKey('demographics', $customPasses);
+        $this->assertArrayHasKey('placement', $customPasses);
+        $this->assertArrayHasKey('geography', $customPasses);
+        $this->assertEquals(['country'], $customPasses['geography']['dimension_keys']);
     }
 
     public function testMetaSyncDriverTraitMethods()

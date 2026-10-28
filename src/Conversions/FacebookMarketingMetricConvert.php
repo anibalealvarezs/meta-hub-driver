@@ -22,6 +22,131 @@
     class FacebookMarketingMetricConvert
     {
         private const array METADATA_FIELDS = ['actions', 'cost_per_action_type', 'purchase_roas', 'website_purchase_roas'];
+        private const array ACTION_NORMALIZED_METRICS = [
+            'purchases',
+            'purchase_value',
+            'cost_per_purchase',
+            'leads',
+            'cost_per_lead',
+        ];
+
+        /**
+         * Normalizes raw Meta action arrays into flat metric fields on the row.
+         */
+        public static function normalizeRowActions(array $row): array
+        {
+            $actions = [];
+            if (!empty($row['actions']) && is_array($row['actions'])) {
+                foreach ($row['actions'] as $act) {
+                    if (isset($act['action_type']) && isset($act['value'])) {
+                        $actions[$act['action_type']] = (float)$act['value'];
+                    }
+                }
+            }
+
+            $actionValues = [];
+            if (!empty($row['action_values']) && is_array($row['action_values'])) {
+                foreach ($row['action_values'] as $actVal) {
+                    if (isset($actVal['action_type']) && isset($actVal['value'])) {
+                        $actionValues[$actVal['action_type']] = (float)$actVal['value'];
+                    }
+                }
+            }
+
+            $cpa = [];
+            if (!empty($row['cost_per_action_type']) && is_array($row['cost_per_action_type'])) {
+                foreach ($row['cost_per_action_type'] as $cpaItem) {
+                    if (isset($cpaItem['action_type']) && isset($cpaItem['value'])) {
+                        $cpa[$cpaItem['action_type']] = (float)$cpaItem['value'];
+                    }
+                }
+            }
+
+            $hasActions = !empty($row['actions']) && is_array($row['actions']);
+            $hasActionValues = !empty($row['action_values']) && is_array($row['action_values']);
+            $hasCpa = !empty($row['cost_per_action_type']) && is_array($row['cost_per_action_type']);
+
+            if (!$hasActions && !$hasActionValues && !$hasCpa) {
+                return $row;
+            }
+
+            // 1. Purchases
+            if ($hasActions) {
+                $purchases = $actions['omni_purchase']
+                    ?? ($actions['purchase']
+                        ?? ($actions['offsite_conversion.fb_pixel_purchase']
+                            ?? ($actions['onsite_conversion.purchase'] ?? 0.0)));
+                $row['purchases'] = (float)$purchases;
+            }
+
+            // 2. Purchase Value
+            if ($hasActionValues) {
+                $purchaseValue = $actionValues['omni_purchase']
+                    ?? ($actionValues['purchase']
+                        ?? ($actionValues['offsite_conversion.fb_pixel_purchase']
+                            ?? ($actionValues['onsite_conversion.purchase'] ?? 0.0)));
+                $row['purchase_value'] = (float)$purchaseValue;
+            }
+
+            // 3. Cost Per Purchase
+            if ($hasCpa || ($hasActions && isset($row['purchases']))) {
+                $costPerPurchase = $cpa['omni_purchase']
+                    ?? ($cpa['purchase']
+                        ?? ($cpa['offsite_conversion.fb_pixel_purchase']
+                            ?? ($cpa['onsite_conversion.purchase'] ?? null)));
+                if ($costPerPurchase !== null) {
+                    $row['cost_per_purchase'] = (float)$costPerPurchase;
+                } elseif (!empty($row['purchases']) && $row['purchases'] > 0 && isset($row['spend'])) {
+                    $row['cost_per_purchase'] = ((float)$row['spend']) / $row['purchases'];
+                }
+            }
+
+            // 4. Leads
+            if ($hasActions) {
+                $leads = $actions['lead']
+                    ?? ($actions['offsite_conversion.fb_pixel_lead']
+                        ?? ($actions['onsite_conversion.lead'] ?? 0.0));
+                $row['leads'] = (float)$leads;
+            }
+
+            // 5. Cost Per Lead
+            if ($hasCpa || ($hasActions && isset($row['leads']))) {
+                $costPerLead = $cpa['lead']
+                    ?? ($cpa['offsite_conversion.fb_pixel_lead']
+                        ?? ($cpa['onsite_conversion.lead'] ?? null));
+                if ($costPerLead !== null) {
+                    $row['cost_per_lead'] = (float)$costPerLead;
+                } elseif (!empty($row['leads']) && $row['leads'] > 0 && isset($row['spend'])) {
+                    $row['cost_per_lead'] = ((float)$row['spend']) / $row['leads'];
+                }
+            }
+
+            return $row;
+        }
+
+        /**
+         * Resolves the list of metrics to process, automatically appending normalized action metrics when evaluating default/custom field sets.
+         */
+        private static function resolveMetricsList(
+            array $metricsToProcess,
+            ?string $customFields,
+            string $defaultFields,
+        ): array {
+            if (!empty($metricsToProcess)) {
+                return array_values(array_unique(array_filter(array_map('trim', $metricsToProcess))));
+            }
+
+            $baseList = $customFields ? explode(',', $customFields) : explode(',', $defaultFields);
+            $baseList = array_map('trim', $baseList);
+
+            foreach (self::ACTION_NORMALIZED_METRICS as $normMetric) {
+                if (!in_array($normMetric, $baseList, true)) {
+                    $baseList[] = $normMetric;
+                }
+            }
+
+            return array_values(array_unique(array_filter($baseList)));
+        }
 
         /**
          * Converts Facebook Creative API rows into metrics.
@@ -36,9 +161,11 @@
             array              $metricsToProcess = [],
             ?string            $customFields = null,
             object|string|null $account = null,
+            array              $dimensions = ['age', 'gender'],
         ): ArrayCollection
         {
-            $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdPermission::DEFAULT->insightsFields($metricSet)));
+            $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, AdPermission::DEFAULT->insightsFields($metricSet));
+            $rows = array_map([self::class, 'normalizeRowActions'], $rows);
 
             $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string)$channeledAccount) : (string)$channeledAccount;
             $creativePlatformId = is_object($creative) ? (method_exists($creative, 'getCreativeId') ? $creative->getCreativeId() : (method_exists($creative, 'getPlatformId') ? $creative->getPlatformId() : (string)$creative)) : (string)$creative;
@@ -50,7 +177,7 @@
                 'platform_id_field'    => 'creative_id',
                 'date_field'           => 'date_start',
                 'metrics'              => array_combine($metricsList, $metricsList),
-                'dimensions'           => ['age', 'gender'],
+                'dimensions'           => $dimensions,
                 'metadata_fields'      => self::METADATA_FIELDS,
                 'context'              => UniversalMetricConverter::getUniversalContext([
                     'account'            => $account,
@@ -78,9 +205,12 @@
             MetricSet          $metricSet = MetricSet::KEY,
             array              $metricsToProcess = [],
             ?string            $customFields = null,
+            array              $dimensions = ['age', 'gender'],
         ): ArrayCollection
         {
-            $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdAccountPermission::DEFAULT->insightsFields($metricSet)));
+            $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, AdAccountPermission::DEFAULT->insightsFields($metricSet));
+            $rows = array_map([self::class, 'normalizeRowActions'], $rows);
+
             $periodValue = is_object($period) && isset($period->value) ? $period->value : (string)$period;
             $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string)$channeledAccount) : (string)$channeledAccount;
             $channeledPlatformId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getPlatformId') ? $channeledAccount->getPlatformId() : (string)$channeledAccount) : (string)$channeledAccount;
@@ -91,7 +221,7 @@
                 'platform_id_field'    => 'account_id',
                 'date_field'           => 'date_start',
                 'metrics'              => array_combine($metricsList, $metricsList),
-                'dimensions'           => ['age', 'gender'],
+                'dimensions'           => $dimensions,
                 'metadata_fields'      => self::METADATA_FIELDS,
                 'context'              => UniversalMetricConverter::getUniversalContext([
                     'account'            => $account,
@@ -117,9 +247,11 @@
             array              $metricsToProcess = [],
             ?string            $customFields = null,
             object|string|null $account = null,
+            array              $dimensions = ['age', 'gender'],
         ): ArrayCollection
         {
-            $metricsList = $customFields ? explode(',', $customFields) : explode(',', CampaignPermission::DEFAULT->insightsFields($metricSet));
+            $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, CampaignPermission::DEFAULT->insightsFields($metricSet));
+            $rows = array_map([self::class, 'normalizeRowActions'], $rows);
 
             $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string)$channeledAccount) : (string)$channeledAccount;
             $channeledCampaignId = is_object($channeledCampaign) ? (method_exists($channeledCampaign, 'getPlatformId') ? $channeledCampaign->getPlatformId() : (string)$channeledCampaign) : (string)$channeledCampaign;
@@ -131,7 +263,7 @@
                 'platform_id_field'    => 'campaign_id',
                 'date_field'           => 'date_start',
                 'metrics'              => array_combine($metricsList, $metricsList),
-                'dimensions'           => ['age', 'gender'],
+                'dimensions'           => $dimensions,
                 'metadata_fields'      => self::METADATA_FIELDS,
                 'context'              => UniversalMetricConverter::getUniversalContext([
                     'account'            => $account,
@@ -165,9 +297,11 @@
             array              $metricsToProcess = [],
             ?string            $customFields = null,
             object|string|null $account = null,
+            array              $dimensions = ['age', 'gender'],
         ): ArrayCollection
         {
-            $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdsetPermission::DEFAULT->insightsFields($metricSet)));
+            $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, AdsetPermission::DEFAULT->insightsFields($metricSet));
+            $rows = array_map([self::class, 'normalizeRowActions'], $rows);
 
             $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string)$channeledAccount) : (string)$channeledAccount;
             $channeledAdGroupId = is_object($channeledAdGroup) ? (method_exists($channeledAdGroup, 'getPlatformId') ? $channeledAdGroup->getPlatformId() : (string)$channeledAdGroup) : (string)$channeledAdGroup;
@@ -179,7 +313,7 @@
                 'platform_id_field'    => 'adset_id',
                 'date_field'           => 'date_start',
                 'metrics'              => array_combine($metricsList, $metricsList),
-                'dimensions'           => ['age', 'gender'],
+                'dimensions'           => $dimensions,
                 'metadata_fields'      => self::METADATA_FIELDS,
                 'context'              => UniversalMetricConverter::getUniversalContext([
                     'account'            => $account,
@@ -217,9 +351,11 @@
             array              $metricsToProcess = [],
             ?string            $customFields = null,
             object|string|null $account = null,
+            array              $dimensions = ['age', 'gender'],
         ): ArrayCollection
         {
-            $metricsList = !empty($metricsToProcess) ? $metricsToProcess : ($customFields ? explode(',', $customFields) : explode(',', AdPermission::DEFAULT->insightsFields($metricSet)));
+            $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, AdPermission::DEFAULT->insightsFields($metricSet));
+            $rows = array_map([self::class, 'normalizeRowActions'], $rows);
 
             $channeledAccountId = is_object($channeledAccount) ? (method_exists($channeledAccount, 'getId') ? $channeledAccount->getId() : (string)$channeledAccount) : (string)$channeledAccount;
             $channeledAdId = is_object($channeledAd) ? (method_exists($channeledAd, 'getPlatformId') ? $channeledAd->getPlatformId() : (string)$channeledAd) : (string)$channeledAd;
@@ -231,7 +367,7 @@
                 'platform_id_field'    => 'ad_id',
                 'date_field'           => 'date_start',
                 'metrics'              => array_combine($metricsList, $metricsList),
-                'dimensions'           => ['age', 'gender'],
+                'dimensions'           => $dimensions,
                 'metadata_fields'      => self::METADATA_FIELDS,
                 'context'              => UniversalMetricConverter::getUniversalContext([
                     'account'            => $account,
@@ -246,13 +382,11 @@
                     'campaign_id' => ['campaign', 'channeledCampaign'],
                     'adset_id'    => ['channeledAdGroup'],
                     'ad_id'       => ['channeledAd'],
-                    'creative_id' => ['creative'],
                 ],
                 'row_entity_fields'    => [
                     'campaign_id' => 'channeledCampaign',
                     'adset_id'    => 'channeledAdGroup',
                     'ad_id'       => 'channeledAd',
-                    'creative'    => 'creative',
                 ],
                 'fallback_platform_id' => $channeledAdId
             ], $logger);
@@ -267,13 +401,53 @@
             string             $level = 'account',
             ?LoggerInterface   $logger = null,
             object|string|null $account = null,
+            MetricSet          $metricSet = MetricSet::KEY,
+            array              $metricsToProcess = [],
+            ?string            $customFields = null,
+            array              $dimensions = ['age', 'gender'],
         ): ArrayCollection
         {
             return match ($level) {
-                'campaign' => self::campaignMetrics(rows: $rows, logger: $logger, channeledAccount: $channeledAccount, account: $account),
-                'adset' => self::adsetMetrics(rows: $rows, logger: $logger, channeledAccount: $channeledAccount, account: $account),
-                'ad' => self::adMetrics(rows: $rows, logger: $logger, channeledAccount: $channeledAccount, account: $account),
-                default => self::adAccountMetrics(rows: $rows, logger: $logger, channeledAccount: $channeledAccount, account: $account),
+                'campaign' => self::campaignMetrics(
+                    rows: $rows,
+                    logger: $logger,
+                    channeledAccount: $channeledAccount,
+                    metricSet: $metricSet,
+                    metricsToProcess: $metricsToProcess,
+                    customFields: $customFields,
+                    account: $account,
+                    dimensions: $dimensions
+                ),
+                'adset' => self::adsetMetrics(
+                    rows: $rows,
+                    logger: $logger,
+                    channeledAccount: $channeledAccount,
+                    metricSet: $metricSet,
+                    metricsToProcess: $metricsToProcess,
+                    customFields: $customFields,
+                    account: $account,
+                    dimensions: $dimensions
+                ),
+                'ad' => self::adMetrics(
+                    rows: $rows,
+                    logger: $logger,
+                    channeledAccount: $channeledAccount,
+                    metricSet: $metricSet,
+                    metricsToProcess: $metricsToProcess,
+                    customFields: $customFields,
+                    account: $account,
+                    dimensions: $dimensions
+                ),
+                default => self::adAccountMetrics(
+                    rows: $rows,
+                    logger: $logger,
+                    account: $account,
+                    channeledAccount: $channeledAccount,
+                    metricSet: $metricSet,
+                    metricsToProcess: $metricsToProcess,
+                    customFields: $customFields,
+                    dimensions: $dimensions
+                ),
             };
         }
     }
