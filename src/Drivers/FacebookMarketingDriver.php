@@ -363,6 +363,12 @@
             if ($metricsConfig !== null) {
                 $chanCfg['metrics_config'] = $metricsConfig;
             }
+            if (isset($newData['metric_set'])) {
+                $chanCfg['metric_set'] = $newData['metric_set'];
+            }
+            if (isset($newData['breakdown_passes'])) {
+                $chanCfg['breakdown_passes'] = $newData['breakdown_passes'];
+            }
 
             $marketingEntities = ['CAMPAIGN', 'ADSET', 'AD', 'CREATIVE'];
             foreach ($marketingEntities as $e) {
