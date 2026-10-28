@@ -902,23 +902,38 @@
 
             $enabledPasses = $accCfg['breakdown_passes'] ?? ($config['breakdown_passes'] ?? null);
 
+            // Normalize enabledPasses to an array of enabled pass keys
+            $activePassKeys = [];
+            if (is_string($enabledPasses)) {
+                $activePassKeys = [$enabledPasses];
+            } elseif (is_array($enabledPasses)) {
+                // Could be sequential ['demographics'] or associative ['demographics' => true]
+                foreach ($enabledPasses as $key => $val) {
+                    if (is_int($key) && is_string($val)) {
+                        $activePassKeys[] = $val;
+                    } elseif ($val) {
+                        $activePassKeys[] = $key;
+                    }
+                }
+            }
+
             // If explicitly configured, honor configured passes
-            if (is_array($enabledPasses)) {
-                if (!empty($enabledPasses['demographics'])) {
+            if (!empty($activePassKeys)) {
+                if (in_array('demographics', $activePassKeys, true)) {
                     $passes['demographics'] = [
                         'label'          => 'Demographics (Age & Gender)',
                         'breakdowns'     => [MetricBreakdown::AGE, MetricBreakdown::GENDER],
                         'dimension_keys' => ['age', 'gender'],
                     ];
                 }
-                if (!empty($enabledPasses['placement'])) {
+                if (in_array('placement', $activePassKeys, true)) {
                     $passes['placement'] = [
                         'label'          => 'Placement & Position',
                         'breakdowns'     => ['publisher_platform', 'platform_position'],
                         'dimension_keys' => ['publisher_platform', 'platform_position'],
                     ];
                 }
-                if (!empty($enabledPasses['geography'])) {
+                if (in_array('geography', $activePassKeys, true)) {
                     $passes['geography'] = [
                         'label'          => 'Geography (Country)',
                         'breakdowns'     => [MetricBreakdown::COUNTRY],
