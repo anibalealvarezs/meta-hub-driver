@@ -10,7 +10,7 @@
   ],
   "require": {
     "anibalealvarezs/api-client-skeleton": "^1.0.0",
-    "anibalealvarezs/api-driver-core": "^1.1.3",
+    "anibalealvarezs/api-driver-core": "^1.1.4",
     "anibalealvarezs/facebook-graph-api": "^1.2.0",
     "symfony/http-foundation": "^5.4 || ^6.0 || ^7.0",
     "psr/log": "^1.0 || ^2.0 || ^3.0",
