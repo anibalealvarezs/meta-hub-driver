@@ -61,7 +61,7 @@ class FacebookMarketingDriverTest extends TestCase
         $defaultPasses = $ref->invoke($this->driver, [], []);
         $this->assertArrayHasKey('unbroken', $defaultPasses);
         $this->assertArrayHasKey('demographics', $defaultPasses);
-        $this->assertNull($defaultPasses['unbroken']['breakdowns']);
+        $this->assertSame([], $defaultPasses['unbroken']['breakdowns']);
         $this->assertEquals([], $defaultPasses['unbroken']['dimension_keys']);
 
         // 2. Custom enabled passes

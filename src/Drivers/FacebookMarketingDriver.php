@@ -912,12 +912,15 @@
             $passes = [
                 'unbroken' => [
                     'label'          => 'Unbroken (Baseline)',
-                    'breakdowns'     => null,
+                    'breakdowns'     => [],
                     'dimension_keys' => [],
                 ]
             ];
 
             $enabledPasses = $accCfg['breakdown_passes'] ?? ($config['breakdown_passes'] ?? null);
+            if ($enabledPasses === 'none' || $enabledPasses === 'unbroken' || $enabledPasses === [] || $enabledPasses === false || $enabledPasses === '') {
+                return $passes;
+            }
 
             // Normalize enabledPasses to an array of enabled pass keys
             $activePassKeys = [];
@@ -932,6 +935,12 @@
                         $activePassKeys[] = $key;
                     }
                 }
+            }
+
+            if (in_array('none', $activePassKeys, true) || in_array('unbroken', $activePassKeys, true)) return $passes;
+            if ($enabledPasses !== null && !$activePassKeys) return $passes;
+            if (array_diff($activePassKeys, ['demographics', 'placement', 'geography'])) {
+                throw new \InvalidArgumentException('Unsupported Meta Ads breakdown pass.');
             }
 
             // If explicitly configured, honor configured passes
@@ -1289,6 +1298,7 @@
                     'cache_history_range' => '2 years',
                     'cache_aggregations'  => false,
                     'metrics_strategy'    => 'default',
+                    'breakdown_passes'    => 'demographics',
                 ],
                 'AD_ACCOUNT' => [
                     'ad_account_metrics' => false,

@@ -85,10 +85,21 @@ To prevent Meta API error `(#100) Cannot combine breakdowns` and protect top-lin
 
 | Pass Key | Label | Meta API Breakdowns | Stored Dimensions | Default Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `unbroken` | **Baseline (Unbroken)** | `null` | `[]` (`dimensions_hash = 'GLOBAL'`) | **Always Active** (Protects source of truth totals) |
+| `unbroken` | **Baseline (Unbroken)** | `[]` (no `breakdowns` request parameter) | `[]` (`dimensions_hash = 'GLOBAL'`) | **Always Active** (Protects source of truth totals) |
 | `demographics` | **Demographics** | `['age', 'gender']` | `['age', 'gender']` | Active (Configurable) |
 | `placement` | **Placement & Position** | `['publisher_platform', 'platform_position']` | `['publisher_platform', 'platform_position']` | Configurable |
 | `geography` | **Geography** | `['country']` | `['country']` | Configurable |
+
+Set `breakdown_passes: none` to run only the unbroken baseline at each configured
+entity level. Explicit empty lists also disable optional passes; missing legacy
+settings retain demographics. `none` takes precedence over other pass keys in a
+mixed selection. The baseline must carry `[]` through metric resolution to the SDK:
+null invokes legacy default audience breakdowns and is not an unbroken request.
+
+The Data Sources UI displays a temporary availability notice for campaigns targeting
+people in the United States and recommends selecting no breakdown for those campaigns.
+Publishing/installing the corrected driver is required before relying on the new
+Facade option. Existing save-triggered historical resync behavior is unchanged.
 
 ---
 

@@ -15,6 +15,8 @@
 
 ## Current notes
 
+- Meta Ads baseline-only mode (2026-10-30): explicit `breakdown_passes: none` (or empty list) runs only the unbroken pass. Missing legacy settings retain demographics; account overrides and enabled independent passes remain supported. The baseline MUST use `breakdowns=[]`, not null: both driver metric resolution and the SDK interpret null as legacy age/gender defaults. Tests exercise actual SDK query construction behind a fake HTTP boundary for all four entity levels, ensuring the `breakdowns` parameter is absent. See docs/surface-manifest.md and apis-hub/docs/facebook-marketing-analysis-and-implementation-plan.md. Facade’s new option requires the corrected driver in the tenant; no tag/Composer change is included.
+
 - Meta driver should keep Facebook/Instagram normalization separate from UI or persistence logic.
 - Use the canonical `instagram_account` account type for Instagram organic filtering and reporting.
 - Keep Facebook Organic payloads aligned with the actual stored metric names, including the available `*_daily` content metrics and the IG account-level metric set.
