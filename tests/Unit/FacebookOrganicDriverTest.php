@@ -17,6 +17,66 @@
             $this->driver = new FacebookOrganicDriver(null, $logger);
         }
 
+        /** @dataProvider followerSnapshotCases */
+        public function testFollowerSnapshotsUseTheObservationDate(bool $recent, array $responses, array $expected, ?string $target = null, int $runs = 1): void
+        {
+            $api = $this->createMock(\Anibalealvarezs\FacebookGraphApi\FacebookGraphApi::class);
+            $api->method('getFacebookPageInsights')->willReturn([]);
+            $api->method('getDailyInstagramAccountTotalValueInsights')->willReturn([]);
+            $api->expects($this->exactly($recent ? count($responses) * $runs : 0))->method('performRequest')
+                ->willReturnCallback(function ($method, $endpoint, $query, ...$arguments) use ($responses) {
+                    $this->assertSame('GET', $method);
+                    $this->assertSame(['fields' => 'followers_count'], $query);
+                    $this->assertArrayHasKey($endpoint, $responses);
+                    $payload = $responses[$endpoint];
+                    if ($payload instanceof \Exception) {
+                        throw $payload;
+                    }
+
+                    return new \GuzzleHttp\Psr7\Response(200, [], json_encode($payload));
+                });
+
+            $driver = $this->getMockBuilder(FacebookOrganicDriver::class)
+                ->setConstructorArgs([null, $this->createMock(LoggerInterface::class)])
+                ->onlyMethods(['initializeApi'])
+                ->getMock();
+            $driver->method('initializeApi')->willReturn($api);
+            $values = [];
+            $driver->setDataProcessor(function ($metrics) use (&$values): array {
+                foreach ($metrics as $metric) {
+                    $this->assertSame('follower_total', $metric->name);
+                    $this->assertSame('lifetime', $metric->period);
+                    $this->assertSame(date('Y-m-d'), substr($metric->date, 0, 10));
+                    $values[] = [(int) $metric->value, $metric->metricConfigKey, $metric->metricDate];
+                }
+
+                return ['metrics' => count($metrics)];
+            });
+
+            $config = ['pages' => [['id' => '123', 'ig_account' => '456', 'page_metrics' => true, 'ig_account_metrics' => true]]];
+            if ($target !== null) {
+                $config['account_id'] = $target;
+            }
+            for ($run = 0; $run < $runs; $run++) {
+                $driver->syncMetrics(new DateTime('-2 weeks'), new DateTime($recent ? 'yesterday' : '-1 week'), $config);
+            }
+
+            $this->assertSame(array_merge(...array_fill(0, $runs, $expected)), array_column($values, 0));
+            if ($runs > 1) {
+                $this->assertSame(array_slice($values, 0, count($expected)), array_slice($values, count($expected)));
+            }
+        }
+
+        public static function followerSnapshotCases(): array
+        {
+            return [
+                'both accounts, including explicit zero' => [true, [123 => ['followers_count' => 0], 456 => ['followers_count' => '12']], [0, 12]],
+                'missing and failed responses' => [true, [123 => [], 456 => new \RuntimeException('Unavailable')], []],
+                'historical sync' => [false, [], []],
+                'Instagram-only target and same-day retry' => [true, [456 => ['followers_count' => 12]], [12], '456', 2],
+            ];
+        }
+
         public function testGetChannel()
         {
             $this->assertEquals('facebook_organic', $this->driver->getChannel());

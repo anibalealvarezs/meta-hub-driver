@@ -635,6 +635,42 @@
                         }
                     }
 
+                    if ($idx === 0 && $endDate->format('Y-m-d') >= date('Y-m-d', strtotime('yesterday'))) {
+                        $snapshotTargets = [
+                            [$page[MetaFeature::PAGE_METRICS->value] ?? false, $pagePlatformId, $pageObj, $caObj, TokenSample::PAGE],
+                            [$page[MetaFeature::IG_ACCOUNT_METRICS->value] ?? false, $igPlatformId, $igPageObj, $igCaObj, TokenSample::USER],
+                        ];
+
+                        foreach ($snapshotTargets as [$enabled, $platformId, $snapshotPage, $snapshotAccount, $tokenSample]) {
+                            if (!$enabled || !$platformId || ($resolvedTargetId && $resolvedTargetId !== $platformId)) {
+                                continue;
+                            }
+                            if ($shouldContinue && !$shouldContinue()) {
+                                throw new Exception("Sync aborted by the orchestrator.");
+                            }
+
+                            $count = $this->fetchFollowerTotal($api, $platformId, $tokenSample);
+                            if ($count === null) {
+                                continue;
+                            }
+
+                            $snapshots = FacebookOrganicMetricConvert::igAccountMetrics(
+                                rows: [['name' => 'follower_total', 'value' => $count]],
+                                date: date('Y-m-d'),
+                                page: $snapshotPage,
+                                account: method_exists($snapshotAccount, 'getAccount')
+                                    ? $snapshotAccount->getAccount()
+                                    : ($config['accounts_group_name'] ?? 'Default'),
+                                channeledAccount: $snapshotAccount,
+                                logger: $this->logger,
+                                period: 'lifetime'
+                            );
+                            foreach ($snapshots as $snapshot) {
+                                $pageLevelMetrics->add($snapshot);
+                            }
+                        }
+                    }
+
                     // 3. Process Facebook Post Insights
                     if (!empty($pageData['fb_post_insights'])) {
                         $this->logger->info('DEBUG: FacebookOrganicDriver::syncMetrics -> Post insights', [json_encode(['channeled_account_object' => $caObj, 'channeled_account_platform_id' => $pagePlatformId])]);
@@ -854,6 +890,31 @@
                 logger: $this->logger,
                 tokenRefresherCallback: $this->authProvider->getTokenRefresherCallback()
             );
+        }
+
+        private function fetchFollowerTotal(FacebookGraphApi $api, string $platformId, TokenSample $tokenSample): ?int
+        {
+            try {
+                $response = $api->performRequest(
+                    method: 'GET',
+                    endpoint: $platformId,
+                    query: ['fields' => 'followers_count'],
+                    tokenSample: $tokenSample
+                );
+                $value = json_decode((string) $response->getBody(), true)['followers_count'] ?? null;
+            } catch (Exception $e) {
+                $this->logger?->warning('Meta Organic follower snapshot unavailable.', ['exception' => $e::class]);
+
+                return null;
+            }
+
+            if (!is_int($value) && !is_string($value)) {
+                return null;
+            }
+
+            $count = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+
+            return $count === false ? null : $count;
         }
 
         /**
