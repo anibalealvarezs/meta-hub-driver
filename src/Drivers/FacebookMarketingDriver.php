@@ -40,7 +40,9 @@
     use Anibalealvarezs\ApiDriverCore\Helpers\FieldsNormalizerHelper;
     use Anibalealvarezs\MetaHubDriver\Services\FacebookEntitySync;
 
-    class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface, AggregationProfileProviderInterface, CanonicalMetricDictionaryProviderInterface
+    use Anibalealvarezs\ApiDriverCore\Interfaces\LiveWindowProviderInterface;
+
+    class FacebookMarketingDriver implements SyncDriverInterface, ChanneledAccountableInterface, MetricProfileProviderInterface, AggregationProfileProviderInterface, CanonicalMetricDictionaryProviderInterface, LiveWindowProviderInterface
     {
         use HasHierarchicalValidationTrait;
         use SyncDriverTrait, MetaSyncDriverTrait {
@@ -1836,5 +1838,71 @@
             $jsPath = __DIR__.'/js/FacebookMarketingConfigHandler.js';
 
             return file_exists($jsPath) ? file_get_contents($jsPath) : "";
+        }
+
+        public static function supportsLiveWindow(string $metric): bool
+        {
+            $supported = ['reach', 'frequency', 'average_frequency', 'total_reach'];
+            return in_array(strtolower($metric), $supported, true);
+        }
+
+        public function fetchLiveWindow(
+            array $config,
+            string $platformId,
+            array $metrics,
+            string $startDate,
+            string $endDate,
+            array $dimensions = [],
+            array $filters = []
+        ): array {
+            $api = $this->initializeApi($config);
+            $accountId = str_starts_with($platformId, 'act_') ? $platformId : 'act_' . $platformId;
+
+            $metaFields = [];
+            foreach ($metrics as $m) {
+                $norm = strtolower($m);
+                if (in_array($norm, ['reach', 'total_reach'], true)) {
+                    $metaFields['reach'] = $m;
+                } elseif (in_array($norm, ['frequency', 'average_frequency'], true)) {
+                    $metaFields['frequency'] = $m;
+                }
+            }
+
+            if (empty($metaFields)) {
+                return [];
+            }
+
+            $params = [
+                'time_range' => json_encode(['since' => $startDate, 'until' => $endDate]),
+                'level' => 'account',
+                'fields' => implode(',', array_keys($metaFields)),
+                'time_increment' => 'all_days', // Entire window summary
+            ];
+
+            $res = $api->getAdAccountInsights(
+                adAccountId: $accountId,
+                limit: 10,
+                metricBreakdown: [],
+                metricSet: \Anibalealvarezs\FacebookGraphApi\Enums\MetricSet::CUSTOM,
+                additionalParams: $params,
+                customMetrics: array_keys($metaFields)
+            );
+
+            $data = $res['data'] ?? [];
+            if (empty($data)) {
+                return [];
+            }
+
+            $firstRow = $data[0] ?? [];
+            $outputRow = [];
+            foreach ($metaFields as $metaKey => $requestedKey) {
+                if (isset($firstRow[$metaKey])) {
+                    $val = (float)$firstRow[$metaKey];
+                    $outputRow[$metaKey] = $val;
+                    $outputRow[$requestedKey] = $val;
+                }
+            }
+
+            return [$outputRow];
         }
     }
