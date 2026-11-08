@@ -49,17 +49,24 @@
                 return true;
             }
 
+            $matchesPattern = function (string $pattern, string $target): bool {
+                if (preg_match('/^\/(.*)\/([a-z]*)$/i', $pattern, $regexParts)) {
+                    $body = $regexParts[1];
+                    $flags = $regexParts[2];
+                    $res = @preg_match('/' . $body . '/' . $flags, $target);
+                    if ($res !== false) {
+                        return (bool) $res;
+                    }
+                }
+                return stripos($target, $pattern) !== false;
+            };
+
             if ($include) {
                 $matchedInclude = false;
                 $includes = array_map('trim', explode(',', $include));
                 foreach ($includes as $pattern) {
                     if (empty($pattern)) continue;
-                    if (str_starts_with($pattern, '/') && str_ends_with($pattern, '/')) {
-                        if (preg_match($pattern, $value)) {
-                            $matchedInclude = true;
-                            break;
-                        }
-                    } elseif (stripos($value, $pattern) !== false) {
+                    if ($matchesPattern($pattern, $value)) {
                         $matchedInclude = true;
                         break;
                     }
@@ -73,11 +80,7 @@
                 $excludes = array_map('trim', explode(',', $exclude));
                 foreach ($excludes as $pattern) {
                     if (empty($pattern)) continue;
-                    if (str_starts_with($pattern, '/') && str_ends_with($pattern, '/')) {
-                        if (preg_match($pattern, $value)) {
-                            return false;
-                        }
-                    } elseif (stripos($value, $pattern) !== false) {
+                    if ($matchesPattern($pattern, $value)) {
                         return false;
                     }
                 }
