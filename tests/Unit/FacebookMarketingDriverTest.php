@@ -77,6 +77,25 @@ class FacebookMarketingDriverTest extends TestCase
         $this->assertArrayHasKey('placement', $customPasses);
         $this->assertArrayHasKey('geography', $customPasses);
         $this->assertEquals(['country'], $customPasses['geography']['dimension_keys']);
+
+        // 3. Individual breakdown passes
+        $individualPasses = $ref->invoke($this->driver, [
+            'breakdown_passes' => [
+                'age' => true,
+                'gender' => true,
+                'platform' => true,
+                'position' => true,
+            ]
+        ], []);
+        $this->assertArrayHasKey('unbroken', $individualPasses);
+        $this->assertArrayHasKey('age', $individualPasses);
+        $this->assertEquals(['age'], $individualPasses['age']['dimension_keys']);
+        $this->assertArrayHasKey('gender', $individualPasses);
+        $this->assertEquals(['gender'], $individualPasses['gender']['dimension_keys']);
+        $this->assertArrayHasKey('platform', $individualPasses);
+        $this->assertEquals(['publisher_platform'], $individualPasses['platform']['dimension_keys']);
+        $this->assertArrayHasKey('position', $individualPasses);
+        $this->assertEquals(['platform_position'], $individualPasses['position']['dimension_keys']);
     }
 
     public function testMetaSyncDriverTraitMethods()

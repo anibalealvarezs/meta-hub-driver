@@ -941,7 +941,8 @@
 
             if (in_array('none', $activePassKeys, true) || in_array('unbroken', $activePassKeys, true)) return $passes;
             if ($enabledPasses !== null && !$activePassKeys) return $passes;
-            if (array_diff($activePassKeys, ['demographics', 'placement', 'geography'])) {
+            $allowedPasses = ['demographics', 'placement', 'geography', 'age', 'gender', 'platform', 'position'];
+            if (array_diff($activePassKeys, $allowedPasses)) {
                 throw new \InvalidArgumentException('Unsupported Meta Ads breakdown pass.');
             }
 
@@ -954,11 +955,39 @@
                         'dimension_keys' => ['age', 'gender'],
                     ];
                 }
+                if (in_array('age', $activePassKeys, true)) {
+                    $passes['age'] = [
+                        'label'          => 'Age',
+                        'breakdowns'     => [MetricBreakdown::AGE],
+                        'dimension_keys' => ['age'],
+                    ];
+                }
+                if (in_array('gender', $activePassKeys, true)) {
+                    $passes['gender'] = [
+                        'label'          => 'Gender',
+                        'breakdowns'     => [MetricBreakdown::GENDER],
+                        'dimension_keys' => ['gender'],
+                    ];
+                }
                 if (in_array('placement', $activePassKeys, true)) {
                     $passes['placement'] = [
-                        'label'          => 'Placement & Position',
+                        'label'          => 'Placement (Platform & Position)',
                         'breakdowns'     => ['publisher_platform', 'platform_position'],
                         'dimension_keys' => ['publisher_platform', 'platform_position'],
+                    ];
+                }
+                if (in_array('platform', $activePassKeys, true)) {
+                    $passes['platform'] = [
+                        'label'          => 'Platform',
+                        'breakdowns'     => ['publisher_platform'],
+                        'dimension_keys' => ['publisher_platform'],
+                    ];
+                }
+                if (in_array('position', $activePassKeys, true)) {
+                    $passes['position'] = [
+                        'label'          => 'Position',
+                        'breakdowns'     => ['platform_position'],
+                        'dimension_keys' => ['platform_position'],
                     ];
                 }
                 if (in_array('geography', $activePassKeys, true)) {
