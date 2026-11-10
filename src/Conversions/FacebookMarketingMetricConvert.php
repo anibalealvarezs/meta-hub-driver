@@ -206,6 +206,7 @@
             array              $metricsToProcess = [],
             ?string            $customFields = null,
             array              $dimensions = ['age', 'gender'],
+            ?string            $currency = null,
         ): ArrayCollection
         {
             $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, AdAccountPermission::DEFAULT->insightsFields($metricSet));
@@ -227,6 +228,8 @@
                     'account'            => $account,
                     'channeledAccount'   => $channeledAccount,
                     'channeledAccountId' => $channeledAccountId,
+                    'currency'           => $currency,
+                    'sourceCurrency'     => $currency,
                 ]),
                 'row_key_fields'       => [],
                 'fallback_platform_id' => $channeledPlatformId
@@ -248,6 +251,7 @@
             ?string            $customFields = null,
             object|string|null $account = null,
             array              $dimensions = ['age', 'gender'],
+            ?string            $currency = null,
         ): ArrayCollection
         {
             $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, CampaignPermission::DEFAULT->insightsFields($metricSet));
@@ -271,6 +275,8 @@
                     'channeledAccountId' => $channeledAccountId,
                     'campaign'           => $campaign,
                     'channeledCampaign'  => $channeledCampaign,
+                    'currency'           => $currency,
+                    'sourceCurrency'     => $currency,
                 ]),
                 'row_key_fields'       => [
                     'campaign_id' => ['campaign', 'channeledCampaign'],
@@ -298,6 +304,7 @@
             ?string            $customFields = null,
             object|string|null $account = null,
             array              $dimensions = ['age', 'gender'],
+            ?string            $currency = null,
         ): ArrayCollection
         {
             $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, AdsetPermission::DEFAULT->insightsFields($metricSet));
@@ -322,6 +329,8 @@
                     'campaign'           => $campaign,
                     'channeledCampaign'  => $channeledCampaign,
                     'channeledAdGroup'   => $channeledAdGroup,
+                    'currency'           => $currency,
+                    'sourceCurrency'     => $currency,
                 ]),
                 'row_key_fields'       => [
                     'campaign_id' => ['campaign', 'channeledCampaign'],
@@ -352,6 +361,7 @@
             ?string            $customFields = null,
             object|string|null $account = null,
             array              $dimensions = ['age', 'gender'],
+            ?string            $currency = null,
         ): ArrayCollection
         {
             $metricsList = self::resolveMetricsList($metricsToProcess, $customFields, AdPermission::DEFAULT->insightsFields($metricSet));
@@ -377,6 +387,8 @@
                     'channeledCampaign'  => $channeledCampaign,
                     'channeledAdGroup'   => $channeledAdGroup,
                     'channeledAd'        => $channeledAd,
+                    'currency'           => $currency,
+                    'sourceCurrency'     => $currency,
                 ]),
                 'row_key_fields'       => [
                     'campaign_id' => ['campaign', 'channeledCampaign'],
@@ -405,49 +417,26 @@
             array              $metricsToProcess = [],
             ?string            $customFields = null,
             array              $dimensions = ['age', 'gender'],
+            ?string            $currency = null,
         ): ArrayCollection
         {
+            $args = [
+                'rows' => $rows,
+                'logger' => $logger,
+                'channeledAccount' => $channeledAccount,
+                'account' => $account,
+                'metricSet' => $metricSet,
+                'metricsToProcess' => $metricsToProcess,
+                'customFields' => $customFields,
+                'dimensions' => $dimensions,
+                'currency' => $currency,
+            ];
+
             return match ($level) {
-                'campaign' => self::campaignMetrics(
-                    rows: $rows,
-                    logger: $logger,
-                    channeledAccount: $channeledAccount,
-                    metricSet: $metricSet,
-                    metricsToProcess: $metricsToProcess,
-                    customFields: $customFields,
-                    account: $account,
-                    dimensions: $dimensions
-                ),
-                'adset' => self::adsetMetrics(
-                    rows: $rows,
-                    logger: $logger,
-                    channeledAccount: $channeledAccount,
-                    metricSet: $metricSet,
-                    metricsToProcess: $metricsToProcess,
-                    customFields: $customFields,
-                    account: $account,
-                    dimensions: $dimensions
-                ),
-                'ad' => self::adMetrics(
-                    rows: $rows,
-                    logger: $logger,
-                    channeledAccount: $channeledAccount,
-                    metricSet: $metricSet,
-                    metricsToProcess: $metricsToProcess,
-                    customFields: $customFields,
-                    account: $account,
-                    dimensions: $dimensions
-                ),
-                default => self::adAccountMetrics(
-                    rows: $rows,
-                    logger: $logger,
-                    account: $account,
-                    channeledAccount: $channeledAccount,
-                    metricSet: $metricSet,
-                    metricsToProcess: $metricsToProcess,
-                    customFields: $customFields,
-                    dimensions: $dimensions
-                ),
+                'campaign' => self::campaignMetrics(...$args),
+                'adset' => self::adsetMetrics(...$args),
+                'ad' => self::adMetrics(...$args),
+                default => self::adAccountMetrics(...$args),
             };
         }
     }

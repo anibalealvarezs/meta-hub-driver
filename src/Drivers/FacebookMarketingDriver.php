@@ -609,6 +609,7 @@
 
                                 if (!empty($rows)) {
                                     $metricCfg = $this->getMetricsConfig($config, $breakdownList);
+                                    $accountCurrency = $accCfg['currency'] ?? ($accCfg['data']['currency'] ?? ($account['currency'] ?? ($account['data']['currency'] ?? null)));
                                     $collection = FacebookMarketingMetricConvert::metrics(
                                         rows: $rows,
                                         channeledAccount: $caObject ?? $accountPlatformId,
@@ -617,7 +618,8 @@
                                         account: (method_exists($caObject, 'getAccount')) ? $caObject->getAccount() : ($config['accounts_group_name'] ?? 'Default'),
                                         metricSet: $metricCfg['metricSet'],
                                         metricsToProcess: $metricCfg['metrics'],
-                                        dimensions: $dimensionKeys
+                                        dimensions: $dimensionKeys,
+                                        currency: $accountCurrency
                                     );
                                     if ($this->dataProcessor && $collection->count() > 0) {
                                         $this->validateHierarchicalIntegrity(collection: $collection, type: HierarchyType::MARKETING);
