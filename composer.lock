@@ -12,13 +12,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "bd5f52bedba1fce4e7c9c42ade7d0ed9d2563a22"
+                "reference": "4aef9d577f28a74222664569f177293575e1d916"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-bd5f52bedba1fce4e7c9c42ade7d0ed9d2563a22-zip-f80c5d.zip",
-                "reference": "bd5f52bedba1fce4e7c9c42ade7d0ed9d2563a22",
-                "shasum": "9771510cfa5c1ccd0d325f59c3c32d47da10c078"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-4aef9d577f28a74222664569f177293575e1d916-zip-65ae20.zip",
+                "reference": "4aef9d577f28a74222664569f177293575e1d916",
+                "shasum": "521b40f2b98a0c58a094c3f8de8ccf3ea6908b1d"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "^1.0.0",
@@ -67,7 +67,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-07-02T20:56:26+00:00"
+            "time": "2026-11-10T13:25:01+00:00"
         },
         {
             "name": "anibalealvarezs/api-driver-core",
@@ -75,13 +75,13 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-driver-core.git",
-                "reference": "885093d190e6d8be88b859191243f91e3ea61501"
+                "reference": "86c118ff2d556b0e937c3c6b881fb90c9e323d8b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-885093d190e6d8be88b859191243f91e3ea61501-zip-bab1d7.zip",
-                "reference": "885093d190e6d8be88b859191243f91e3ea61501",
-                "shasum": "5b6ebb96f55bd59e253efa90cf9b786007c04070"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-driver-core/anibalealvarezs-api-driver-core-86c118ff2d556b0e937c3c6b881fb90c9e323d8b-zip-c920f5.zip",
+                "reference": "86c118ff2d556b0e937c3c6b881fb90c9e323d8b",
+                "shasum": "60ed36ceb87ebb46b76009acbd8e1dcb6a709772"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "^1.0.0",
@@ -115,7 +115,7 @@
                 }
             ],
             "description": "Core interfaces and orchestration logic for APIs Hub drivers.",
-            "time": "2026-11-08T16:07:29+00:00"
+            "time": "2026-11-10T13:41:58+00:00"
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
@@ -402,16 +402,16 @@
         },
         {
             "name": "doctrine/dbal",
-            "version": "4.5.0",
+            "version": "4.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/dbal.git",
-                "reference": "c435cd7ea33e17d2a89288caf994cf3d4549b879"
+                "reference": "b2815456989aa41964ee66d7ab47b7885264acf3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/dbal/zipball/c435cd7ea33e17d2a89288caf994cf3d4549b879",
-                "reference": "c435cd7ea33e17d2a89288caf994cf3d4549b879",
+                "url": "https://api.github.com/repos/doctrine/dbal/zipball/b2815456989aa41964ee66d7ab47b7885264acf3",
+                "reference": "b2815456989aa41964ee66d7ab47b7885264acf3",
                 "shasum": ""
             },
             "require": {
@@ -424,7 +424,7 @@
                 "doctrine/coding-standard": "14.0.0",
                 "fig/log-test": "^1",
                 "jetbrains/phpstorm-stubs": "2023.2",
-                "phpstan/phpstan": "2.1.30",
+                "phpstan/phpstan": "2.3.4",
                 "phpstan/phpstan-phpunit": "2.0.7",
                 "phpstan/phpstan-strict-rules": "^2",
                 "phpunit/phpunit": "11.5.56",
@@ -488,7 +488,7 @@
             ],
             "support": {
                 "issues": "https://github.com/doctrine/dbal/issues",
-                "source": "https://github.com/doctrine/dbal/tree/4.5.0"
+                "source": "https://github.com/doctrine/dbal/tree/4.5.1"
             },
             "funding": [
                 {
@@ -504,7 +504,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-24T16:11:26+00:00"
+            "time": "2026-11-10T09:21:59+00:00"
         },
         {
             "name": "doctrine/deprecations",
