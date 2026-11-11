@@ -4,21 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "35589dc1e9f38c12d4f729fa78060b99",
+    "content-hash": "8921ad470f5163189edd1dcc9eecea5d",
     "packages": [
         {
             "name": "anibalealvarezs/api-client-skeleton",
-            "version": "v1.0.0",
+            "version": "v1.0.1",
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/api-client-skeleton.git",
-                "reference": "4aef9d577f28a74222664569f177293575e1d916"
+                "reference": "16d346d3f3012da2abddd8deebc66021bfd1787c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-4aef9d577f28a74222664569f177293575e1d916-zip-65ae20.zip",
-                "reference": "4aef9d577f28a74222664569f177293575e1d916",
-                "shasum": "521b40f2b98a0c58a094c3f8de8ccf3ea6908b1d"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/api-client-skeleton/anibalealvarezs-api-client-skeleton-16d346d3f3012da2abddd8deebc66021bfd1787c-zip-75f1b2.zip",
+                "reference": "16d346d3f3012da2abddd8deebc66021bfd1787c",
+                "shasum": "f6253b02904592a0bcb3201358817aebd1a096fd"
             },
             "require": {
                 "anibalealvarezs/oauth-v1": "^1.0.0",
@@ -67,7 +67,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/api-client-skeleton/issues"
             },
-            "time": "2026-11-10T13:25:01+00:00"
+            "time": "2026-11-11T13:55:16+00:00"
         },
         {
             "name": "anibalealvarezs/api-driver-core",
@@ -119,17 +119,17 @@
         },
         {
             "name": "anibalealvarezs/facebook-graph-api",
-            "version": "v1.2.0",
+            "version": "v1.2.1",
             "source": {
                 "type": "git",
                 "url": "git@github.com:anibalealvarezs/facebook-graph-api.git",
-                "reference": "9224bd2c68a2622a9e37d5a421eb4cf7a66fdc13"
+                "reference": "57d0bd35241e4c445f6a579654d42c73ecf6f9a5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-9224bd2c68a2622a9e37d5a421eb4cf7a66fdc13-zip-1e948f.zip",
-                "reference": "9224bd2c68a2622a9e37d5a421eb4cf7a66fdc13",
-                "shasum": "5bc056b4df61f3449a4eb7e84362adce5bdeccb3"
+                "url": "https://satis.anibalalvarez.com/dist/anibalealvarezs/facebook-graph-api/anibalealvarezs-facebook-graph-api-57d0bd35241e4c445f6a579654d42c73ecf6f9a5-zip-da4b6a.zip",
+                "reference": "57d0bd35241e4c445f6a579654d42c73ecf6f9a5",
+                "shasum": "af5cacbbf18677d1165e00a1a52fda7725699360"
             },
             "require": {
                 "anibalealvarezs/api-client-skeleton": "^1.0.0",
@@ -180,7 +180,7 @@
             "support": {
                 "issues": "https://github.com/anibalealvarezs/facebook-graph-api/issues"
             },
-            "time": "2026-10-28T15:12:43+00:00"
+            "time": "2026-11-11T13:59:31+00:00"
         },
         {
             "name": "anibalealvarezs/oauth-v1",
@@ -508,20 +508,20 @@
         },
         {
             "name": "doctrine/deprecations",
-            "version": "1.1.6",
+            "version": "1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/deprecations.git",
-                "reference": "d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca"
+                "reference": "d2e16653a734c8784c1851ad68b02f997b53ca82"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/deprecations/zipball/d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca",
-                "reference": "d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca",
+                "url": "https://api.github.com/repos/doctrine/deprecations/zipball/d2e16653a734c8784c1851ad68b02f997b53ca82",
+                "reference": "d2e16653a734c8784c1851ad68b02f997b53ca82",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.1 || ^8.0"
+                "php": "^7.4 || ^8.0"
             },
             "conflict": {
                 "phpunit/phpunit": "<=7.5 || >=14"
@@ -550,9 +550,9 @@
             "homepage": "https://www.doctrine-project.org/",
             "support": {
                 "issues": "https://github.com/doctrine/deprecations/issues",
-                "source": "https://github.com/doctrine/deprecations/tree/1.1.6"
+                "source": "https://github.com/doctrine/deprecations/tree/1.2.0"
             },
-            "time": "2026-02-07T07:09:04+00:00"
+            "time": "2026-11-11T10:04:49+00:00"
         },
         {
             "name": "doctrine/event-manager",
