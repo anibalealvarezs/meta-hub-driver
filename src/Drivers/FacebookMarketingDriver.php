@@ -575,7 +575,9 @@
                     $caObject = $caMap[$accountPlatformId] ?? (new UniversalEntity())->setPlatformId($accountPlatformId);
 
                     $levelsToFetch = $this->resolveLevelsToFetch($accCfg, $config);
-                    $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $chunkSize);
+                    $effectiveChunkSize = $accCfg['cache_chunk_size'] ?? $config['cache_chunk_size'] ?? $chunkSize;
+                    $chunks = DateHelper::getDateChunks($startDate->format('Y-m-d'), $endDate->format('Y-m-d'), $effectiveChunkSize);
+                    $this->logger?->info("Account {$accountPlatformId} chunked into " . count($chunks) . " intervals (chunk size: '{$effectiveChunkSize}') from {$startDate->format('Y-m-d')} to {$endDate->format('Y-m-d')}");
                     $breakdownPasses = $this->resolveBreakdownPasses($accCfg, $config);
 
                     foreach ($chunks as $chunk) {
@@ -1044,7 +1046,8 @@
                     throw new Exception("Sync aborted by the orchestrator.");
                 }
                 try {
-                    return $api->getAdAccountInsights(
+                    $this->logger?->info("fetchInsights attempt " . ($retryCount + 1) . "/{$maxRetries} for {$accountId} (limit: {$currentLimit})");
+                    $res = $api->getAdAccountInsights(
                         adAccountId: $accountId,
                         limit: $currentLimit,
                         metricBreakdown: $metricConfig['breakdowns'],
@@ -1052,13 +1055,21 @@
                         additionalParams: $params,
                         customMetrics: $metricConfig['metrics']
                     );
+                    $totalRows = count($res['data'] ?? []);
+                    $this->logger?->info("fetchInsights completed for {$accountId} level '{$level}' ({$startDate} to {$endDate}) with {$totalRows} rows.");
+                    return $res;
                 } catch (Exception $e) {
+                    $this->logger?->warning("fetchInsights error for {$accountId} level '{$level}' (Attempt " . ($retryCount + 1) . "/{$maxRetries}): " . $e->getMessage(), [
+                        'exception' => get_class($e),
+                        'code' => $e->getCode(),
+                    ]);
                     if (str_contains($e->getMessage(), 'reduce the amount of data')) {
                         $currentLimit = max(10, (int)floor($currentLimit / 2));
                         $this->logger?->warning("Data limit error for $accountId in fetchInsights: Reducing limit to $currentLimit");
                     }
                     $retryCount++;
                     if ($retryCount >= $maxRetries || $this->isFatal($e)) {
+                        $this->logger?->error("fetchInsights FATAL or max retries exceeded for {$accountId}: " . $e->getMessage());
                         throw $e;
                     }
                     usleep(500000 * $retryCount);
