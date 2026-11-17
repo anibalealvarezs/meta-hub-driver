@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 class FacebookMarketingLiveWindowTest extends TestCase
 {
-    public function testFetchLiveWindowAppliesMonthlyGroupingAndCampaignKeywordFilter(): void
+    public function testFetchLiveWindowAppliesMonthlyGroupingAndNestedChanneledCampaignFilter(): void
     {
         $fakeApi = new class extends FacebookGraphApi {
             public array $capturedCalls = [];
@@ -53,10 +53,10 @@ class FacebookMarketingLiveWindowTest extends TestCase
             metrics: ['reach'],
             startDate: '2026-09-01',
             endDate: '2026-10-31',
-            dimensions: ['month'],
+            dimensions: ['monthly'],
             filters: [
                 'channeledAccount' => 1,
-                'campaign_name' => ['operator' => 'contains', 'value' => 'promo'],
+                'channeledCampaign' => [['operator' => 'like', 'value' => 'sculpt']],
             ]
         );
 
@@ -65,13 +65,68 @@ class FacebookMarketingLiveWindowTest extends TestCase
         $this->assertSame('monthly', $params['time_increment']);
         $this->assertSame('account', $params['level']);
         $this->assertSame(
-            [['field' => 'campaign.name', 'operator' => 'CONTAIN', 'value' => 'promo']],
+            [['field' => 'campaign.name', 'operator' => 'CONTAIN', 'value' => 'sculpt']],
             json_decode($params['filtering'], true)
         );
 
         $this->assertSame([
-            ['month' => '2026-09', 'reach' => 12500.0],
-            ['month' => '2026-10', 'reach' => 18400.0],
+            ['monthly' => '2026-09', 'reach' => 12500.0],
+            ['monthly' => '2026-10', 'reach' => 18400.0],
         ], $rows);
+    }
+
+    public function testFetchLiveWindowSupportsWeeklyQuarterlySemiannualAndAnnuallyBuckets(): void
+    {
+        $fakeApi = new class extends FacebookGraphApi {
+            public array $capturedCalls = [];
+
+            public function __construct() {}
+
+            public function getAdAccountInsights(
+                string $adAccountId,
+                int $limit = 100,
+                MetricBreakdown|array|string|null $metricBreakdown = null,
+                MetricSet $metricSet = MetricSet::BASIC,
+                array $additionalParams = [],
+                array $customMetrics = []
+            ): array {
+                $this->capturedCalls[] = $additionalParams;
+
+                return ['data' => [['reach' => '5000']]];
+            }
+        };
+
+        $driver = new class($fakeApi) extends FacebookMarketingDriver {
+            public function __construct(private FacebookGraphApi $fakeApi) {}
+
+            protected function initializeApi(array $config): FacebookGraphApi
+            {
+                return $this->fakeApi;
+            }
+        };
+
+        $qRows = $driver->fetchLiveWindow([], '123', ['reach'], '2026-07-01', '2026-12-31', ['quarterly'], []);
+        $this->assertSame([
+            ['quarterly' => '2026-Q3', 'reach' => 5000.0],
+            ['quarterly' => '2026-Q4', 'reach' => 5000.0],
+        ], $qRows);
+
+        $sRows = $driver->fetchLiveWindow([], '123', ['reach'], '2026-01-01', '2026-12-31', ['semiannual'], []);
+        $this->assertSame([
+            ['semiannual' => '2026-S1', 'reach' => 5000.0],
+            ['semiannual' => '2026-S2', 'reach' => 5000.0],
+        ], $sRows);
+
+        $aRows = $driver->fetchLiveWindow([], '123', ['reach'], '2025-06-01', '2026-06-01', ['annually'], []);
+        $this->assertSame([
+            ['annually' => '2025', 'reach' => 5000.0],
+            ['annually' => '2026', 'reach' => 5000.0],
+        ], $aRows);
+
+        $wRows = $driver->fetchLiveWindow([], '123', ['reach'], '2026-11-02', '2026-11-15', ['weekly'], []);
+        $this->assertSame([
+            ['weekly' => '2026-W45', 'reach' => 5000.0],
+            ['weekly' => '2026-W46', 'reach' => 5000.0],
+        ], $wRows);
     }
 }
