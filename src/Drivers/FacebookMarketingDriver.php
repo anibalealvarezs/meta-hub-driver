@@ -1914,20 +1914,69 @@
                 return [];
             }
 
+            $timeIncrement = 'all_days';
+            $timeDimKey = null;
+            $timeGranularity = null;
+            $level = 'account';
+            $extraFields = [];
+            $entityDimMap = [];
+
+            foreach ($dimensions as $dim) {
+                $normDim = strtolower(trim((string)$dim));
+                if (in_array($normDim, ['month', 'date:month'], true)) {
+                    $timeIncrement = 'monthly';
+                    $timeDimKey = (string)$dim;
+                    $timeGranularity = 'month';
+                } elseif (in_array($normDim, ['week', 'date:week'], true)) {
+                    $timeIncrement = 7;
+                    $timeDimKey = (string)$dim;
+                    $timeGranularity = 'week';
+                } elseif (in_array($normDim, ['day', 'date', 'metric_date', 'date:day'], true)) {
+                    $timeIncrement = 1;
+                    $timeDimKey = (string)$dim;
+                    $timeGranularity = 'day';
+                } elseif (in_array($normDim, ['campaign', 'campaign_name'], true)) {
+                    $level = 'campaign';
+                    $extraFields[] = 'campaign_name';
+                    $entityDimMap[(string)$dim] = 'campaign_name';
+                } elseif (in_array($normDim, ['campaign_id', 'campaign_platform_id'], true)) {
+                    $level = 'campaign';
+                    $extraFields[] = 'campaign_id';
+                    $entityDimMap[(string)$dim] = 'campaign_id';
+                } elseif (in_array($normDim, ['adset', 'ad_group', 'adset_name', 'ad_group_name'], true)) {
+                    if ($level === 'account') {
+                        $level = 'adset';
+                    }
+                    $extraFields[] = 'adset_name';
+                    $entityDimMap[(string)$dim] = 'adset_name';
+                } elseif (in_array($normDim, ['ad', 'ad_name'], true)) {
+                    $level = 'ad';
+                    $extraFields[] = 'ad_name';
+                    $entityDimMap[(string)$dim] = 'ad_name';
+                }
+            }
+
+            $fields = array_values(array_unique(array_merge(array_keys($metaFields), $extraFields)));
+
             $params = [
                 'time_range' => json_encode(['since' => $startDate, 'until' => $endDate]),
-                'level' => 'account',
-                'fields' => implode(',', array_keys($metaFields)),
-                'time_increment' => 'all_days', // Entire window summary
+                'level' => $level,
+                'fields' => implode(',', $fields),
+                'time_increment' => $timeIncrement,
             ];
+
+            $metaFiltering = $this->buildLiveWindowFiltering($filters);
+            if ($metaFiltering !== []) {
+                $params['filtering'] = json_encode($metaFiltering);
+            }
 
             $res = $api->getAdAccountInsights(
                 adAccountId: $accountId,
-                limit: 10,
+                limit: 500,
                 metricBreakdown: [],
                 metricSet: \Anibalealvarezs\FacebookGraphApi\Enums\MetricSet::CUSTOM,
                 additionalParams: $params,
-                customMetrics: array_keys($metaFields)
+                customMetrics: $fields
             );
 
             $data = $res['data'] ?? [];
@@ -1935,16 +1984,90 @@
                 return [];
             }
 
-            $firstRow = $data[0] ?? [];
-            $outputRow = [];
-            foreach ($metaFields as $metaKey => $requestedKey) {
-                if (isset($firstRow[$metaKey])) {
-                    $val = (float)$firstRow[$metaKey];
-                    $outputRow[$metaKey] = $val;
-                    $outputRow[$requestedKey] = $val;
+            $outputRows = [];
+            foreach ($data as $row) {
+                $outputRow = [];
+                if ($timeDimKey !== null && isset($row['date_start'])) {
+                    $outputRow[$timeDimKey] = $timeGranularity === 'month'
+                        ? substr((string)$row['date_start'], 0, 7)
+                        : (string)$row['date_start'];
+                }
+                foreach ($entityDimMap as $dimKey => $metaField) {
+                    if (isset($row[$metaField])) {
+                        $outputRow[$dimKey] = $row[$metaField];
+                    }
+                }
+                foreach ($metaFields as $metaKey => $requestedKey) {
+                    if (isset($row[$metaKey])) {
+                        $val = (float)$row[$metaKey];
+                        $outputRow[$metaKey] = $val;
+                        $outputRow[$requestedKey] = $val;
+                    }
+                }
+                $outputRows[] = $outputRow;
+            }
+
+            return $outputRows;
+        }
+
+        /**
+         * Translates APIs Hub filter conditions into Meta Insights API `filtering` objects.
+         *
+         * @param array<string, mixed> $filters
+         * @return array<int, array{field: string, operator: string, value: mixed}>
+         */
+        private function buildLiveWindowFiltering(array $filters): array
+        {
+            $fieldMap = [
+                'campaign' => 'campaign.name',
+                'campaign_name' => 'campaign.name',
+                'campaign_id' => 'campaign.id',
+                'campaign_platform_id' => 'campaign.id',
+                'adset' => 'adset.name',
+                'ad_group' => 'adset.name',
+                'adset_name' => 'adset.name',
+                'ad_group_name' => 'adset.name',
+                'adset_id' => 'adset.id',
+                'ad_group_id' => 'adset.id',
+                'ad' => 'ad.name',
+                'ad_name' => 'ad.name',
+                'ad_id' => 'ad.id',
+            ];
+
+            $filtering = [];
+            foreach ($filters as $rawField => $condition) {
+                $normField = strtolower(trim((string)$rawField));
+                if (!isset($fieldMap[$normField])) {
+                    continue;
+                }
+                $metaField = $fieldMap[$normField];
+
+                if (is_object($condition)) {
+                    $condition = (array)$condition;
+                }
+
+                if (is_array($condition) && array_key_exists('value', $condition)) {
+                    $op = strtolower(trim((string)($condition['operator'] ?? 'eq')));
+                    $val = $condition['value'];
+                    $metaOp = match ($op) {
+                        'contains', 'like', 'ilike' => 'CONTAIN',
+                        'not_contains', 'not_like', 'not_ilike' => 'NOT_CONTAIN',
+                        'neq', '!=' => 'NOT_EQUAL',
+                        'in' => 'IN',
+                        'not_in' => 'NOT_IN',
+                        default => 'EQUAL',
+                    };
+                    if (in_array($op, ['like', 'ilike', 'not_like', 'not_ilike'], true) && is_string($val)) {
+                        $val = trim($val, '%');
+                    }
+                    $filtering[] = ['field' => $metaField, 'operator' => $metaOp, 'value' => $val];
+                } elseif (is_array($condition)) {
+                    $filtering[] = ['field' => $metaField, 'operator' => 'IN', 'value' => array_values($condition)];
+                } elseif ($condition !== null && $condition !== '') {
+                    $filtering[] = ['field' => $metaField, 'operator' => 'EQUAL', 'value' => $condition];
                 }
             }
 
-            return [$outputRow];
+            return $filtering;
         }
     }
