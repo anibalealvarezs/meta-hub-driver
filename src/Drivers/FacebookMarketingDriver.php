@@ -1937,7 +1937,6 @@
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'month';
                 } elseif (str_contains($normDim, 'week')) {
-                    $timeIncrement = 7;
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'week';
                 } elseif (str_contains($normDim, 'day') || str_contains($normDim, 'daily') || in_array($normDim, ['date', 'metric_date'], true)) {
@@ -1969,7 +1968,7 @@
 
             $metaFiltering = $this->buildLiveWindowFiltering($filters);
 
-            if (in_array($timeGranularity, ['quarter', 'semiannual', 'year'], true)) {
+            if (in_array($timeGranularity, ['week', 'quarter', 'semiannual', 'year'], true)) {
                 return $this->fetchBucketedLiveWindow(
                     $api,
                     $accountId,
@@ -2014,7 +2013,9 @@
             foreach ($data as $row) {
                 $outputRow = [];
                 if ($timeDimKey !== null && isset($row['date_start'])) {
-                    $outputRow[$timeDimKey] = (string)$row['date_start'];
+                    $outputRow[$timeDimKey] = $timeGranularity === 'month'
+                        ? substr((string)$row['date_start'], 0, 7)
+                        : (string)$row['date_start'];
                 }
                 foreach ($entityDimMap as $dimKey => $metaField) {
                     if (isset($row[$metaField])) {
@@ -2060,14 +2061,24 @@
                 if ($granularity === 'year') {
                     $bucketStart = $cursor->format('Y-01-01');
                     $bucketEnd = min($endDate, $cursor->format('Y-12-31'));
+                    $bucketLabel = $cursor->format('Y');
                     $next = new \DateTimeImmutable(($year + 1) . '-01-01');
                 } elseif ($granularity === 'semiannual') {
-                    $halfStartMonth = ((int)$cursor->format('n') <= 6) ? 1 : 7;
+                    $half = ((int)$cursor->format('n') <= 6) ? 1 : 2;
+                    $halfStartMonth = $half === 1 ? 1 : 7;
                     $hStart = new \DateTimeImmutable(sprintf('%04d-%02d-01', $year, $halfStartMonth));
                     $hEnd = $hStart->modify('+6 months -1 day');
                     $bucketStart = $hStart->format('Y-m-d');
                     $bucketEnd = min($endDate, $hEnd->format('Y-m-d'));
+                    $bucketLabel = sprintf('%04d-S%d', $year, $half);
                     $next = $hStart->modify('+6 months');
+                } elseif ($granularity === 'week') {
+                    $wStart = $cursor->modify('monday this week');
+                    $wEnd = $wStart->modify('+6 days');
+                    $bucketStart = $wStart->format('Y-m-d');
+                    $bucketEnd = min($endDate, $wEnd->format('Y-m-d'));
+                    $bucketLabel = $wStart->format('o-\WW');
+                    $next = $wStart->modify('+7 days');
                 } else {
                     $quarter = (int)ceil((int)$cursor->format('n') / 3);
                     $qStartMonth = ($quarter - 1) * 3 + 1;
@@ -2075,6 +2086,7 @@
                     $qEnd = $qStart->modify('+3 months -1 day');
                     $bucketStart = $qStart->format('Y-m-d');
                     $bucketEnd = min($endDate, $qEnd->format('Y-m-d'));
+                    $bucketLabel = sprintf('%04d-Q%d', $year, $quarter);
                     $next = $qStart->modify('+3 months');
                 }
 
@@ -2099,7 +2111,7 @@
                 );
 
                 foreach ($res['data'] ?? [] as $row) {
-                    $outputRow = [$timeDimKey => $bucketStart];
+                    $outputRow = [$timeDimKey => $bucketLabel];
                     foreach ($entityDimMap as $dimKey => $metaField) {
                         if (isset($row[$metaField])) {
                             $outputRow[$dimKey] = $row[$metaField];
