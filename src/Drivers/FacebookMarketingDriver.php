@@ -1923,9 +1923,12 @@
 
             foreach ($dimensions as $dim) {
                 $normDim = strtolower(trim((string)$dim));
-                if (str_contains($normDim, 'year')) {
+                if (str_contains($normDim, 'year') || str_contains($normDim, 'annual')) {
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'year';
+                } elseif (str_contains($normDim, 'semiannual') || str_contains($normDim, 'half')) {
+                    $timeDimKey = (string)$dim;
+                    $timeGranularity = 'semiannual';
                 } elseif (str_contains($normDim, 'quarter')) {
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'quarter';
@@ -1966,7 +1969,7 @@
 
             $metaFiltering = $this->buildLiveWindowFiltering($filters);
 
-            if (in_array($timeGranularity, ['quarter', 'year'], true)) {
+            if (in_array($timeGranularity, ['quarter', 'semiannual', 'year'], true)) {
                 return $this->fetchBucketedLiveWindow(
                     $api,
                     $accountId,
@@ -2058,6 +2061,13 @@
                     $bucketStart = $cursor->format('Y-01-01');
                     $bucketEnd = min($endDate, $cursor->format('Y-12-31'));
                     $next = new \DateTimeImmutable(($year + 1) . '-01-01');
+                } elseif ($granularity === 'semiannual') {
+                    $halfStartMonth = ((int)$cursor->format('n') <= 6) ? 1 : 7;
+                    $hStart = new \DateTimeImmutable(sprintf('%04d-%02d-01', $year, $halfStartMonth));
+                    $hEnd = $hStart->modify('+6 months -1 day');
+                    $bucketStart = $hStart->format('Y-m-d');
+                    $bucketEnd = min($endDate, $hEnd->format('Y-m-d'));
+                    $next = $hStart->modify('+6 months');
                 } else {
                     $quarter = (int)ceil((int)$cursor->format('n') / 3);
                     $qStartMonth = ($quarter - 1) * 3 + 1;
