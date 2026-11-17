@@ -1923,7 +1923,11 @@
 
             foreach ($dimensions as $dim) {
                 $normDim = strtolower(trim((string)$dim));
-                if (str_contains($normDim, 'semiannual') || str_contains($normDim, 'half')) {
+                if (str_starts_with($normDim, 'trailing_')) {
+                    $timeIncrement = 1;
+                    $timeDimKey = (string)$dim;
+                    $timeGranularity = 'day';
+                } elseif (str_contains($normDim, 'semiannual') || str_contains($normDim, 'half')) {
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'semiannual';
                 } elseif (str_contains($normDim, 'year') || str_contains($normDim, 'annual')) {

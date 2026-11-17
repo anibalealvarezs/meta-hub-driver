@@ -105,28 +105,50 @@ class FacebookMarketingLiveWindowTest extends TestCase
             }
         };
 
-        $qRows = $driver->fetchLiveWindow([], '123', ['reach'], '2026-07-01', '2026-12-31', ['quarterly'], []);
+        $qRows = $driver->fetchLiveWindow([], '123', ['reach'], '2026-07-01', '2026-12-15', ['quarterly'], []);
+        $this->assertCount(2, $fakeApi->capturedCalls);
+        $this->assertSame('{"since":"2026-07-01","until":"2026-09-30"}', $fakeApi->capturedCalls[0]['time_range']);
+        $this->assertSame('{"since":"2026-10-01","until":"2026-12-15"}', $fakeApi->capturedCalls[1]['time_range']);
+        $this->assertSame('all_days', $fakeApi->capturedCalls[0]['time_increment']);
         $this->assertSame([
             ['quarterly' => '2026-Q3', 'reach' => 5000.0],
             ['quarterly' => '2026-Q4', 'reach' => 5000.0],
         ], $qRows);
 
+        $fakeApi->capturedCalls = [];
         $sRows = $driver->fetchLiveWindow([], '123', ['reach'], '2026-01-01', '2026-12-31', ['semiannual'], []);
+        $this->assertCount(2, $fakeApi->capturedCalls);
+        $this->assertSame('{"since":"2026-01-01","until":"2026-06-30"}', $fakeApi->capturedCalls[0]['time_range']);
+        $this->assertSame('{"since":"2026-07-01","until":"2026-12-31"}', $fakeApi->capturedCalls[1]['time_range']);
         $this->assertSame([
             ['semiannual' => '2026-S1', 'reach' => 5000.0],
             ['semiannual' => '2026-S2', 'reach' => 5000.0],
         ], $sRows);
 
+        $fakeApi->capturedCalls = [];
         $aRows = $driver->fetchLiveWindow([], '123', ['reach'], '2025-06-01', '2026-06-01', ['annually'], []);
+        $this->assertCount(2, $fakeApi->capturedCalls);
+        $this->assertSame('{"since":"2025-06-01","until":"2025-12-31"}', $fakeApi->capturedCalls[0]['time_range']);
+        $this->assertSame('{"since":"2026-01-01","until":"2026-06-01"}', $fakeApi->capturedCalls[1]['time_range']);
         $this->assertSame([
             ['annually' => '2025', 'reach' => 5000.0],
             ['annually' => '2026', 'reach' => 5000.0],
         ], $aRows);
 
+        $fakeApi->capturedCalls = [];
         $wRows = $driver->fetchLiveWindow([], '123', ['reach'], '2026-11-02', '2026-11-15', ['weekly'], []);
+        $this->assertCount(2, $fakeApi->capturedCalls);
+        $this->assertSame('{"since":"2026-11-02","until":"2026-11-08"}', $fakeApi->capturedCalls[0]['time_range']);
+        $this->assertSame('{"since":"2026-11-09","until":"2026-11-15"}', $fakeApi->capturedCalls[1]['time_range']);
         $this->assertSame([
             ['weekly' => '2026-W45', 'reach' => 5000.0],
             ['weekly' => '2026-W46', 'reach' => 5000.0],
         ], $wRows);
+
+        $fakeApi->capturedCalls = [];
+        $lRows = $driver->fetchLiveWindow([], '123', ['reach'], '2026-01-01', '2026-11-15', [], []);
+        $this->assertCount(1, $fakeApi->capturedCalls);
+        $this->assertSame('all_days', $fakeApi->capturedCalls[0]['time_increment']);
+        $this->assertSame([['reach' => 5000.0]], $lRows);
     }
 }
