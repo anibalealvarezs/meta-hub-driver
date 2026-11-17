@@ -1931,7 +1931,7 @@
                     $timeIncrement = 7;
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'week';
-                } elseif (str_contains($normDim, 'day') || in_array($normDim, ['date', 'metric_date'], true)) {
+                } elseif (str_contains($normDim, 'day') || str_contains($normDim, 'daily') || in_array($normDim, ['date', 'metric_date'], true)) {
                     $timeIncrement = 1;
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'day';
