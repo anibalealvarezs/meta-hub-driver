@@ -2161,25 +2161,36 @@
                     $condition = (array)$condition;
                 }
 
-                if (is_array($condition) && array_key_exists('value', $condition)) {
-                    $op = strtolower(trim((string)($condition['operator'] ?? 'eq')));
-                    $val = $condition['value'];
-                    $metaOp = match ($op) {
-                        'contains', 'like', 'ilike' => 'CONTAIN',
-                        'not_contains', 'not_like', 'not_ilike' => 'NOT_CONTAIN',
-                        'neq', '!=' => 'NOT_EQUAL',
-                        'in' => 'IN',
-                        'not_in' => 'NOT_IN',
-                        default => 'EQUAL',
-                    };
-                    if (in_array($op, ['like', 'ilike', 'not_like', 'not_ilike'], true) && is_string($val)) {
-                        $val = trim($val, '%');
+                // Handle both a single condition ['operator' => ..., 'value' => ...]
+                // and a list of conditions [['operator' => ..., 'value' => ...]]
+                $items = (is_array($condition) && !array_key_exists('value', $condition) && isset($condition[0]))
+                    ? $condition
+                    : [$condition];
+
+                foreach ($items as $item) {
+                    if (is_object($item)) {
+                        $item = (array)$item;
                     }
-                    $filtering[] = ['field' => $metaField, 'operator' => $metaOp, 'value' => $val];
-                } elseif (is_array($condition)) {
-                    $filtering[] = ['field' => $metaField, 'operator' => 'IN', 'value' => array_values($condition)];
-                } elseif ($condition !== null && $condition !== '') {
-                    $filtering[] = ['field' => $metaField, 'operator' => 'EQUAL', 'value' => $condition];
+                    if (is_array($item) && array_key_exists('value', $item)) {
+                        $op = strtolower(trim((string)($item['operator'] ?? 'eq')));
+                        $val = $item['value'];
+                        $metaOp = match ($op) {
+                            'contains', 'like', 'ilike' => 'CONTAIN',
+                            'not_contains', 'not_like', 'not_ilike' => 'NOT_CONTAIN',
+                            'neq', '!=' => 'NOT_EQUAL',
+                            'in' => 'IN',
+                            'not_in' => 'NOT_IN',
+                            default => 'EQUAL',
+                        };
+                        if (in_array($op, ['like', 'ilike', 'not_like', 'not_ilike'], true) && is_string($val)) {
+                            $val = trim($val, '%');
+                        }
+                        $filtering[] = ['field' => $metaField, 'operator' => $metaOp, 'value' => $val];
+                    } elseif (is_array($item)) {
+                        $filtering[] = ['field' => $metaField, 'operator' => 'IN', 'value' => array_values($item)];
+                    } elseif ($item !== null && $item !== '') {
+                        $filtering[] = ['field' => $metaField, 'operator' => 'EQUAL', 'value' => $item];
+                    }
                 }
             }
 
