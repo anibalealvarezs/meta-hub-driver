@@ -1923,15 +1923,15 @@
 
             foreach ($dimensions as $dim) {
                 $normDim = strtolower(trim((string)$dim));
-                if (in_array($normDim, ['month', 'date:month'], true)) {
+                if (str_contains($normDim, 'month')) {
                     $timeIncrement = 'monthly';
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'month';
-                } elseif (in_array($normDim, ['week', 'date:week'], true)) {
+                } elseif (str_contains($normDim, 'week')) {
                     $timeIncrement = 7;
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'week';
-                } elseif (in_array($normDim, ['day', 'date', 'metric_date', 'date:day'], true)) {
+                } elseif (str_contains($normDim, 'day') || in_array($normDim, ['date', 'metric_date'], true)) {
                     $timeIncrement = 1;
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'day';
