@@ -1988,9 +1988,7 @@
             foreach ($data as $row) {
                 $outputRow = [];
                 if ($timeDimKey !== null && isset($row['date_start'])) {
-                    $outputRow[$timeDimKey] = $timeGranularity === 'month'
-                        ? substr((string)$row['date_start'], 0, 7)
-                        : (string)$row['date_start'];
+                    $outputRow[$timeDimKey] = (string)$row['date_start'];
                 }
                 foreach ($entityDimMap as $dimKey => $metaField) {
                     if (isset($row[$metaField])) {

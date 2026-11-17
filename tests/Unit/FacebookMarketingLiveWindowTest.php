@@ -70,8 +70,8 @@ class FacebookMarketingLiveWindowTest extends TestCase
         );
 
         $this->assertSame([
-            ['month' => '2026-09', 'reach' => 12500.0],
-            ['month' => '2026-10', 'reach' => 18400.0],
+            ['month' => '2026-09-01', 'reach' => 12500.0],
+            ['month' => '2026-10-01', 'reach' => 18400.0],
         ], $rows);
     }
 }
