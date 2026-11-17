@@ -1923,7 +1923,13 @@
 
             foreach ($dimensions as $dim) {
                 $normDim = strtolower(trim((string)$dim));
-                if (str_contains($normDim, 'month')) {
+                if (str_contains($normDim, 'year')) {
+                    $timeDimKey = (string)$dim;
+                    $timeGranularity = 'year';
+                } elseif (str_contains($normDim, 'quarter')) {
+                    $timeDimKey = (string)$dim;
+                    $timeGranularity = 'quarter';
+                } elseif (str_contains($normDim, 'month')) {
                     $timeIncrement = 'monthly';
                     $timeDimKey = (string)$dim;
                     $timeGranularity = 'month';
@@ -1958,6 +1964,24 @@
 
             $fields = array_values(array_unique(array_merge(array_keys($metaFields), $extraFields)));
 
+            $metaFiltering = $this->buildLiveWindowFiltering($filters);
+
+            if (in_array($timeGranularity, ['quarter', 'year'], true)) {
+                return $this->fetchBucketedLiveWindow(
+                    $api,
+                    $accountId,
+                    $fields,
+                    $metaFields,
+                    $entityDimMap,
+                    $metaFiltering,
+                    $level,
+                    $timeDimKey,
+                    $timeGranularity,
+                    $startDate,
+                    $endDate
+                );
+            }
+
             $params = [
                 'time_range' => json_encode(['since' => $startDate, 'until' => $endDate]),
                 'level' => $level,
@@ -1965,7 +1989,6 @@
                 'time_increment' => $timeIncrement,
             ];
 
-            $metaFiltering = $this->buildLiveWindowFiltering($filters);
             if ($metaFiltering !== []) {
                 $params['filtering'] = json_encode($metaFiltering);
             }
@@ -2003,6 +2026,86 @@
                     }
                 }
                 $outputRows[] = $outputRow;
+            }
+
+            return $outputRows;
+        }
+
+        /**
+         * Fetches deduplicated live window metrics for granularities not natively supported
+         * by Meta's `time_increment` (such as `quarter` and `year`) using one `all_days` call per bucket.
+         */
+        private function fetchBucketedLiveWindow(
+            $api,
+            string $accountId,
+            array $fields,
+            array $metaFields,
+            array $entityDimMap,
+            array $metaFiltering,
+            string $level,
+            string $timeDimKey,
+            string $granularity,
+            string $startDate,
+            string $endDate
+        ): array {
+            $cursor = new \DateTimeImmutable($startDate);
+            $end = new \DateTimeImmutable($endDate);
+            $outputRows = [];
+
+            while ($cursor <= $end) {
+                $year = (int)$cursor->format('Y');
+                if ($granularity === 'year') {
+                    $bucketStart = $cursor->format('Y-01-01');
+                    $bucketEnd = min($endDate, $cursor->format('Y-12-31'));
+                    $next = new \DateTimeImmutable(($year + 1) . '-01-01');
+                } else {
+                    $quarter = (int)ceil((int)$cursor->format('n') / 3);
+                    $qStartMonth = ($quarter - 1) * 3 + 1;
+                    $qStart = new \DateTimeImmutable(sprintf('%04d-%02d-01', $year, $qStartMonth));
+                    $qEnd = $qStart->modify('+3 months -1 day');
+                    $bucketStart = $qStart->format('Y-m-d');
+                    $bucketEnd = min($endDate, $qEnd->format('Y-m-d'));
+                    $next = $qStart->modify('+3 months');
+                }
+
+                $since = max($startDate, $bucketStart);
+                $params = [
+                    'time_range' => json_encode(['since' => $since, 'until' => $bucketEnd]),
+                    'level' => $level,
+                    'fields' => implode(',', $fields),
+                    'time_increment' => 'all_days',
+                ];
+                if ($metaFiltering !== []) {
+                    $params['filtering'] = json_encode($metaFiltering);
+                }
+
+                $res = $api->getAdAccountInsights(
+                    adAccountId: $accountId,
+                    limit: 500,
+                    metricBreakdown: [],
+                    metricSet: \Anibalealvarezs\FacebookGraphApi\Enums\MetricSet::CUSTOM,
+                    additionalParams: $params,
+                    customMetrics: $fields
+                );
+
+                foreach ($res['data'] ?? [] as $row) {
+                    $outputRow = [$timeDimKey => $bucketStart];
+                    foreach ($entityDimMap as $dimKey => $metaField) {
+                        if (isset($row[$metaField])) {
+                            $outputRow[$dimKey] = $row[$metaField];
+                        }
+                    }
+                    foreach ($metaFields as $metaKey => $requestedKey) {
+                        if (isset($row[$metaKey])) {
+                            $val = (float)$row[$metaKey];
+                            $outputRow[$metaKey] = $val;
+                            $outputRow[$requestedKey] = $val;
+                        }
+                    }
+                    $outputRows[] = $outputRow;
+                }
+
+                $cursor = $next;
             }
 
             return $outputRows;
